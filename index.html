@@ -102,6 +102,29 @@ input { -webkit-user-select: text; user-select: text; }
 .zpanel .col { width: 100%; }
 .zdare { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--raise); font-size: 14px; text-align: left; }
 .pickgrid { display: flex; flex-direction: column; gap: 8px; }
+.arc-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.arc-tile { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; text-align: left; color: var(--ink); }
+.arc-tile .gicon { width: 56px; height: 56px; font-size: 32px; }
+.arc-tile b { font-family: var(--title); font-size: 24px; display: block; line-height: 1.1; }
+.arc-tile small { display: block; font-size: 13px; opacity: 0.8; }
+.at-zoomies { background: var(--card-arcade); } .at-snake { background: var(--card-five); } .at-merge { background: var(--card-groups); }
+.zwrap.swipe { touch-action: none; }
+.mwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 16px; position: relative; touch-action: none; -webkit-user-select: none; user-select: none; }
+.mtop { width: 100%; max-width: 420px; display: flex; gap: 8px; align-items: stretch; }
+.mstat { flex: 1; background: var(--raise); border-radius: 10px; padding: 6px 10px; text-align: center; }
+.mstat small { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mstat b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.mdare { width: 100%; max-width: 420px; text-align: center; font-size: 14px; font-weight: 700; background: #ffd23f; color: #121212; border-radius: 10px; padding: 6px 10px; }
+.mgrid { width: min(100%, 420px, calc(100vh - 260px)); aspect-ratio: 1; background: #bfa98a; border-radius: 14px; padding: 8px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 8px; }
+.mcell { background: rgba(255,255,255,0.28); border-radius: 9px; position: relative; display: grid; place-items: center; overflow: hidden; }
+.mtile { position: absolute; inset: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #3b2a1a; font-weight: 800; line-height: 1; }
+.mtile .me { font-size: clamp(20px, 7vw, 34px); display: inline-flex; }
+.mtile .mn { font-size: clamp(9px, 2.6vw, 12px); margin-top: 3px; letter-spacing: 0.02em; }
+.mtile .mv { position: absolute; top: 4px; right: 6px; font-size: clamp(9px, 2.4vw, 11px); opacity: 0.7; }
+.mtile.new { animation: mpop 0.18s ease-out; } .mtile.merged { animation: mbump 0.2s ease-out; }
+@keyframes mpop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes mbump { 50% { transform: scale(1.12); } }
+.mwrap .zpanel { top: 50%; }
 .gtext { display: flex; flex-direction: column; min-width: 0; }
 .gtext b { font-family: var(--title); font-weight: 700; font-size: 23px; line-height: 1.1; }
 .gsub { font-size: 13.5px; color: var(--ink); opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -390,6 +413,8 @@ input { -webkit-user-select: text; user-select: text; }
 .whogrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 46vh; overflow-y: auto; padding: 2px; }
 .whogrid button { min-height: 48px; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--line); font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .whogrid button:active { border-color: var(--ink); }
+#who-q { width: 100%; font-size: 18px; text-align: center; }
+.whohint { margin: -4px 0 0; color: var(--muted); font-size: 13.5px; min-height: 1em; }
 .splash .pinbox { letter-spacing: 0.5em; font-size: 26px; font-weight: 700; }
 .splash .textbtn { color: var(--muted); align-self: center; }
 .dotload { display: flex; gap: 6px; }
@@ -444,9 +469,9 @@ input { -webkit-user-select: text; user-select: text; }
           <span class="gstat done" id="st-scores">View</span>
         </button>
         <p class="arcade-lbl">Arcade · just for fun</p>
-        <button class="gcard c-arcade" data-go="zoomies">
-          <span class="gicon" id="ic-zoomies"></span>
-          <span class="gtext"><b>Zoomies</b><span class="gsub" id="sub-zoomies">Tap to fly. Dodge the bones.</span></span>
+        <button class="gcard c-arcade" data-go="arcade">
+          <span class="gicon" id="ic-arcade"></span>
+          <span class="gtext"><b>Arcade</b><span class="gsub" id="sub-arcade">Zoomies · Long Dawg · Merge Mutts</span></span>
           <span class="gstat done">Play</span>
         </button>
       </div>
@@ -472,12 +497,58 @@ input { -webkit-user-select: text; user-select: text; }
     <div class="donebar" id="five-done" hidden><p id="five-done-text"></p><button class="pill solid" data-results="five">See results</button></div>
   </section>
 
+  <!-- ARCADE HUB -->
+  <section class="view" id="v-arcade" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Arcade</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="arc-body">
+      <p class="note">Just for fun. None of this counts toward the daily scoreboard.</p>
+      <div id="arc-dares" class="stack" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="arc-tile at-zoomies" data-go="zoomies"><span class="gicon" data-arcicon="zoomies"></span><span><b>Zoomies</b><small>Tap to fly. Dodge the bones.</small><small id="ab-zoomies"></small></span><span class="gstat">Play</span></button>
+      <button class="arc-tile at-snake" data-go="snake"><span class="gicon" data-arcicon="snake"></span><span><b>Long Dawg</b><small>Swipe to steer. Eat bones, get longer.</small><small id="ab-snake"></small></span><span class="gstat">Play</span></button>
+      <button class="arc-tile at-merge" data-go="merge"><span class="gicon" data-arcicon="merge"></span><span><b>Merge Mutts</b><small>Swipe to merge pups into a Big Dawg.</small><small id="ab-merge"></small></span><span class="gstat">Play</span></button>
+    </div>
+  </section>
+
+  <!-- LONG DAWG (snake) -->
+  <section class="view" id="v-snake" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Long Dawg</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="zwrap swipe" id="swrap">
+      <canvas id="sc" aria-label="Long Dawg game"></canvas>
+      <div class="zhud" id="shud" hidden>0</div>
+      <div class="zpanel" id="spanel"></div>
+    </div>
+  </section>
+
+  <!-- MERGE MUTTS (2048) -->
+  <section class="view" id="v-merge" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Merge Mutts</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="mwrap" id="mwrap">
+      <div class="mtop"><div class="mstat"><small>Score</small><b id="m-score">0</b></div><div class="mstat"><small>Best</small><b id="m-best">0</b></div><button class="pill" id="m-new">New game</button></div>
+      <div class="mdare" id="m-dare" hidden></div>
+      <div class="mgrid" id="mgrid"></div>
+      <p class="note center">Swipe to slide. Two of the same dog merge into the next one up.</p>
+      <div class="zpanel" id="mpanel" hidden></div>
+    </div>
+  </section>
+
   <!-- ZOOMIES (arcade) -->
   <section class="view" id="v-zoomies" hidden>
     <header class="bar">
-      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
       <h1>Zoomies</h1>
-      <div class="bar-r"><button class="icon" id="z-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
     <div class="zwrap" id="zwrap">
       <canvas id="zc" aria-label="Zoomies game"></canvas>
@@ -623,12 +694,13 @@ input { -webkit-user-select: text; user-select: text; }
       </div>
       <div class="pane" data-pane="arcade" hidden>
       <div class="box">
-        <div class="sechead"><h2>Zoomies</h2><span>Arcade · not on the scoreboard</span></div>
+        <div class="sechead"><h2>Arcade</h2><span>Not on the scoreboard</span></div>
+        <div class="seg" id="arc-seg"><button data-arc="zoomies" class="on">Zoomies</button><button data-arc="snake">Long Dawg</button><button data-arc="merge">Merge</button></div>
         <h3>This week's best</h3>
         <ol class="rank-list" id="z-week"></ol>
         <h3>All-time best</h3>
         <ol class="rank-list" id="z-all"></ol>
-        <button class="pill solid" data-go="zoomies">🐶 Play Zoomies</button>
+        <button class="pill solid" id="arc-play" data-go="zoomies">🐶 Play Zoomies</button>
       </div>
       </div>
       <div class="pane" data-pane="more" hidden>
@@ -682,6 +754,8 @@ input { -webkit-user-select: text; user-select: text; }
   <a class="fastcta" id="fast-splash" target="_top" href="#" hidden><b>⚡ Tired of waiting? Big Dawg loads fast AF now</b><span>Tap here</span></a>
   <div class="choices" id="who" hidden>
     <h2>Who's playing?</h2>
+    <input id="who-q" type="search" placeholder="Start typing your name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Your name">
+    <p id="who-hint" class="whohint"></p>
     <div class="whogrid" id="who-list"></div>
     <button class="pill" id="who-new" type="button">I'm new here</button>
   </div>
@@ -1768,7 +1842,7 @@ $("modal-close").addEventListener("click", closeModal);
 $("modal").addEventListener("click", e => { if (e.target === $("modal")) closeModal(); });
 
 // ---------- navigation ----------
-const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies"];
+const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies", "arcade", "snake", "merge"];
 let active = "home", lastGame = "home";
 function show(name) {
   if (name === "back") name = lastGame;
@@ -1782,6 +1856,9 @@ function show(name) {
   if (name === "five") renderBoard();
   if (name === "groups") renderGroups();
   if (name === "zoomies") zShown(); else zHidden();
+  if (name === "snake") sShown(); else sHidden();
+  if (name === "merge") mShown();
+  if (name === "arcade") renderArcHub();
   syncTimer();
   try { sessionStorage.setItem("bdd:view", name); } catch (e) {}
   setTimeout(maybeServe, 350);
@@ -2760,11 +2837,11 @@ function maybeServe() {
   if (!(active === "home" || active === "scores") || !$("modal").hidden || !$("splash").hidden) return;
   serving = shade.inbox[0];
   const clap = serving.kind === "clap", dare = serving.kind === "dare", res = serving.kind === "dareres";
-  $("served-from").textContent = `${serving.fromName} ${dare ? "dared you" : res ? "took your Zoomies dare" : clap ? "clapped back" : serving.kind === "fire" ? "fired back at you" : "threw shade at you"}`;
+  $("served-from").textContent = `${serving.fromName} ${dare ? "dared you" : res ? "took your dare" : clap ? "clapped back" : serving.kind === "fire" ? "fired back at you" : "threw shade at you"}`;
   $("served-text").textContent = "";
   if (clap && isDawg(serving.text)) $("served-text").appendChild(emo(serving.text, 110));
-  else if (dare) $("served-text").textContent = `Beat ${serving.text} in Zoomies. 🐶`;
-  else if (res) { const [sc, tg] = serving.text.split("/").map(Number); $("served-text").textContent = sc > tg ? `${serving.fromName} scored ${sc}, beating your ${tg}. Run it back? 😤` : `${serving.fromName} scored ${sc}. Your ${tg} stands. 😎`; }
+  else if (dare) { const d = parseDare(serving.text); $("served-text").textContent = `Beat ${d.target} in ${ARC[d.game].name}. 🐶`; }
+  else if (res) { const d = parseDare(serving.text), [sc, tg] = d.rest.split("/").map(Number); $("served-text").textContent = sc > tg ? `${serving.fromName} scored ${sc} in ${ARC[d.game].name}, beating your ${tg}. Run it back? 😤` : `${serving.fromName} scored ${sc} in ${ARC[d.game].name}. Your ${tg} stands. 😎`; }
   else $("served-text").textContent = serving.text;
   $("served-text").classList.toggle("big", clap);
   $("served-ok").textContent = res ? "GG" : "Noted 😤";
@@ -2779,10 +2856,10 @@ function finishServe(resp, emoji) {
   shade.inbox = shade.inbox.filter(x => x.id !== sh.id);
   API("respondShade", me.id, sh.id, resp === "later" ? "ok" : resp).then(() => { if (resp === "L") refreshShade(); }).catch(() => {});
   if (resp === "play" || resp === "later") {
-    const d = { id: sh.id, from: sh.from, fromName: sh.fromName, target: Number(sh.text) || 0 };
-    zDares = zDares.filter(x => x.id !== d.id).concat([d]).slice(-10); store.set("bdd:dares", zDares);
-    renderZoomiesSub();
-    if (resp === "play") { zDare = d; show("zoomies"); } else { toast("Saved. It's waiting in Zoomies.", 1800); setTimeout(maybeServe, 400); }
+    const pd = parseDare(sh.text), d = { id: sh.id, from: sh.from, fromName: sh.fromName, target: pd.target, game: pd.game };
+    aDares = aDares.filter(x => x.id !== d.id).concat([d]).slice(-10); store.set("bdd:dares", aDares);
+    renderArcSub();
+    if (resp === "play") { aDare = d; show(d.game); } else { toast("Saved. It's waiting in the Arcade.", 1800); setTimeout(maybeServe, 400); }
     renderShadeBits(); return;
   }
   if (resp === "fire") openShade(sh.from, { fire: true, replyTo: sh.id });
@@ -3071,8 +3148,56 @@ $("opt-fx").addEventListener("change", e => { store.set("bdd:fx", e.target.check
 
 // ================= ARCADE: ZOOMIES =================
 // A one-tap flyer. Just for fun: it never touches the daily scoreboard, league, awards or streaks.
-let zDares = store.get("bdd:dares") || [], zDare = null, arcade = null;
-const Z = { state: "idle", raf: 0, last: 0, W: 0, H: 0, dpr: 1, y: 0, vy: 0, pipes: [], score: 0, t: 0, dist: 0, best: Number(store.get("bdd:zbest")) || 0, dead: 0 };
+// ---------- shared arcade bits ----------
+const ARC = {
+  zoomies: { name: "Zoomies", icon: ":dawgpog:", how: "Tap anywhere to flap. Fly through the gaps, don't touch the bones." },
+  snake: { name: "Long Dawg", icon: "🦴", how: "Swipe to steer. Eat bones to grow longer. Don't hit the fence or your own tail." },
+  merge: { name: "Merge Mutts", icon: "🐶", how: "Swipe to slide every pup. Two of the same dog merge into the next one up." }
+};
+function parseDare(text) { const m = String(text).match(/^(?:([a-z]+):)?(\d+)(.*)$/) || []; const game = ARC[m[1]] ? m[1] : "zoomies"; return { game, target: Number(m[2]) || 0, rest: (m[2] || "0") + (m[3] || "") }; }
+let aDares = (store.get("bdd:dares") || []).map(d => Object.assign({ game: "zoomies" }, d)), aDare = null, arcade = null, arcTab = "zoomies";
+const aBest = Object.assign({ zoomies: Number(store.get("bdd:zbest")) || 0, snake: 0, merge: 0 }, store.get("bdd:abest") || {});
+function setBest(g, v) { if (v > (aBest[g] || 0)) { aBest[g] = v; store.set("bdd:abest", aBest); return true; } return false; }
+function dropDare(d) { aDares = aDares.filter(x => x.id !== d.id); store.set("bdd:dares", aDares); renderArcSub(); }
+// Start screen for a game: your best, any dares waiting for this game, and a Go button.
+function arcStart(game, panel, onGo) {
+  panel.innerHTML = ""; panel.hidden = false;
+  const dare = aDare && aDare.game === game ? aDare : null;
+  panel.append(el("h2", null, dare ? `Beat ${dare.target}` : ARC[game].name));
+  panel.append(el("p", null, dare ? `${dare.fromName} dared you. Your next run counts.` : ARC[game].how));
+  panel.append(el("p", null, `Your best: ${aBest[game] || 0}`));
+  if (!dare) aDares.filter(d => d.game === game).slice(-3).forEach(d => {
+    const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${d.target}`));
+    const b = el("button", "pill", "Take it"); b.addEventListener("click", e => { e.stopPropagation(); aDare = d; arcStart(game, panel, onGo); });
+    row.append(b); panel.append(row);
+  });
+  const go = el("button", "pill solid", dare ? "🐶 Let's go" : "🐶 Start"); go.addEventListener("click", e => { e.stopPropagation(); onGo(); });
+  panel.append(go);
+}
+// Game over: saves your best, answers a dare if you took one, offers a rematch or a dare.
+function arcOver(game, score, panel, onAgain, title) {
+  const newBest = setBest(game, score) && score > 0;
+  // Older servers only know Zoomies; don't let other games' scores land on its board.
+  if (score > 0 && me && (game === "zoomies" || (arcade && arcade.games))) API("submitArcade", me.id, KEY, score, game).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); }).catch(() => {});
+  panel.innerHTML = ""; panel.hidden = false;
+  panel.append(el("h2", null, newBest ? "New best! 🐶" : title || (score === 0 ? "Bonk." : "Ruff.")));
+  panel.append(el("div", "zbig", String(score)), el("p", null, `Best: ${aBest[game] || 0}`));
+  const msg = el("p"); panel.append(msg);
+  const dare = aDare && aDare.game === game ? aDare : null;
+  if (dare) {
+    aDare = null; dropDare(dare);
+    msg.textContent = score > dare.target ? `You beat ${dare.fromName}'s ${dare.target}. They'll hear about it. 😎` : `${dare.fromName}'s ${dare.target} stands. Ouch.`;
+    if (score > dare.target) celebrate();
+    if (me) API("answerDare", me.id, KEY, dare.id, score).catch(e => toast(errMsg(e), 2200));
+  } else if (newBest && score >= 5) celebrate();
+  const col = el("div", "col");
+  const again = el("button", "pill solid", "Run it back"); again.addEventListener("click", e => { e.stopPropagation(); onAgain(); });
+  col.append(again);
+  if (score > 0 && me) { const d = el("button", "pill", `🎯 Dare someone to beat ${score}`); d.addEventListener("click", e => { e.stopPropagation(); openDarePicker(game, score); }); col.append(d); }
+  panel.append(col);
+}
+function syncBests() { if (!arcade) return; const g = arcade.games || { zoomies: { myBest: arcade.myBest } }; Object.keys(g).forEach(k => setBest(k, g[k].myBest || 0)); }
+const Z = { state: "idle", raf: 0, last: 0, W: 0, H: 0, dpr: 1, y: 0, vy: 0, pipes: [], score: 0, t: 0, dist: 0, dead: 0 };
 const ZC = { grav: 1500, flap: -440, r: 18, pw: 62, space: 210 };
 const zImg = {};
 function zFace(code) {
@@ -3080,7 +3205,8 @@ function zFace(code) {
   const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(dawgSvg(code, 64).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
   return zImg[code] = img;
 }
-$("ic-zoomies").appendChild(emo(":dawgpog:", 32));
+$("ic-arcade").appendChild(emo(":dawgpog:", 32));
+document.querySelectorAll("[data-arcicon]").forEach(x => x.appendChild(emo(ARC[x.dataset.arcicon].icon, 40)));
 [":dawgW:", ":dawgpog:", ":dawgpain:"].forEach(k => { zFace(k).onload = () => { if (active === "zoomies" && Z.state !== "play" && Z.state !== "dying" && Z.W) zDraw(); }; });
 function zDark() { const c = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(); return c && parseInt(c.replace("#", "").slice(0, 2), 16) < 80; }
 function zSize() {
@@ -3170,80 +3296,201 @@ function zIdle() {
   const idle = () => { if (Z.state !== "idle" || active !== "zoomies") return; zDraw(); Z.raf = requestAnimationFrame(idle); };
   idle();
 }
-function zPanelStart() {
-  const p = $("zpanel"); p.innerHTML = ""; p.hidden = false; $("zhud").hidden = true;
-  p.append(el("h2", null, zDare ? `Beat ${zDare.target}` : "Zoomies"));
-  p.append(el("p", null, zDare ? `${zDare.fromName} dared you. Your next run counts.` : "Tap anywhere to flap. Fly through the gaps, don't touch the bones."));
-  p.append(el("p", null, `Your best: ${Z.best}`));
-  const open = zDares.filter(d => !zDare || d.id !== zDare.id);
-  if (open.length && !zDare) {
-    open.slice(-3).forEach(d => {
-      const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${d.target}`));
-      const b = el("button", "pill", "Take it"); b.addEventListener("click", e => { e.stopPropagation(); zDare = d; zPanelStart(); });
-      row.append(b); p.append(row);
-    });
-  }
-  const go = el("button", "pill solid", zDare ? "🐶 Let's go" : "🐶 Tap to start"); go.addEventListener("click", e => { e.stopPropagation(); zFlap(); });
-  p.append(go);
-}
+function zPanelStart() { $("zhud").hidden = true; arcStart("zoomies", $("zpanel"), zFlap); }
 function zOver() {
   Z.state = "over"; cancelAnimationFrame(Z.raf); zDraw();
-  const score = Z.score, newBest = score > Z.best;
-  if (newBest) { Z.best = score; store.set("bdd:zbest", score); }
-  if (score > 0 && me) API("submitArcade", me.id, KEY, score).then(a => { arcade = a; Z.best = Math.max(Z.best, a.myBest || 0); renderArcade(); renderZoomiesSub(); }).catch(() => {});
-  const p = $("zpanel"); p.innerHTML = ""; p.hidden = false;
-  p.append(el("h2", null, newBest && score > 0 ? "New best! 🐶" : score >= 10 ? hype(HYPE.win, 40 + score) : score === 0 ? "Bonk." : "Ruff."));
-  p.append(el("div", "zbig", String(score)), el("p", null, `Best: ${Z.best}`));
-  const dareMsg = el("p"); p.append(dareMsg);
-  if (zDare) {
-    const d = zDare; zDare = null;
-    zDares = zDares.filter(x => x.id !== d.id); store.set("bdd:dares", zDares); renderZoomiesSub();
-    dareMsg.textContent = score > d.target ? `You beat ${d.fromName}'s ${d.target}. They'll hear about it. 😎` : `${d.fromName}'s ${d.target} stands. Ouch.`;
-    if (score > d.target) celebrate();
-    if (me) API("answerDare", me.id, KEY, d.id, score).catch(e => toast(errMsg(e), 2200));
-  } else if (newBest && score >= 5) celebrate();
-  const col = el("div", "col");
-  const again = el("button", "pill solid", "Run it back"); again.addEventListener("click", e => { e.stopPropagation(); zIdle(); zPanelStart(); });
-  col.append(again);
-  if (score > 0 && me) { const dare = el("button", "pill", `🎯 Dare someone to beat ${score}`); dare.addEventListener("click", e => { e.stopPropagation(); openDarePicker(score); }); col.append(dare); }
-  p.append(col);
+  arcOver("zoomies", Z.score, $("zpanel"), () => { zIdle(); zPanelStart(); }, Z.score >= 10 ? hype(HYPE.win, 40 + Z.score) : null);
   Z.dead = performance.now();
 }
-function openDarePicker(score) {
+function openDarePicker(game, score) {
   const others = (shade.players || []).filter(x => me && x.id !== me.id);
   if (!others.length) { toast("Nobody to dare yet. Invite some friends.", 2200); return; }
   const list = el("div", "pickgrid");
-  others.forEach(o => {
-    const b = el("button", "pill", o.name);
-    b.addEventListener("click", () => {
-      b.disabled = true; b.textContent = "Sending…";
-      API("sendDare", me.id, o.id, KEY, score).then(st => { shade = st; closeModal(); toast(`Dare sent to ${o.name} 🎯`, 1800); })
-        .catch(e => { b.disabled = false; b.textContent = o.name; toast(errMsg(e), 2400); });
+  const q = el("input"); q.placeholder = "Search names"; q.setAttribute("aria-label", "Search names");
+  const draw = () => {
+    list.innerHTML = ""; const t = q.value.trim().toLowerCase();
+    others.filter(o => !t || o.name.toLowerCase().includes(t)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 30).forEach(o => {
+      const b = el("button", "pill", o.name);
+      b.addEventListener("click", () => {
+        b.disabled = true; b.textContent = "Sending…";
+        API("sendDare", me.id, o.id, KEY, score, game).then(st => { shade = st; closeModal(); toast(`Dare sent to ${o.name} 🎯`, 1800); })
+          .catch(e => { b.disabled = false; b.textContent = o.name; toast(errMsg(e), 2400); });
+      });
+      list.appendChild(b);
     });
-    list.appendChild(b);
-  });
-  openModal([el("h2", null, `Dare someone to beat ${score}`), el("p", "sub", "They get it next time they open the app."), list]);
+  };
+  q.addEventListener("input", draw); draw();
+  openModal([el("h2", null, `Dare someone to beat ${score}`), el("p", "sub", `In ${ARC[game].name}. They get it next time they open the app.`), others.length > 6 ? q : el("span"), list]);
 }
 function zShown() { requestAnimationFrame(() => { zIdle(); zPanelStart(); }); if (!arcade) refreshArcade(); }
 function zHidden() { if (Z.state === "play" || Z.state === "dying") { Z.state = "idle"; } cancelAnimationFrame(Z.raf); }
 $("zwrap").addEventListener("pointerdown", e => { if (e.target.closest("button") || e.target.closest(".zpanel")) return; e.preventDefault(); zFlap(); });
 document.addEventListener("keydown", e => { if (active === "zoomies" && (e.code === "Space" || e.key === "ArrowUp") && Z.state !== "over") { e.preventDefault(); zFlap(); } });
 window.addEventListener("resize", () => { if (active === "zoomies" && Z.state === "idle") zIdle(); });
-$("z-board").addEventListener("click", () => { show("scores"); scoreTab("arcade"); refreshArcade(); });
+document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = ARC[active] ? active : arcTab; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  API("getArcade", me.id, KEY).then(a => { arcade = a; Z.best = Math.max(Z.best, a.myBest || 0); store.set("bdd:zbest", Z.best); renderArcade(); renderZoomiesSub(); }).catch(() => {});
+  API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "arcade") renderArcHub(); }).catch(() => {});
 }
 function renderArcade() {
+  document.querySelectorAll("#arc-seg button").forEach(b => b.classList.toggle("on", b.dataset.arc === arcTab));
+  const g = arcade && (arcade.games ? arcade.games[arcTab] : arcTab === "zoomies" ? arcade : null);
   const fill = (ol, list) => {
     ol.innerHTML = "";
-    if (!list || !list.length) { ol.appendChild(el("li", "dim", arcade ? "No runs yet. Be the first." : "Loading…")); return; }
+    if (!list || !list.length) { ol.appendChild(el("li", "dim", arcade ? "No scores yet. Be the first." : "Loading…")); return; }
     list.forEach(x => { const rk = 1 + list.filter(y => y.n > x.n).length; const li = el("li", (rk === 1 ? "lead" : "") + (me && x.id === me.id ? " league-me" : "")); li.append(el("span", "rk", rk), el("span", "nm", x.name), el("span", "ct", String(x.n))); ol.appendChild(li); });
   };
-  fill($("z-week"), arcade && arcade.week); fill($("z-all"), arcade && arcade.all);
+  fill($("z-week"), g && g.week); fill($("z-all"), g && g.all);
+  $("arc-play").dataset.go = arcTab; $("arc-play").textContent = `🐶 Play ${ARC[arcTab].name}`;
 }
-function renderZoomiesSub() { $("sub-zoomies").textContent = zDares.length ? `🎯 ${zDares.length} dare${zDares.length > 1 ? "s" : ""} waiting` : Z.best ? `Your best: ${Z.best}` : "Tap to fly. Dodge the bones."; }
-renderZoomiesSub(); renderArcade();
+document.querySelectorAll("#arc-seg button").forEach(b => b.addEventListener("click", () => { arcTab = b.dataset.arc; renderArcade(); }));
+function renderArcSub() { $("sub-arcade").textContent = aDares.length ? `🎯 ${aDares.length} dare${aDares.length > 1 ? "s" : ""} waiting` : "Zoomies · Long Dawg · Merge Mutts"; }
+function renderArcHub() {
+  Object.keys(ARC).forEach(g => { const n = aDares.filter(d => d.game === g).length; $("ab-" + g).textContent = (aBest[g] ? `Your best: ${aBest[g]}` : "") + (n ? `${aBest[g] ? " · " : ""}🎯 ${n} dare${n > 1 ? "s" : ""}` : ""); });
+  const box = $("arc-dares"); box.innerHTML = "";
+  aDares.slice(-5).reverse().forEach(d => {
+    const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${d.target} in ${ARC[d.game].name}`));
+    const b = el("button", "pill", "Take it"); b.addEventListener("click", () => { aDare = d; show(d.game); });
+    row.append(b); box.appendChild(row);
+  });
+  if (!arcade) refreshArcade();
+}
+renderArcSub(); renderArcade();
+
+// ================= ARCADE: LONG DAWG (snake) =================
+const SN = { state: "idle", W: 0, H: 0, dpr: 1, cols: 15, rows: 20, cell: 20, ox: 0, oy: 0, body: [], dir: [1, 0], q: [], bone: null, score: 0, acc: 0, last: 0, raf: 0 };
+function sSize() {
+  const w = $("swrap"), c = $("sc"), r = w.getBoundingClientRect();
+  SN.dpr = Math.min(window.devicePixelRatio || 1, 2); SN.W = r.width; SN.H = r.height;
+  c.width = Math.round(r.width * SN.dpr); c.height = Math.round(r.height * SN.dpr);
+  SN.cols = 15; SN.cell = Math.floor((r.width - 16) / SN.cols); SN.rows = Math.max(12, Math.floor((r.height - 16) / SN.cell));
+  SN.ox = Math.round((r.width - SN.cols * SN.cell) / 2); SN.oy = Math.round((r.height - SN.rows * SN.cell) / 2);
+}
+function sReset() {
+  const y = Math.floor(SN.rows / 2); SN.body = [[5, y], [4, y], [3, y]]; SN.dir = [1, 0]; SN.q = []; SN.score = 0; SN.acc = 0; sBone();
+}
+function sBone() {
+  const free = []; for (let x = 0; x < SN.cols; x++) for (let y = 0; y < SN.rows; y++) if (!SN.body.some(b => b[0] === x && b[1] === y)) free.push([x, y]);
+  SN.bone = free[Math.floor(Math.random() * free.length)];
+}
+function sTick() { return Math.max(70, 150 - SN.score * 3); }
+function sTurn(dx, dy) {
+  if (SN.state === "idle") return;
+  const last = SN.q.length ? SN.q[SN.q.length - 1] : SN.dir;
+  if ((dx === -last[0] && dy === -last[1]) || (dx === last[0] && dy === last[1])) return;
+  if (SN.q.length < 2) SN.q.push([dx, dy]);
+}
+function sGo() { $("spanel").hidden = true; $("shud").hidden = false; $("shud").textContent = "0"; sSize(); sReset(); SN.state = "play"; SN.last = performance.now(); sLoop(); }
+function sLoop() {
+  cancelAnimationFrame(SN.raf);
+  SN.raf = requestAnimationFrame(now => {
+    if (SN.state !== "play") return;
+    SN.acc += Math.min(250, now - SN.last); SN.last = now;
+    while (SN.acc >= sTick() && SN.state === "play") { SN.acc -= sTick(); sStep(); }
+    sDraw(); if (SN.state === "play") sLoop();
+  });
+}
+function sStep() {
+  if (SN.q.length) SN.dir = SN.q.shift();
+  const h = SN.body[0], n = [h[0] + SN.dir[0], h[1] + SN.dir[1]];
+  const eat = SN.bone && n[0] === SN.bone[0] && n[1] === SN.bone[1];
+  const tail = eat ? SN.body : SN.body.slice(0, -1);
+  if (n[0] < 0 || n[1] < 0 || n[0] >= SN.cols || n[1] >= SN.rows || tail.some(b => b[0] === n[0] && b[1] === n[1])) { sDie(); return; }
+  SN.body.unshift(n); if (!eat) SN.body.pop();
+  if (eat) { SN.score++; $("shud").textContent = SN.score; chime("pop"); if (SN.score % 10 === 0) chime("win"); sBone(); }
+}
+function sDie() {
+  SN.state = "over"; chime("lose"); if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+  sDraw();
+  arcOver("snake", SN.score, $("spanel"), () => { sIdle(); }, SN.score >= 15 ? hype(HYPE.win, 60 + SN.score) : SN.score === 0 ? "Bonk." : "Ruff.");
+}
+function sDraw() {
+  const c = $("sc").getContext("2d"), dark = zDark(), k = SN.cell;
+  c.setTransform(SN.dpr, 0, 0, SN.dpr, 0, 0);
+  c.fillStyle = dark ? "#1d2a1a" : "#cfe8b8"; c.fillRect(0, 0, SN.W, SN.H);
+  for (let x = 0; x < SN.cols; x++) for (let y = 0; y < SN.rows; y++) { c.fillStyle = (x + y) % 2 ? (dark ? "#24361f" : "#b9dd9c") : (dark ? "#2a3f24" : "#c6e5aa"); c.fillRect(SN.ox + x * k, SN.oy + y * k, k, k); }
+  c.strokeStyle = dark ? "#6b4f33" : "#8a5a2b"; c.lineWidth = 4; c.strokeRect(SN.ox - 2, SN.oy - 2, SN.cols * k + 4, SN.rows * k + 4);
+  if (SN.bone) { c.font = `${Math.round(k * 1.15)}px system-ui, "Apple Color Emoji"`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("🦴", SN.ox + SN.bone[0] * k + k / 2, SN.oy + SN.bone[1] * k + k / 2 + 1); }
+  // the long dawg: a dachshund body with a bulldog head
+  const pts = SN.body.map(b => [SN.ox + b[0] * k + k / 2, SN.oy + b[1] * k + k / 2]);
+  if (pts.length > 1) {
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.strokeStyle = "#7a4a22"; c.lineWidth = k * 0.86; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke();
+    c.strokeStyle = "#b8763d"; c.lineWidth = k * 0.66; c.stroke();
+    const t = pts[pts.length - 1]; c.fillStyle = "#7a4a22"; c.beginPath(); c.arc(t[0], t[1], k * 0.18, 0, 7); c.fill();
+  }
+  const h = pts[0]; if (h) { const img = zFace(SN.state === "over" ? ":dawgpain:" : ":dawgW:"); const s = k * 1.45; if (img.complete) c.drawImage(img, h[0] - s / 2, h[1] - s / 2, s, s); }
+}
+function sIdle() { cancelAnimationFrame(SN.raf); SN.state = "idle"; sSize(); sReset(); sDraw(); $("shud").hidden = true; arcStart("snake", $("spanel"), sGo); }
+function sShown() { requestAnimationFrame(sIdle); if (!arcade) refreshArcade(); }
+function sHidden() { if (SN.state === "play") { SN.state = "idle"; } cancelAnimationFrame(SN.raf); }
+// Swipe anywhere on the board to steer (or use the arrow keys).
+function swipe(elm, fn) {
+  let sx = 0, sy = 0, on = false;
+  elm.addEventListener("pointerdown", e => { if (e.target.closest("button") || e.target.closest(".zpanel")) return; on = true; sx = e.clientX; sy = e.clientY; e.preventDefault(); });
+  elm.addEventListener("pointermove", e => { if (!on) return; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return; on = false; Math.abs(dx) > Math.abs(dy) ? fn(dx > 0 ? 1 : -1, 0) : fn(0, dy > 0 ? 1 : -1); });
+  elm.addEventListener("pointerup", () => on = false); elm.addEventListener("pointercancel", () => on = false);
+}
+swipe($("swrap"), sTurn);
+const KEYDIR = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] };
+document.addEventListener("keydown", e => { const d = KEYDIR[e.key]; if (!d) return; if (active === "snake") { e.preventDefault(); sTurn(d[0], d[1]); } else if (active === "merge") { e.preventDefault(); mMove(d[0], d[1]); } });
+window.addEventListener("resize", () => { if (active === "snake" && SN.state !== "play") sIdle(); });
+
+// ================= ARCADE: MERGE MUTTS (2048) =================
+const MT = { 2: ["🐾", "Paw", "#f3ead7"], 4: ["🐶", "Pup", "#f6dcc4"], 8: ["🐕", "Mutt", "#f4c79b"], 16: ["🐩", "Poodle", "#f2a96d"], 32: ["🦮", "Lab", "#ef8f58"], 64: ["🐕‍🦺", "Shepherd", "#ea7046"],
+  128: ["🐺", "Husky", "#f1d46a"], 256: ["🌭", "Wiener", "#efcb4f"], 512: [":dawgsus:", "Boxer", "#ecc23a"], 1024: [":dawgpog:", "Great Dane", "#e9b827"], 2048: [":dawgW:", "BIG DAWG", "#ffd23f"] };
+const MM = { g: [], score: 0, over: false, won: false, last: null };
+function mLoad() { const s = store.get("bdd:merge"); if (s && Array.isArray(s.g) && s.g.length === 16 && !s.over) { MM.g = s.g; MM.score = s.score || 0; MM.won = !!s.won; MM.over = false; return true; } return false; }
+function mSave() { store.set("bdd:merge", { g: MM.g, score: MM.score, won: MM.won, over: MM.over }); }
+function mSpawn() { const free = MM.g.map((v, i) => v ? -1 : i).filter(i => i >= 0); if (!free.length) return -1; const i = free[Math.floor(Math.random() * free.length)]; MM.g[i] = Math.random() < 0.9 ? 2 : 4; return i; }
+function mNew() { MM.g = Array(16).fill(0); MM.score = 0; MM.over = false; MM.won = false; mSpawn(); mSpawn(); mSave(); $("mpanel").hidden = true; mRender([], []); }
+function mCanMove() { for (let i = 0; i < 16; i++) { if (!MM.g[i]) return true; const x = i % 4, y = Math.floor(i / 4); if (x < 3 && MM.g[i] === MM.g[i + 1]) return true; if (y < 3 && MM.g[i] === MM.g[i + 4]) return true; } return false; }
+function mMove(dx, dy) {
+  if (MM.over || !$("mpanel").hidden) return;
+  const merged = [], before = MM.g.join(",");
+  for (let k = 0; k < 4; k++) {
+    const idx = [0, 1, 2, 3].map(t => dx ? (k * 4 + (dx > 0 ? 3 - t : t)) : ((dy > 0 ? 3 - t : t) * 4 + k));
+    const vals = idx.map(i => MM.g[i]).filter(Boolean), out = [];
+    for (let i = 0; i < vals.length; i++) {
+      if (vals[i] === vals[i + 1]) { const v = vals[i] * 2; out.push(v); MM.score += v; merged.push(idx[out.length - 1]); i++; if (v === 2048 && !MM.won) { MM.won = true; setTimeout(() => { toast("BIG DAWG! 🐶👑", 2200); celebrate(); }, 150); } }
+      else out.push(vals[i]);
+    }
+    idx.forEach((i, t) => MM.g[i] = out[t] || 0);
+  }
+  if (MM.g.join(",") === before) return;
+  const born = mSpawn(); chime("pop");
+  if (!mCanMove()) MM.over = true;
+  mSave(); mRender(merged, [born]);
+  if (MM.over) setTimeout(mOver, 450);
+}
+function mOver() {
+  store.set("bdd:merge", null);
+  arcOver("merge", MM.score, $("mpanel"), () => { mNew(); mRender([], []); }, MM.score >= 5000 ? hype(HYPE.win, 80) : "Board's full.");
+}
+function mRender(merged, born) {
+  const grid = $("mgrid");
+  if (grid.children.length !== 16) { grid.innerHTML = ""; for (let i = 0; i < 16; i++) grid.appendChild(el("div", "mcell")); }
+  MM.g.forEach((v, i) => {
+    const cell = grid.children[i]; cell.innerHTML = "";
+    if (!v) return;
+    const t = MT[v] || [":dawgpog:", "Legend", "#b993f0"];
+    const tile = el("div", "mtile" + (merged.includes(i) ? " merged" : born.includes(i) ? " new" : ""));
+    tile.style.background = t[2];
+    const e = el("span", "me"); e.appendChild(emo(t[0], 34)); tile.append(e, el("span", "mn", t[1]), el("span", "mv", String(v)));
+    cell.appendChild(tile);
+  });
+  $("m-score").textContent = MM.score; $("m-best").textContent = Math.max(aBest.merge || 0, MM.score);
+  const dare = aDare && aDare.game === "merge" ? aDare : null;
+  $("m-dare").hidden = !dare; if (dare) $("m-dare").textContent = `🎯 ${dare.fromName} dared you: beat ${dare.target}`;
+}
+function mShown() {
+  if (aDare && aDare.game === "merge") mNew(); // a dare always starts a fresh board
+  else if (!MM.g.length && !mLoad()) mNew();
+  mRender([], []);
+  if (!arcade) refreshArcade();
+}
+$("m-new").addEventListener("click", () => { if (MM.g.some(Boolean) && !MM.over && MM.score > 0 && !confirm("Start over? This board will be lost.")) return; mNew(); });
+swipe($("mwrap"), (dx, dy) => mMove(dx, dy));
 
 // ================= IDENTITY & BOOT =================
 function newId() { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = ""; const r = new Uint32Array(16); crypto.getRandomValues(r); r.forEach(x => s += a[x % a.length]); return s; }
@@ -3256,15 +3503,27 @@ function showWho() {
   return API("listPlayers").then(list => {
     whoList = list || [];
     if (!whoList.length) { showJoin(); return; }
-    const box = $("who-list"); box.innerHTML = "";
-    whoList.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
-      const b = el("button", null, p.name); b.type = "button";
-      b.addEventListener("click", () => showPin(p));
-      box.appendChild(b);
-    });
+    $("who-q").value = ""; drawWho();
     splashMode("who");
+    setTimeout(() => $("who-q").focus(), 60);
   }).catch(() => showJoin());
 }
+// Type a few letters of your name instead of scrolling a long list.
+function drawWho() {
+  const box = $("who-list"); box.innerHTML = "";
+  const q = $("who-q").value.trim().toLowerCase();
+  const all = whoList.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const few = all.length <= 6;
+  const hits = q ? all.filter(p => p.name.toLowerCase().startsWith(q)).concat(all.filter(p => !p.name.toLowerCase().startsWith(q) && p.name.toLowerCase().includes(q))) : few ? all : [];
+  hits.slice(0, 8).forEach(p => {
+    const b = el("button", null, p.name); b.type = "button";
+    b.addEventListener("click", () => showPin(p));
+    box.appendChild(b);
+  });
+  $("who-hint").textContent = q && !hits.length ? "No one by that name yet. Tap \u201cI'm new here\u201d below." : !q && !few ? `${all.length} players. Type your name to find yours.` : "";
+}
+$("who-q").addEventListener("input", drawWho);
+$("who-q").addEventListener("keydown", e => { if (e.key === "Enter") { const b = $("who-list").querySelector("button"); if (b) b.click(); } });
 function showPin(p) {
   pinFor = p;
   $("pin-q").textContent = p.hasPin ? `Hi ${p.name}! Enter your PIN` : `Hi ${p.name}! Pick a 4-digit PIN`;
