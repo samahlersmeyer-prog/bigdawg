@@ -18,7 +18,7 @@
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@600;700&family=Press+Start+2P&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: an app shell that never scrolls. Home is a stack of game cards; each game is a full-height view
    with a top bar, a play area that sizes itself to the space left, and a docked keyboard or action row. */
@@ -28,7 +28,7 @@
   --hit: #6aaa64; --near: #c9b458; --miss: #787c7e; --tile-line: #d3d6da; --tile-filled: #878a8c; --on: #ffffff;
   --g-tile: #efefe6; --g-sel: #5a594e; --g-sel-ink: #ffffff; --g0: #f9df6d; --g1: #a0c35a; --g2: #b0c4ef; --g3: #ba81c5; --g-ink: #121212;
   --cw-line: #121212; --cw-cell: #ffffff; --cw-block: #121212; --cw-word: #a7d8ff; --cw-cur: #ffda00; --cw-bad: #d33a2c; --cw-num: #121212;
-  --card-five: #d7e8d2; --card-groups: #ddd3f2; --card-mini: #cfe0f8; --card-scores: #f3e3b6; --card-strands: #c9e3df; --card-arcade: #f6d6c9;
+  --card-five: #d7e8d2; --card-groups: #ddd3f2; --card-mini: #cfe0f8; --card-scores: #f3e3b6; --card-strands: #c9e3df; --card-arcade: #f6d6c9; --card-arcade-2: #e4ecc4; --card-arcade-3: #d6d0f0;
   --st-sel: #dbd8c5; --st-word: #aedfee; --st-span: #f8cd05; --st-ink: #121212; --st-theme: #c9e3df;
   --toast-bg: #121212; --toast-ink: #ffffff; --scrim: rgba(0,0,0,0.45);
   --ui: "Libre Franklin", "Franklin Gothic Medium", "Helvetica Neue", Arial, sans-serif;
@@ -41,7 +41,7 @@
     --hit: #538d4e; --near: #b59f3b; --miss: #3a3a3c; --tile-line: #3a3a3c; --tile-filled: #6a6a6c; --on: #ffffff;
     --g-tile: #3a3a3c; --g-sel: #e8e8de; --g-sel-ink: #121212; --g-ink: #121212;
     --cw-line: #5a5a5c; --cw-cell: #1f1f21; --cw-block: #000000; --cw-word: #24486b; --cw-cur: #8a7400; --cw-bad: #ff7b6b; --cw-num: #d0d0d0;
-    --card-five: #263524; --card-groups: #2f2844; --card-mini: #1f3149; --card-scores: #43391c; --card-strands: #1f3a37; --card-arcade: #45291f;
+    --card-five: #263524; --card-groups: #2f2844; --card-mini: #1f3149; --card-scores: #43391c; --card-strands: #1f3a37; --card-arcade: #45291f; --card-arcade-2: #33391e; --card-arcade-3: #2c2747;
     --st-sel: #5a5a5c; --st-word: #2f6f82; --st-span: #b38f00; --st-ink: #f5f5f5; --st-theme: #1f3a37;
     --toast-bg: #f5f5f5; --toast-ink: #121212; --scrim: rgba(0,0,0,0.6);
     color-scheme: dark;
@@ -53,7 +53,7 @@
   --hit: #538d4e; --near: #b59f3b; --miss: #3a3a3c; --tile-line: #3a3a3c; --tile-filled: #6a6a6c; --on: #ffffff;
   --g-tile: #3a3a3c; --g-sel: #e8e8de; --g-sel-ink: #121212; --g-ink: #121212;
   --cw-line: #5a5a5c; --cw-cell: #1f1f21; --cw-block: #000000; --cw-word: #24486b; --cw-cur: #8a7400; --cw-bad: #ff7b6b; --cw-num: #d0d0d0;
-  --card-five: #263524; --card-groups: #2f2844; --card-mini: #1f3149; --card-scores: #43391c; --card-strands: #1f3a37; --card-arcade: #45291f;
+  --card-five: #263524; --card-groups: #2f2844; --card-mini: #1f3149; --card-scores: #43391c; --card-strands: #1f3a37; --card-arcade: #45291f; --card-arcade-2: #33391e; --card-arcade-3: #2c2747;
   --st-sel: #5a5a5c; --st-word: #2f6f82; --st-span: #b38f00; --st-ink: #f5f5f5; --st-theme: #1f3a37;
   --toast-bg: #f5f5f5; --toast-ink: #121212; --scrim: rgba(0,0,0,0.6);
   color-scheme: dark;
@@ -107,24 +107,9 @@ input { -webkit-user-select: text; user-select: text; }
 .arc-tile .gicon { width: 56px; height: 56px; font-size: 32px; }
 .arc-tile b { font-family: var(--title); font-size: 24px; display: block; line-height: 1.1; }
 .arc-tile small { display: block; font-size: 13px; opacity: 0.8; }
-.at-zoomies { background: var(--card-arcade); } .at-snake { background: var(--card-five); } .at-merge { background: var(--card-groups); }
+.at-zoomies { background: var(--card-arcade); } .at-snake { background: var(--card-arcade-2); } .at-fetch { background: var(--card-arcade-3); }
+.arcade-lbl span { font-weight: 600; letter-spacing: 0.04em; text-transform: none; }
 .zwrap.swipe { touch-action: none; }
-.mwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 16px; position: relative; touch-action: none; -webkit-user-select: none; user-select: none; }
-.mtop { width: 100%; max-width: 420px; display: flex; gap: 8px; align-items: stretch; }
-.mstat { flex: 1; background: var(--raise); border-radius: 10px; padding: 6px 10px; text-align: center; }
-.mstat small { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.mstat b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.mdare { width: 100%; max-width: 420px; text-align: center; font-size: 14px; font-weight: 700; background: #ffd23f; color: #121212; border-radius: 10px; padding: 6px 10px; }
-.mgrid { width: min(100%, 420px, calc(100vh - 260px)); aspect-ratio: 1; background: #bfa98a; border-radius: 14px; padding: 8px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 8px; }
-.mcell { background: rgba(255,255,255,0.28); border-radius: 9px; position: relative; display: grid; place-items: center; overflow: hidden; }
-.mtile { position: absolute; inset: 0; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #3b2a1a; font-weight: 800; line-height: 1; }
-.mtile .me { font-size: clamp(20px, 7vw, 34px); display: inline-flex; }
-.mtile .mn { font-size: clamp(9px, 2.6vw, 12px); margin-top: 3px; letter-spacing: 0.02em; }
-.mtile .mv { position: absolute; top: 4px; right: 6px; font-size: clamp(9px, 2.4vw, 11px); opacity: 0.7; }
-.mtile.new { animation: mpop 0.18s ease-out; } .mtile.merged { animation: mbump 0.2s ease-out; }
-@keyframes mpop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes mbump { 50% { transform: scale(1.12); } }
-.mwrap .zpanel { top: 50%; }
 .gtext { display: flex; flex-direction: column; min-width: 0; }
 .gtext b { font-family: var(--title); font-weight: 700; font-size: 23px; line-height: 1.1; }
 .gsub { font-size: 13.5px; color: var(--ink); opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -468,10 +453,20 @@ input { -webkit-user-select: text; user-select: text; }
           <span class="gtext"><b>Scoreboard</b><span class="gsub" id="sub-scores">See how everyone did today</span></span>
           <span class="gstat done" id="st-scores">View</span>
         </button>
-        <p class="arcade-lbl">Arcade · just for fun</p>
-        <button class="gcard c-arcade" data-go="arcade">
-          <span class="gicon" id="ic-arcade"></span>
-          <span class="gtext"><b>Arcade</b><span class="gsub" id="sub-arcade">Zoomies · Long Dawg · Merge Mutts</span></span>
+        <p class="arcade-lbl">Big Dawg Arcade <span>· just for fun</span></p>
+        <button class="gcard c-arcade at-zoomies" data-go="zoomies">
+          <span class="gicon" data-arcicon="zoomies"></span>
+          <span class="gtext"><b>Zoomies</b><span class="gsub" id="sub-zoomies">Tap to fly. Dodge the bones.</span></span>
+          <span class="gstat done">Play</span>
+        </button>
+        <button class="gcard c-arcade at-snake" data-go="snake">
+          <span class="gicon" data-arcicon="snake"></span>
+          <span class="gtext"><b>Long Dawg</b><span class="gsub" id="sub-snake">Swipe to steer. Eat bones, grow longer.</span></span>
+          <span class="gstat done">Play</span>
+        </button>
+        <button class="gcard c-arcade at-fetch" data-go="fetch">
+          <span class="gicon" data-arcicon="fetch"></span>
+          <span class="gtext"><b>Fetch Breakout</b><span class="gsub" id="sub-fetch">Bounce the ball. Smash the treats.</span></span>
           <span class="gstat done">Play</span>
         </button>
       </div>
@@ -497,26 +492,10 @@ input { -webkit-user-select: text; user-select: text; }
     <div class="donebar" id="five-done" hidden><p id="five-done-text"></p><button class="pill solid" data-results="five">See results</button></div>
   </section>
 
-  <!-- ARCADE HUB -->
-  <section class="view" id="v-arcade" hidden>
-    <header class="bar">
-      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
-      <h1>Arcade</h1>
-      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
-    </header>
-    <div class="arc-body">
-      <p class="note">Just for fun. None of this counts toward the daily scoreboard.</p>
-      <div id="arc-dares" class="stack" style="display:flex;flex-direction:column;gap:8px"></div>
-      <button class="arc-tile at-zoomies" data-go="zoomies"><span class="gicon" data-arcicon="zoomies"></span><span><b>Zoomies</b><small>Tap to fly. Dodge the bones.</small><small id="ab-zoomies"></small></span><span class="gstat">Play</span></button>
-      <button class="arc-tile at-snake" data-go="snake"><span class="gicon" data-arcicon="snake"></span><span><b>Long Dawg</b><small>Swipe to steer. Eat bones, get longer.</small><small id="ab-snake"></small></span><span class="gstat">Play</span></button>
-      <button class="arc-tile at-merge" data-go="merge"><span class="gicon" data-arcicon="merge"></span><span><b>Merge Mutts</b><small>Swipe to merge pups into a Big Dawg.</small><small id="ab-merge"></small></span><span class="gstat">Play</span></button>
-    </div>
-  </section>
-
   <!-- LONG DAWG (snake) -->
   <section class="view" id="v-snake" hidden>
     <header class="bar">
-      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
       <h1>Long Dawg</h1>
       <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
@@ -527,26 +506,23 @@ input { -webkit-user-select: text; user-select: text; }
     </div>
   </section>
 
-  <!-- MERGE MUTTS (2048) -->
-  <section class="view" id="v-merge" hidden>
+  <!-- FETCH BREAKOUT -->
+  <section class="view" id="v-fetch" hidden>
     <header class="bar">
-      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
-      <h1>Merge Mutts</h1>
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Fetch Breakout</h1>
       <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
-    <div class="mwrap" id="mwrap">
-      <div class="mtop"><div class="mstat"><small>Score</small><b id="m-score">0</b></div><div class="mstat"><small>Best</small><b id="m-best">0</b></div><button class="pill" id="m-new">New game</button></div>
-      <div class="mdare" id="m-dare" hidden></div>
-      <div class="mgrid" id="mgrid"></div>
-      <p class="note center">Swipe to slide. Two of the same dog merge into the next one up.</p>
-      <div class="zpanel" id="mpanel" hidden></div>
+    <div class="zwrap swipe" id="fwrap">
+      <canvas id="fc" aria-label="Fetch Breakout game"></canvas>
+      <div class="zpanel" id="fpanel"></div>
     </div>
   </section>
 
   <!-- ZOOMIES (arcade) -->
   <section class="view" id="v-zoomies" hidden>
     <header class="bar">
-      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
       <h1>Zoomies</h1>
       <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
@@ -695,7 +671,7 @@ input { -webkit-user-select: text; user-select: text; }
       <div class="pane" data-pane="arcade" hidden>
       <div class="box">
         <div class="sechead"><h2>Arcade</h2><span>Not on the scoreboard</span></div>
-        <div class="seg" id="arc-seg"><button data-arc="zoomies" class="on">Zoomies</button><button data-arc="snake">Long Dawg</button><button data-arc="merge">Merge</button></div>
+        <div class="seg" id="arc-seg"><button data-arc="zoomies" class="on">Zoomies</button><button data-arc="snake">Long Dawg</button><button data-arc="fetch">Fetch</button></div>
         <h3>This week's best</h3>
         <ol class="rank-list" id="z-week"></ol>
         <h3>All-time best</h3>
@@ -1842,7 +1818,7 @@ $("modal-close").addEventListener("click", closeModal);
 $("modal").addEventListener("click", e => { if (e.target === $("modal")) closeModal(); });
 
 // ---------- navigation ----------
-const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies", "arcade", "snake", "merge"];
+const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies", "snake", "fetch"];
 let active = "home", lastGame = "home";
 function show(name) {
   if (name === "back") name = lastGame;
@@ -1857,8 +1833,7 @@ function show(name) {
   if (name === "groups") renderGroups();
   if (name === "zoomies") zShown(); else zHidden();
   if (name === "snake") sShown(); else sHidden();
-  if (name === "merge") mShown();
-  if (name === "arcade") renderArcHub();
+  if (name === "fetch") fShown(); else fHidden();
   syncTimer();
   try { sessionStorage.setItem("bdd:view", name); } catch (e) {}
   setTimeout(maybeServe, 350);
@@ -3152,11 +3127,11 @@ $("opt-fx").addEventListener("change", e => { store.set("bdd:fx", e.target.check
 const ARC = {
   zoomies: { name: "Zoomies", icon: ":dawgpog:", how: "Tap anywhere to flap. Fly through the gaps, don't touch the bones." },
   snake: { name: "Long Dawg", icon: "🦴", how: "Swipe to steer. Eat bones to grow longer. Don't hit the fence or your own tail." },
-  merge: { name: "Merge Mutts", icon: "🐶", how: "Swipe to slide every pup. Two of the same dog merge into the next one up." }
+  fetch: { name: "Fetch Breakout", icon: "🎾", how: "Drag to move the dog bed. Tap to launch the ball. Smash every treat brick and don't let the ball get by you." }
 };
 function parseDare(text) { const m = String(text).match(/^(?:([a-z]+):)?(\d+)(.*)$/) || []; const game = ARC[m[1]] ? m[1] : "zoomies"; return { game, target: Number(m[2]) || 0, rest: (m[2] || "0") + (m[3] || "") }; }
-let aDares = (store.get("bdd:dares") || []).map(d => Object.assign({ game: "zoomies" }, d)), aDare = null, arcade = null, arcTab = "zoomies";
-const aBest = Object.assign({ zoomies: Number(store.get("bdd:zbest")) || 0, snake: 0, merge: 0 }, store.get("bdd:abest") || {});
+let aDares = (store.get("bdd:dares") || []).map(d => Object.assign({ game: "zoomies" }, d)).filter(d => ARC[d.game]), aDare = null, arcade = null, arcTab = "zoomies";
+const aBest = Object.assign({ zoomies: Number(store.get("bdd:zbest")) || 0, snake: 0, fetch: 0 }, store.get("bdd:abest") || {});
 function setBest(g, v) { if (v > (aBest[g] || 0)) { aBest[g] = v; store.set("bdd:abest", aBest); return true; } return false; }
 function dropDare(d) { aDares = aDares.filter(x => x.id !== d.id); store.set("bdd:dares", aDares); renderArcSub(); }
 // Start screen for a game: your best, any dares waiting for this game, and a Go button.
@@ -3205,8 +3180,7 @@ function zFace(code) {
   const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(dawgSvg(code, 64).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
   return zImg[code] = img;
 }
-$("ic-arcade").appendChild(emo(":dawgpog:", 32));
-document.querySelectorAll("[data-arcicon]").forEach(x => x.appendChild(emo(ARC[x.dataset.arcicon].icon, 40)));
+document.querySelectorAll("[data-arcicon]").forEach(x => x.appendChild(emo(ARC[x.dataset.arcicon].icon, 30)));
 [":dawgW:", ":dawgpog:", ":dawgpain:"].forEach(k => { zFace(k).onload = () => { if (active === "zoomies" && Z.state !== "play" && Z.state !== "dying" && Z.W) zDraw(); }; });
 function zDark() { const c = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(); return c && parseInt(c.replace("#", "").slice(0, 2), 16) < 80; }
 function zSize() {
@@ -3330,7 +3304,7 @@ window.addEventListener("resize", () => { if (active === "zoomies" && Z.state ==
 document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = ARC[active] ? active : arcTab; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "arcade") renderArcHub(); }).catch(() => {});
+  API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); }).catch(() => {});
 }
 function renderArcade() {
   document.querySelectorAll("#arc-seg button").forEach(b => b.classList.toggle("on", b.dataset.arc === arcTab));
@@ -3344,16 +3318,12 @@ function renderArcade() {
   $("arc-play").dataset.go = arcTab; $("arc-play").textContent = `🐶 Play ${ARC[arcTab].name}`;
 }
 document.querySelectorAll("#arc-seg button").forEach(b => b.addEventListener("click", () => { arcTab = b.dataset.arc; renderArcade(); }));
-function renderArcSub() { $("sub-arcade").textContent = aDares.length ? `🎯 ${aDares.length} dare${aDares.length > 1 ? "s" : ""} waiting` : "Zoomies · Long Dawg · Merge Mutts"; }
-function renderArcHub() {
-  Object.keys(ARC).forEach(g => { const n = aDares.filter(d => d.game === g).length; $("ab-" + g).textContent = (aBest[g] ? `Your best: ${aBest[g]}` : "") + (n ? `${aBest[g] ? " · " : ""}🎯 ${n} dare${n > 1 ? "s" : ""}` : ""); });
-  const box = $("arc-dares"); box.innerHTML = "";
-  aDares.slice(-5).reverse().forEach(d => {
-    const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${d.target} in ${ARC[d.game].name}`));
-    const b = el("button", "pill", "Take it"); b.addEventListener("click", () => { aDare = d; show(d.game); });
-    row.append(b); box.appendChild(row);
+const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
+function renderArcSub() {
+  Object.keys(ARC).forEach(g => {
+    const n = aDares.filter(d => d.game === g).length;
+    $("sub-" + g).textContent = n ? `🎯 ${n} dare${n > 1 ? "s" : ""} waiting` : aBest[g] ? `Your best: ${aBest[g]}` : ARC_BLURB[g];
   });
-  if (!arcade) refreshArcade();
 }
 renderArcSub(); renderArcade();
 
@@ -3433,64 +3403,107 @@ function swipe(elm, fn) {
 }
 swipe($("swrap"), sTurn);
 const KEYDIR = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] };
-document.addEventListener("keydown", e => { const d = KEYDIR[e.key]; if (!d) return; if (active === "snake") { e.preventDefault(); sTurn(d[0], d[1]); } else if (active === "merge") { e.preventDefault(); mMove(d[0], d[1]); } });
+document.addEventListener("keydown", e => { const d = KEYDIR[e.key]; if (!d) return; if (active === "snake") { e.preventDefault(); sTurn(d[0], d[1]); } else if (active === "fetch" && d[1] === 0) { e.preventDefault(); FB.key = d[0]; } });
 window.addEventListener("resize", () => { if (active === "snake" && SN.state !== "play") sIdle(); });
 
-// ================= ARCADE: MERGE MUTTS (2048) =================
-const MT = { 2: ["🐾", "Paw", "#f3ead7"], 4: ["🐶", "Pup", "#f6dcc4"], 8: ["🐕", "Mutt", "#f4c79b"], 16: ["🐩", "Poodle", "#f2a96d"], 32: ["🦮", "Lab", "#ef8f58"], 64: ["🐕‍🦺", "Shepherd", "#ea7046"],
-  128: ["🐺", "Husky", "#f1d46a"], 256: ["🌭", "Wiener", "#efcb4f"], 512: [":dawgsus:", "Boxer", "#ecc23a"], 1024: [":dawgpog:", "Great Dane", "#e9b827"], 2048: [":dawgW:", "BIG DAWG", "#ffd23f"] };
-const MM = { g: [], score: 0, over: false, won: false, last: null };
-function mLoad() { const s = store.get("bdd:merge"); if (s && Array.isArray(s.g) && s.g.length === 16 && !s.over) { MM.g = s.g; MM.score = s.score || 0; MM.won = !!s.won; MM.over = false; return true; } return false; }
-function mSave() { store.set("bdd:merge", { g: MM.g, score: MM.score, won: MM.won, over: MM.over }); }
-function mSpawn() { const free = MM.g.map((v, i) => v ? -1 : i).filter(i => i >= 0); if (!free.length) return -1; const i = free[Math.floor(Math.random() * free.length)]; MM.g[i] = Math.random() < 0.9 ? 2 : 4; return i; }
-function mNew() { MM.g = Array(16).fill(0); MM.score = 0; MM.over = false; MM.won = false; mSpawn(); mSpawn(); mSave(); $("mpanel").hidden = true; mRender([], []); }
-function mCanMove() { for (let i = 0; i < 16; i++) { if (!MM.g[i]) return true; const x = i % 4, y = Math.floor(i / 4); if (x < 3 && MM.g[i] === MM.g[i + 1]) return true; if (y < 3 && MM.g[i] === MM.g[i + 4]) return true; } return false; }
-function mMove(dx, dy) {
-  if (MM.over || !$("mpanel").hidden) return;
-  const merged = [], before = MM.g.join(",");
-  for (let k = 0; k < 4; k++) {
-    const idx = [0, 1, 2, 3].map(t => dx ? (k * 4 + (dx > 0 ? 3 - t : t)) : ((dy > 0 ? 3 - t : t) * 4 + k));
-    const vals = idx.map(i => MM.g[i]).filter(Boolean), out = [];
-    for (let i = 0; i < vals.length; i++) {
-      if (vals[i] === vals[i + 1]) { const v = vals[i] * 2; out.push(v); MM.score += v; merged.push(idx[out.length - 1]); i++; if (v === 2048 && !MM.won) { MM.won = true; setTimeout(() => { toast("BIG DAWG! 🐶👑", 2200); celebrate(); }, 150); } }
-      else out.push(vals[i]);
-    }
-    idx.forEach((i, t) => MM.g[i] = out[t] || 0);
+// ================= ARCADE: FETCH BREAKOUT =================
+// Arkanoid-style: drag the dog bed, bounce the tennis ball, smash rows of treat bricks.
+const FB = { state: "idle", W: 0, H: 0, dpr: 1, raf: 0, last: 0, px: 0, tx: 0, pw: 84, key: 0, bx: 0, by: 0, vx: 0, vy: 0, stuck: true, bricks: [], level: 1, score: 0, lives: 3, hurt: 0, pops: [] };
+const TREATS = [["🦴", "#f3ead7"], ["🥓", "#f2a6a0"], ["🧀", "#f6d36b"], ["🍪", "#d9a86c"], ["🍖", "#e98d6b"], ["🥩", "#e57a7a"]];
+function fSize() {
+  const w = $("fwrap"), c = $("fc"), r = w.getBoundingClientRect();
+  FB.dpr = Math.min(window.devicePixelRatio || 1, 2); FB.W = r.width; FB.H = r.height;
+  c.width = Math.round(r.width * FB.dpr); c.height = Math.round(r.height * FB.dpr);
+  FB.pw = Math.max(70, Math.min(110, r.width * 0.22));
+}
+function fLevel() {
+  const cols = 7, rows = Math.min(7, 3 + FB.level), gap = 5, bw = (FB.W - 20 - gap * (cols - 1)) / cols, bh = 22;
+  FB.bricks = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const tough = FB.level >= 2 && r === 0;
+    FB.bricks.push({ x: 10 + c * (bw + gap), y: 54 + r * (bh + gap), w: bw, h: bh, hp: tough ? 2 : 1, t: TREATS[(r + FB.level - 1) % TREATS.length] });
   }
-  if (MM.g.join(",") === before) return;
-  const born = mSpawn(); chime("pop");
-  if (!mCanMove()) MM.over = true;
-  mSave(); mRender(merged, [born]);
-  if (MM.over) setTimeout(mOver, 450);
+  fStick();
 }
-function mOver() {
-  store.set("bdd:merge", null);
-  arcOver("merge", MM.score, $("mpanel"), () => { mNew(); mRender([], []); }, MM.score >= 5000 ? hype(HYPE.win, 80) : "Board's full.");
+function fStick() { FB.stuck = true; FB.vx = 0; FB.vy = 0; FB.bx = FB.px; FB.by = FB.H - 64 - 9; }
+function fReset() { FB.level = 1; FB.score = 0; FB.lives = 3; FB.px = FB.tx = FB.W / 2; FB.pops = []; fLevel(); }
+function fSpeed() { return Math.min(580, 350 + FB.level * 30); }
+function fLaunch() { if (FB.state !== "play" || !FB.stuck) return; FB.stuck = false; const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.7, sp = fSpeed(); FB.vx = Math.cos(a) * sp; FB.vy = Math.sin(a) * sp; chime("pop"); }
+function fGo() { $("fpanel").hidden = true; fSize(); fReset(); FB.state = "play"; FB.last = performance.now(); fLoop(); }
+function fLoop() {
+  cancelAnimationFrame(FB.raf);
+  FB.raf = requestAnimationFrame(now => { const dt = Math.min(0.033, (now - FB.last) / 1000); FB.last = now; if (FB.state === "play") fStep(dt); fDraw(); if (FB.state === "play") fLoop(); });
 }
-function mRender(merged, born) {
-  const grid = $("mgrid");
-  if (grid.children.length !== 16) { grid.innerHTML = ""; for (let i = 0; i < 16; i++) grid.appendChild(el("div", "mcell")); }
-  MM.g.forEach((v, i) => {
-    const cell = grid.children[i]; cell.innerHTML = "";
-    if (!v) return;
-    const t = MT[v] || [":dawgpog:", "Legend", "#b993f0"];
-    const tile = el("div", "mtile" + (merged.includes(i) ? " merged" : born.includes(i) ? " new" : ""));
-    tile.style.background = t[2];
-    const e = el("span", "me"); e.appendChild(emo(t[0], 34)); tile.append(e, el("span", "mn", t[1]), el("span", "mv", String(v)));
-    cell.appendChild(tile);
+function fStep(dt) {
+  const py = FB.H - 64, R = 9;
+  if (FB.key) FB.tx += FB.key * 420 * dt;
+  FB.tx = Math.max(FB.pw / 2 + 4, Math.min(FB.W - FB.pw / 2 - 4, FB.tx));
+  FB.px += (FB.tx - FB.px) * Math.min(1, dt * 18);
+  if (FB.stuck) { FB.bx = FB.px; FB.by = py - R; return; }
+  const n = 4;
+  for (let i = 0; i < n; i++) {
+    const ox = FB.bx, oy = FB.by; FB.bx += FB.vx * dt / n; FB.by += FB.vy * dt / n;
+    if (FB.bx < R) { FB.bx = R; FB.vx = Math.abs(FB.vx); } if (FB.bx > FB.W - R) { FB.bx = FB.W - R; FB.vx = -Math.abs(FB.vx); }
+    if (FB.by < 30 + R) { FB.by = 30 + R; FB.vy = Math.abs(FB.vy); }
+    // the dog bed: where it hits decides the bounce angle
+    if (FB.vy > 0 && FB.by + R >= py && FB.by + R <= py + 14 && Math.abs(FB.bx - FB.px) <= FB.pw / 2 + R) {
+      const off = (FB.bx - FB.px) / (FB.pw / 2), sp = Math.min(fSpeed() + 40, Math.hypot(FB.vx, FB.vy) * 1.01), a = -Math.PI / 2 + off * 1.05;
+      FB.vx = Math.cos(a) * sp; FB.vy = Math.sin(a) * sp; FB.by = py - R; chime("pop");
+    }
+    for (const b of FB.bricks) {
+      if (b.hp <= 0 || FB.bx + R < b.x || FB.bx - R > b.x + b.w || FB.by + R < b.y || FB.by - R > b.y + b.h) continue;
+      if (oy + R <= b.y || oy - R >= b.y + b.h) FB.vy = -FB.vy; else FB.vx = -FB.vx;
+      FB.bx = ox; FB.by = oy; b.hp--;
+      if (b.hp <= 0) { FB.score += 10 * FB.level; FB.pops.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0.4, e: b.t[0] }); chime("pop"); }
+      break;
+    }
+    if (FB.by > FB.H + R) {
+      FB.lives--; chime("lose"); if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+      if (FB.lives <= 0) { fDie(); return; }
+      toast(`${FB.lives} ball${FB.lives > 1 ? "s" : ""} left`, 1000); fStick(); return;
+    }
+  }
+  FB.pops.forEach(p => p.t -= dt); FB.pops = FB.pops.filter(p => p.t > 0);
+  if (!FB.bricks.some(b => b.hp > 0)) { FB.score += 100 * FB.level; FB.level++; chime("win"); toast(`Level ${FB.level}! 🎾`, 1200); fLevel(); }
+}
+function fDie() { FB.state = "over"; fDraw(); arcOver("fetch", FB.score, $("fpanel"), fIdle, FB.level >= 3 ? hype(HYPE.win, 70 + FB.level) : "Ball's gone."); }
+function fDraw() {
+  const c = $("fc").getContext("2d"), W = FB.W, H = FB.H, py = H - 64;
+  c.setTransform(FB.dpr, 0, 0, FB.dpr, 0, 0);
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1f3b73"); g.addColorStop(1, "#3c6fb0"); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = "rgba(255,255,255,0.06)"; for (let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2); // CRT scanlines
+  c.textAlign = "center"; c.textBaseline = "middle";
+  FB.bricks.forEach(b => {
+    if (b.hp <= 0) return;
+    c.fillStyle = b.hp > 1 ? "#c7c7d1" : b.t[1]; c.fillRect(b.x, b.y, b.w, b.h);
+    c.fillStyle = "rgba(255,255,255,0.45)"; c.fillRect(b.x, b.y, b.w, 3); c.fillStyle = "rgba(0,0,0,0.22)"; c.fillRect(b.x, b.y + b.h - 3, b.w, 3);
+    c.font = '14px system-ui, "Apple Color Emoji"'; c.fillText(b.hp > 1 ? "🔩" : b.t[0], b.x + b.w / 2, b.y + b.h / 2 + 1);
   });
-  $("m-score").textContent = MM.score; $("m-best").textContent = Math.max(aBest.merge || 0, MM.score);
-  const dare = aDare && aDare.game === "merge" ? aDare : null;
-  $("m-dare").hidden = !dare; if (dare) $("m-dare").textContent = `🎯 ${dare.fromName} dared you: beat ${dare.target}`;
+  FB.pops.forEach(p => { c.globalAlpha = p.t / 0.4; c.font = '20px system-ui, "Apple Color Emoji"'; c.fillText(p.e, p.x, p.y - (0.4 - p.t) * 40); c.globalAlpha = 1; });
+  // dog bed paddle with the Big Dawg riding it
+  c.fillStyle = "#8a4b2a"; c.beginPath(); if (c.roundRect) c.roundRect(FB.px - FB.pw / 2, py, FB.pw, 14, 7); else c.rect(FB.px - FB.pw / 2, py, FB.pw, 14); c.fill();
+  c.fillStyle = "#e9c48f"; c.fillRect(FB.px - FB.pw / 2 + 8, py + 3, FB.pw - 16, 5);
+  const img = zFace(FB.state === "over" ? ":dawgpain:" : FB.stuck ? ":dawgpog:" : ":dawgW:"); if (img.complete) c.drawImage(img, FB.px - 15, py + 12, 30, 30);
+  c.font = '18px system-ui, "Apple Color Emoji"'; c.fillText("🎾", FB.bx, FB.by + 1);
+  c.font = "11px 'Press Start 2P', monospace"; c.fillStyle = "#fff"; c.textAlign = "left"; c.fillText(`SCORE ${FB.score}`, 10, 16);
+  c.textAlign = "right"; c.fillText("🎾".repeat(Math.max(0, FB.lives)), W - 8, 16);
+  c.textAlign = "center"; c.fillStyle = "#ffd23f"; c.fillText(`LEVEL ${FB.level}`, W / 2, 16);
+  if (FB.state === "play" && FB.stuck) { c.fillStyle = "#fff"; c.font = "10px 'Press Start 2P', monospace"; c.fillText("TAP TO LAUNCH", W / 2, py - 60); }
 }
-function mShown() {
-  if (aDare && aDare.game === "merge") mNew(); // a dare always starts a fresh board
-  else if (!MM.g.length && !mLoad()) mNew();
-  mRender([], []);
-  if (!arcade) refreshArcade();
-}
-$("m-new").addEventListener("click", () => { if (MM.g.some(Boolean) && !MM.over && MM.score > 0 && !confirm("Start over? This board will be lost.")) return; mNew(); });
-swipe($("mwrap"), (dx, dy) => mMove(dx, dy));
+function fIdle() { cancelAnimationFrame(FB.raf); FB.state = "idle"; fSize(); fReset(); fDraw(); arcStart("fetch", $("fpanel"), fGo); }
+function fShown() { requestAnimationFrame(fIdle); if (!arcade) refreshArcade(); }
+function fHidden() { if (FB.state === "play") FB.state = "idle"; cancelAnimationFrame(FB.raf); }
+(function () {
+  const w = $("fwrap"); let drag = false, moved = 0, sx = 0;
+  const at = e => { const r = w.getBoundingClientRect(); FB.tx = e.clientX - r.left; };
+  w.addEventListener("pointerdown", e => { if (e.target.closest("button") || e.target.closest(".zpanel")) return; drag = true; moved = 0; sx = e.clientX; at(e); e.preventDefault(); });
+  w.addEventListener("pointermove", e => { if (!drag) return; moved = Math.max(moved, Math.abs(e.clientX - sx)); at(e); });
+  w.addEventListener("pointerup", () => { if (drag && moved < 12) fLaunch(); drag = false; });
+  w.addEventListener("pointercancel", () => drag = false);
+  document.addEventListener("keyup", e => { if (KEYDIR[e.key] && KEYDIR[e.key][1] === 0) FB.key = 0; });
+  document.addEventListener("keydown", e => { if (active === "fetch" && (e.code === "Space" || e.key === "ArrowUp")) { e.preventDefault(); fLaunch(); } });
+})();
+window.addEventListener("resize", () => { if (active === "fetch" && FB.state !== "play") fIdle(); });
 
 // ================= IDENTITY & BOOT =================
 function newId() { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = ""; const r = new Uint32Array(16); crypto.getRandomValues(r); r.forEach(x => s += a[x % a.length]); return s; }
