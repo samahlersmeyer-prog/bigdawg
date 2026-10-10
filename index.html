@@ -119,6 +119,10 @@ input { -webkit-user-select: text; user-select: text; }
 .ic-strands { position: relative; width: 36px; height: 36px; }
 .ic-strands i { position: absolute; width: 13px; height: 13px; border-radius: 50%; display: block; }
 .ic-strands svg { position: absolute; inset: 0; width: 36px; height: 36px; }
+.fastcta { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: 14px; background: #ffd23f; color: #121212; text-decoration: none; text-align: left; box-shadow: 0 3px 0 #121212; border: 2px solid #121212; }
+.fastcta[hidden] { display: none; }
+.fastcta b { font-size: 17px; font-weight: 800; } .fastcta span { font-size: 13px; opacity: 0.8; }
+.splash .fastcta { text-align: center; align-items: center; margin-top: 8px; max-width: 320px; }
 .tip { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: var(--muted); display: flex; gap: 10px; align-items: flex-start; }
 .tip b { color: var(--ink); }
 .tip button { margin-left: auto; color: var(--muted); font-size: 13px; text-decoration: underline; flex: none; }
@@ -409,6 +413,10 @@ input { -webkit-user-select: text; user-select: text; }
     </header>
     <div class="home-body">
       <p class="hello" id="hello"></p>
+      <a class="fastcta" id="fast-tip" target="_top" href="#" hidden>
+        <b>⚡ Big Dawg loads fast AF now</b>
+        <span>Tap here, then Share → Add to Home Screen. Same scores, same crew.</span>
+      </a>
       <div class="cards">
         <button class="gcard c-five" data-go="five">
           <span class="gicon"><span class="ic-five"><i style="background:var(--hit)"></i><i style="background:var(--near)"></i><i style="background:var(--miss)"></i></span></span>
@@ -441,10 +449,6 @@ input { -webkit-user-select: text; user-select: text; }
           <span class="gtext"><b>Zoomies</b><span class="gsub" id="sub-zoomies">Tap to fly. Dodge the bones.</span></span>
           <span class="gstat done">Play</span>
         </button>
-      </div>
-      <div class="tip" id="fast-tip" hidden>
-        <span><b>🚀 New, faster Big Dawg:</b> opens instantly. Tap Open, then in Safari tap Share → Add to Home Screen.</span>
-        <a class="pill solid" id="fast-go" target="_top" href="#" style="margin-left:auto;flex:none;text-decoration:none;padding:6px 14px">Open</a>
       </div>
       <div class="tip" id="install-tip" hidden>
         <span><b>Make it an app:</b> in Safari, tap Share, then Add to Home Screen. It opens full screen and remembers you.</span>
@@ -675,6 +679,7 @@ input { -webkit-user-select: text; user-select: text; }
   <div class="wordmark">Big Dawg Daily</div>
   <p class="tagline">Four puzzles a day with your crew</p>
   <div class="dotload" id="splash-load"><i></i><i></i><i></i></div>
+  <a class="fastcta" id="fast-splash" target="_top" href="#" hidden><b>⚡ Tired of waiting? Big Dawg loads fast AF now</b><span>Tap here</span></a>
   <div class="choices" id="who" hidden>
     <h2>Who's playing?</h2>
     <div class="whogrid" id="who-list"></div>
@@ -1666,6 +1671,8 @@ const store = {
 const hasServer = () => !!(window.google && google.script && google.script.run);
 // When the page is hosted outside Google (GitHub Pages), it talks to the script's JSON API instead.
 const FAST_URL = "https://samahlersmeyer-prog.github.io/bigdawg/".indexOf("__") === 0 ? "" : "https://samahlersmeyer-prog.github.io/bigdawg/"; // the GitHub Pages copy, once it exists
+const fastLink = () => { let id = ""; try { const m = JSON.parse(localStorage.getItem("bdd:me") || "null"); id = (m && m.id) || ""; } catch (e) {} try { if (me && me.id) id = me.id; } catch (e) {} return FAST_URL + (id ? "?p=" + encodeURIComponent(id) : ""); };
+if (FAST_URL && window.google && google.script && google.script.run) { const a = document.getElementById("fast-splash"); if (a) { a.href = fastLink(); a.hidden = false; } }
 const SERVER_URL = "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec".indexOf("__") === 0 ? "" : "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec";
 const STATIC = !hasServer() && !!SERVER_URL;
 function callServer(fn, ...args) {
@@ -1820,7 +1827,7 @@ function renderHome() {
   let standalone = false; try { standalone = !!(window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches || (window.top && window.top.navigator && window.top.navigator.standalone)); } catch (e) {}
   const fast = hasServer() && FAST_URL;
   $("fast-tip").hidden = !fast;
-  if (fast) $("fast-go").href = FAST_URL + (me ? "?p=" + encodeURIComponent(me.id) : "");
+  if (fast) $("fast-tip").href = fastLink();
   $("install-tip").hidden = fast || standalone || !!store.get("bdd:tipdone") || !/iPhone|iPad/.test(navigator.userAgent);
 }
 $("tip-close").addEventListener("click", () => { store.set("bdd:tipdone", 1); $("install-tip").hidden = true; });
