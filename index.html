@@ -458,7 +458,7 @@ input { -webkit-user-select: text; user-select: text; }
   <section class="view" id="v-home">
     <header class="bar home-bar">
       <div class="wordmark">Big Dawg Daily</div>
-      <div class="bar-r"><button class="icon bell" id="home-bell" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span class="bell-n" id="bell-n" hidden></span></button><button class="icon" id="home-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.3"/></svg></button><button class="icon" data-help="about" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button></div>
+      <div class="bar-r"><button class="icon" id="home-idea" aria-label="Send feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button><button class="icon bell" id="home-bell" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span class="bell-n" id="bell-n" hidden></span></button><button class="icon" id="home-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.3"/></svg></button><button class="icon" data-help="about" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button></div>
     </header>
     <div class="home-body">
       <p class="hello" id="hello"></p>
@@ -724,7 +724,7 @@ input { -webkit-user-select: text; user-select: text; }
         <div class="sechead"><h2>This week</h2><span id="league-range"></span></div>
         <ol class="rank-list" id="league-list"></ol>
         <p class="note" id="league-champ"></p>
-        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 5 for fastest, then 4, 3, 2, 1. Your best 5 days count, so a day or two off won't sink you. Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
+        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you. Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
       </div>
       <div class="box" id="awards" hidden>
         <div class="sechead"><h2 id="awards-title">Weekly awards</h2><span id="awards-sub"></span></div>
@@ -2650,11 +2650,14 @@ function stat(label, nodes) { const d = el("div", "stat"); const v = el("span", 
 const dash = () => el("span", "dim", "–");
 // Scoreboard order: most games finished, then fewest Five guesses + Groups mistakes, then fastest Mini + Strands.
 const doneCount = x => (x.t.f ? 1 : 0) + (x.t.g ? 1 : 0) + (x.t.c ? 1 : 0) + (x.t.s ? 1 : 0);
+// Daily board order = the same points as the league (Five 5, Groups 5, Mini 6, Strands 6), ties by total time.
+let RANKPTS = {};
 function rankCmp(a, b) {
-  const fs = x => x.t.f ? (x.t.f.w ? x.t.f.n : 7) : 0, gs = x => x.t.g ? (x.t.g.w ? x.t.g.m : 5) : 0, cs = x => (x.t.c ? x.t.c.t : 5e8) + (x.t.s ? x.t.s.t + 30 * x.t.s.h : 5e8);
-  return doneCount(b) - doneCount(a) || (fs(a) + gs(a)) - (fs(b) + gs(b)) || cs(a) - cs(b);
+  const cs = x => (x.t.c ? x.t.c.t + (x.t.c.k ? 30 : 0) : 5e8) + (x.t.s ? x.t.s.t + 30 * x.t.s.h : 5e8);
+  return (RANKPTS[b.id] || 0) - (RANKPTS[a.id] || 0) || doneCount(b) - doneCount(a) || cs(a) - cs(b);
 }
-const boardOrder = b => b ? b.players.map(p => ({ id: p.id, name: p.name, t: p.t || {} })).filter(x => doneCount(x)).sort(rankCmp) : [];
+const sortBoard = list => { RANKPTS = dayPts(list); return list.sort(rankCmp); };
+const boardOrder = b => b ? sortBoard(b.players.map(p => ({ id: p.id, name: p.name, t: p.t || {} })).filter(x => doneCount(x))) : [];
 function renderScores() {
   $("scores-date").textContent = now.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · No. " + NUM;
   if (document.activeElement !== $("nick")) $("nick").value = me ? me.name : "";
@@ -2667,7 +2670,7 @@ function renderScores() {
   mine.t = Object.assign({}, mine.t, todayEntry());
   if (!mine.s && (mine.t.f || mine.t.g || mine.t.c || mine.t.s)) mine.s = 1;
   const rows = list.filter(x => x.id === me.id || x.t.f || x.t.g || x.t.c || x.t.s);
-  rows.sort(rankCmp);
+  sortBoard(rows);
   body.innerHTML = "";
   rows.forEach((x, idx) => {
     const li = el("li"); const head = el("div", "phead");
@@ -2931,6 +2934,17 @@ function openBell() {
   if (ids.length && me) API("markSeen", me.id, ids).catch(() => {});
 }
 $("home-bell").addEventListener("click", openBell);
+$("home-idea").addEventListener("click", () => {
+  const ta = el("textarea", "copybox"); ta.rows = 5; ta.maxLength = 1000; ta.placeholder = "What would make Big Dawg better? Bugs, ideas, game requests…";
+  const go = el("button", "pill solid", "Send to Sam"), msg = el("p", "note center");
+  go.addEventListener("click", () => {
+    const t = ta.value.trim(); if (!t || !me) { msg.textContent = "Type something first."; return; }
+    go.disabled = true; msg.textContent = "Sending…";
+    API("sendFeedback", me.id, t).then(() => { closeModal(); toast("Sent! Thanks for the idea 🐶", 2000); }).catch(e => { go.disabled = false; msg.textContent = errMsg(e); });
+  });
+  openModal([el("h2", null, "Ideas & feedback"), el("p", "sub", "Goes straight to Sam."), ta, go, msg]);
+  setTimeout(() => ta.focus(), 80);
+});
 function maybeServe() {
   renderBell();
   const next = (shade.inbox || []).find(worthy);
@@ -3007,7 +3021,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-shad
 // Shade is earned: you can only throw it at someone you're beating today (same points as the league).
 function dayPts(list) {
   const pts = {}; list.forEach(p => { const t = p.t || {}; pts[p.id] = 0; if (t.f && t.f.w) pts[p.id] += Math.min(5, 7 - t.f.n); if (t.g && t.g.w) pts[p.id] += 5 - t.g.m; });
-  const ranked = (k, sc) => list.filter(p => p.t && p.t[k]).sort((a, b) => sc(a.t[k]) - sc(b.t[k])).forEach((p, i) => pts[p.id] += Math.max(1, 5 - i));
+  const ranked = (k, sc) => list.filter(p => p.t && p.t[k]).sort((a, b) => sc(a.t[k]) - sc(b.t[k])).forEach((p, i) => pts[p.id] += Math.max(1, 6 - i));
   ranked("c", c => c.t + (c.k ? 30 : 0)); ranked("s", x => x.t + 30 * x.h);
   return pts;
 }
