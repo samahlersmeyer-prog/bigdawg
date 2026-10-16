@@ -312,6 +312,8 @@ input { -webkit-user-select: text; user-select: text; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); }
 .chip.on { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.shade-chips { display: grid !important; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 6px; justify-content: start; overflow-x: auto; padding-bottom: 6px; mask-image: linear-gradient(90deg, #000 85%, transparent); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.shade-chips .chip { flex: none; }
 .shade-edit { width: 100%; resize: none; border: 2px dashed transparent; font-family: inherit; outline: none; display: block; }
 .shade-edit:focus { border-color: var(--ink); }
 .shadecard { margin: 0; padding: 16px 18px; border-radius: 12px; background: var(--card-scores); color: var(--ink); font-size: 16.5px; line-height: 1.45; font-weight: 500; position: relative; -webkit-user-select: text; user-select: text; }
@@ -2719,38 +2721,78 @@ $("switch-player").addEventListener("click", () => {
 // ================= SHADE: roast generator =================
 // Short, stat-aware one-liners with a generational (or Shakespearean, or British) flavor.
 const STYLES = {
-  bard: { label: "🎭 The Bard",
-    open: ["Hark!", "Fie!", "Zounds!", "Forsooth!", "Alack!"],
-    ins: ["cream-faced loon", "lily-livered knave", "beef-witted clotpole", "rump-fed ronyon", "pribbling hedge-pig"],
-    close: ["Get thee hence.", "Exit, pursued by shame.", "Thou art undone.", "Methinks thou stinks."] },
-  brit: { label: "🇬🇧 Brit",
-    open: ["Oi!", "Blimey!", "Cor!", "Right then:"],
-    ins: ["muppet", "plonker", "numpty", "wally", "donut", "pillock"],
-    close: ["Bottled it.", "Shambolic.", "Absolute scenes.", "Have a word with yourself."] },
+  greatest: { label: "🎖️ Greatest Gen",
+    open: ["Now see here,", "Good grief!", "In my day we walked uphill both ways:", "Hogwash!", "Golly,"],
+    ins: ["whippersnapper", "nincompoop", "goldbricker", "palooka", "lollygagger", "dingbat"],
+    close: ["We stormed beaches. You can't solve a crossword.", "Back to the salt mines with you.", "Shape up or ship out.", "That's a dang shame.", "Go fetch me a Sanka."] },
+  roaring: { label: "🎩 Roaring '20s",
+    open: ["Applesauce!", "Horsefeathers!", "Says you!", "Well, ain't that the bee's knees:"],
+    ins: ["flat tire", "wet blanket", "dumb Dora", "four-flusher", "bluenose", "egg"],
+    close: ["Go chase yourself.", "Banana oil!", "You're all wet.", "Scram, you bum.", "That's the cat's pajamas… NOT."] },
   boomer: { label: "📻 Boomer",
-    open: ["Back in my day…", "Listen here, kiddo:", "Well, I'll be!"],
-    ins: ["knucklehead", "bozo", "slacker", "goof"],
-    close: ["Kids these days.", "Put the phone down.", "Get a real job.", "Not in this house."] },
+    open: ["Back in my day…", "Listen here, kiddo:", "Well, I'll be!", "Lemme tell ya something:", "Kids today…"],
+    ins: ["knucklehead", "bozo", "slacker", "goof", "participation-trophy kid", "screen zombie"],
+    close: ["Kids these days.", "Put the phone down.", "Get a real job.", "Not in this house.", "Pull yourself up by your bootstraps.", "I'm calling your mother."] },
   genx: { label: "📼 Gen X",
-    open: ["Whatever.", "As if.", "Psych!", "Talk to the hand:"],
-    ins: ["poser", "dweeb", "doofus", "loser"],
-    close: ["Not!", "Take a chill pill.", "Gag me.", "Don't have a cow."] },
+    open: ["Whatever.", "As if.", "Psych!", "Talk to the hand:", "Grody.", "Like, totally:"],
+    ins: ["poser", "dweeb", "doofus", "loser", "space cadet", "mall rat"],
+    close: ["Not!", "Take a chill pill.", "Gag me with a spoon.", "Don't have a cow.", "Be kind, rewind.", "Eat my shorts."] },
+  nineties: { label: "📟 '90s Kid",
+    open: ["Boo-yah!", "Talk to the hand,", "Booyakasha.", "Oh snap!", "Da bomb… NOT:"],
+    ins: ["Tamagotchi killer", "dial-up connection", "Pog-flipping poser", "slap-bracelet reject", "buffering VHS"],
+    close: ["Psych!", "Not all that and a bag of chips.", "As if!", "Cowabunga, loser.", "Your mom called, she wants her Game Boy back.", "Phat FAIL."] },
   millennial: { label: "🥑 Millennial",
-    open: ["I literally can't.", "I'm dead.", "OMG."],
-    ins: ["n00b", "scrub", "try-hard", "basic"],
-    close: ["Epic fail.", "Pwned.", "Adulting is hard.", "That's so 2012."] },
+    open: ["I literally can't.", "I'm dead.", "OMG.", "Okay but hear me out:", "Not gonna lie,"],
+    ins: ["n00b", "scrub", "try-hard", "basic", "Harambe truther", "planking enthusiast"],
+    close: ["Epic fail.", "Pwned.", "Adulting is hard.", "That's so 2012.", "Do you even lift?", "Living your worst life. #blessed"] },
   genz: { label: "💀 Gen Z",
-    open: ["Bestie…", "Be so fr:", "No cap:", "POV:"],
-    ins: ["NPC", "bot", "side quest character", "background extra"],
-    close: ["Skill issue.", "Cooked.", "It's giving L.", "Touch grass."] },
+    open: ["Bestie…", "Be so fr:", "No cap:", "POV:", "It's the loss for me:", "Ratio incoming:"],
+    ins: ["NPC", "bot", "side quest character", "background extra", "pick-me", "delulu"],
+    close: ["Skill issue.", "Cooked.", "It's giving L.", "Touch grass.", "The ick.", "Rent free in your loss column.", "Mid."] },
   alpha: { label: "🧃 Gen Alpha",
-    open: ["Bro…", "Chat:", "Nah."],
-    ins: ["noob", "bozo", "NPC"],
-    close: ["Negative aura.", "-1000 aura.", "Not very sigma.", "L + no rizz."] },
+    open: ["Bro…", "Chat:", "Nah.", "Skibidi alert:", "Fanum tax incoming:"],
+    ins: ["noob", "bozo", "NPC", "Ohio final boss", "sussy baka"],
+    close: ["Negative aura.", "-1000 aura.", "Not very sigma.", "L + no rizz.", "Gyatt-less performance.", "Go back to Roblox."] },
   discord: { label: "🎮 Discord brain",
-    open: ["Chat, look:", "Bro really…", "W/L check:", "Kek.", "Ratio:"],
-    ins: ["NPC", "lurker", "copium addict", "mid laner", "AFK andy"],
-    close: ["gg ez.", "Skill issue.", "Ratio.", "Touch grass.", "Copium levels critical.", "L + ratio + who asked.", "Chat is this real?"] }
+    open: ["Chat, look:", "Bro really…", "W/L check:", "Kek.", "Ratio:", "Patch notes:"],
+    ins: ["NPC", "lurker", "copium addict", "mid laner", "AFK andy", "bronze-ranked tourist"],
+    close: ["gg ez.", "Skill issue.", "Ratio.", "Touch grass.", "Copium levels critical.", "L + ratio + who asked.", "Chat is this real?", "Uninstall."] },
+  bard: { label: "🎭 The Bard",
+    open: ["Hark!", "Fie!", "Zounds!", "Forsooth!", "Alack!", "Out, damned spot!"],
+    ins: ["cream-faced loon", "lily-livered knave", "beef-witted clotpole", "rump-fed ronyon", "pribbling hedge-pig", "canker-blossom"],
+    close: ["Get thee hence.", "Exit, pursued by shame.", "Thou art undone.", "Methinks thou stinks.", "To lose or to lose, that is thy question.", "A plague on thy scorecard."] },
+  brit: { label: "🇬🇧 Brit",
+    open: ["Oi!", "Blimey!", "Cor!", "Right then:", "Bloody hell,", "Innit:"],
+    ins: ["muppet", "plonker", "numpty", "wally", "donut", "pillock", "absolute melt"],
+    close: ["Bottled it.", "Shambolic.", "Absolute scenes.", "Have a word with yourself.", "Pop the kettle on and cry.", "Bit of a mare, that."] },
+  southern: { label: "🤠 Southern",
+    open: ["Well bless your heart,", "Lord have mercy,", "I declare,", "Y'all ain't gonna believe this:", "Well butter my biscuit,"],
+    ins: ["one fry short of a Happy Meal", "all hat and no cattle", "dumber than a box of rocks", "useless as a screen door on a submarine"],
+    close: ["Bless your heart.", "Sweeter than tea, slower than molasses.", "Go sit on the porch and think about it.", "Fixin' to lose again, huh?"] },
+  midwest: { label: "🌽 Midwest Nice",
+    open: ["Oh, ya know,", "Ope,", "Well that's different:", "Not to be rude but", "Oh for cute,"],
+    ins: ["silly goose", "dingus", "hotdish with no tater tots", "goofball", "real piece of work, ya know"],
+    close: ["But we're still friends, ya know?", "Gonna pray for ya.", "Interesting choice. Real interesting.", "That's a heckuva way to play.", "Ope, just gonna sneak past you on the leaderboard."] },
+  pirate: { label: "🏴‍☠️ Pirate",
+    open: ["Arrr!", "Shiver me timbers!", "Avast ye,", "Blow me down!"],
+    ins: ["scallywag", "bilge rat", "landlubber", "barnacle-brained swab"],
+    close: ["Walk the plank.", "Davy Jones wouldn't take that score.", "Ye be sleepin' with the fishes.", "Dead men tell no tales, and neither should ye."] },
+  announcer: { label: "🎙️ Sports Announcer",
+    open: ["AND THE CROWD GOES MILD!", "Folks, I've seen it all:", "Unbelievable scenes here:", "Let's go to the replay:"],
+    ins: ["walking turnover", "benchwarmer", "first-round bust", "practice-squad legend"],
+    close: ["That's going on the blooper reel.", "Somebody check the tape.", "Fire the coach.", "And that's why they don't let you start."] },
+  corporate: { label: "💼 Corporate",
+    open: ["Per my last email,", "Circling back:", "Quick sync:", "Let's take this offline:", "Just looping you in:"],
+    ins: ["synergy vacuum", "low performer", "meeting that should've been an email", "reply-all disaster"],
+    close: ["Let's put a pin in your dignity.", "Not a culture fit.", "See attached: your score.", "This is going in your performance review.", "Moving forward, please be better."] },
+  dad: { label: "👨 Dad Jokes",
+    open: ["Hi Hungry, I'm Dad.", "Fun fact:", "Here's the thing, champ:", "Did you hear the one about your score?"],
+    ins: ["sport", "bud", "kiddo", "champ"],
+    close: ["I'm not mad, just disappointed.", "Ask your mother.", "That score is un-BEE-lievable. Bad.", "Who turned off the lights? Oh, that's just your future.", "Someone call the dentist, that score needs a filling."] },
+  mob: { label: "🎲 Mob Boss",
+    open: ["Fuhgeddaboudit.", "Capisce?", "Lemme make you an offer:", "You come into my house…"],
+    ins: ["mook", "goombah", "two-bit palooka", "cannoli without the filling"],
+    close: ["Sleep with the fishes.", "It's not personal. It's business.", "Leave the gun, take the L.", "Badda bing, badda bust."] }
 };
 const STYLE_KEYS = Object.keys(STYLES);
 const UNHINGED = [
@@ -2872,7 +2914,7 @@ function openShade(targetId, opts = {}) {
   // Editable: the generator writes a draft, you can tweak it before sending.
   const card = el("textarea", "shadecard shade-edit"); card.rows = 4; card.maxLength = 300; card.setAttribute("aria-label", "Your shade (tap to edit)");
   const roll = () => { text = makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, { fire: !!opts.fire, jokes, dare: opts.dare }); card.value = text; };
-  const chips = el("div", "chips");
+  const chips = el("div", "chips shade-chips");
   [["chaos", "🎲 Chaos"]].concat(STYLE_KEYS.map(k => [k, STYLES[k].label])).forEach(([k, label]) => {
     const c = el("button", "chip" + (k === style ? " on" : ""), label);
     c.addEventListener("click", () => { style = k; chips.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); roll(); });
