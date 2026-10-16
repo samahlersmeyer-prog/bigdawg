@@ -312,6 +312,8 @@ input { -webkit-user-select: text; user-select: text; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); }
 .chip.on { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.shade-edit { width: 100%; resize: none; border: 2px dashed transparent; font-family: inherit; outline: none; display: block; }
+.shade-edit:focus { border-color: var(--ink); }
 .shadecard { margin: 0; padding: 16px 18px; border-radius: 12px; background: var(--card-scores); color: var(--ink); font-size: 16.5px; line-height: 1.45; font-weight: 500; position: relative; -webkit-user-select: text; user-select: text; }
 .shadecard::before { content: "\201C"; position: absolute; top: -14px; left: 10px; font-family: var(--title); font-size: 54px; line-height: 1; opacity: 0.35; }
 .center { text-align: center; justify-content: center; }
@@ -2867,8 +2869,9 @@ function openShade(targetId, opts = {}) {
   if (!opts.fire && used >= 3) { toast(`You've thrown 3 at ${tgt.name} today. Save some for tomorrow.`, 2600); return; }
   let style = "chaos", text = "";
   const jokes = shade.settings.jokes ? shade.jokes.map(j => j.text) : [];
-  const card = el("blockquote", "shadecard");
-  const roll = () => { text = makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, { fire: !!opts.fire, jokes, dare: opts.dare }); card.textContent = text; };
+  // Editable: the generator writes a draft, you can tweak it before sending.
+  const card = el("textarea", "shadecard shade-edit"); card.rows = 4; card.maxLength = 300; card.setAttribute("aria-label", "Your shade (tap to edit)");
+  const roll = () => { text = makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, { fire: !!opts.fire, jokes, dare: opts.dare }); card.value = text; };
   const chips = el("div", "chips");
   [["chaos", "🎲 Chaos"]].concat(STYLE_KEYS.map(k => [k, STYLES[k].label])).forEach(([k, label]) => {
     const c = el("button", "chip" + (k === style ? " on" : ""), label);
@@ -2881,12 +2884,13 @@ function openShade(targetId, opts = {}) {
   const status = el("p", "note center", opts.dare ? `Talk trash about ${tgt.name}'s dare. One reply per dare.` : opts.fire ? `Return fire at ${tgt.name}. One shot per shade.` : `${3 - used} of 3 throws left at ${tgt.name} today · Spice: ${SPICE[shade.settings.spice || 2]}`);
   send.addEventListener("click", () => {
     send.disabled = true; status.textContent = "Delivering…";
+    text = card.value.trim(); if (!text) { send.disabled = false; status.textContent = "Write something first."; return; }
     API("sendShade", me.id, targetId, KEY, text, opts.fire ? "fire" : "shade", opts.replyTo || "")
       .then(st => { shade = st; renderShadeBits(); closeModal(); toast(opts.dare ? "Trash talk delivered 🗣️" : opts.fire ? "Fired back 🔥" : `Shade delivered to ${tgt.name} 🎯`, 2000); })
       .catch(e => { send.disabled = false; status.textContent = errMsg(e); });
   });
   const row = el("div", "inrow center"); row.append(reroll, send);
-  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), card, chips, row, status]);
+  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), card, el("p", "note center", "✏️ Tap the text to edit it"), chips, row, status]);
 }
 let serving = null;
 // Pop-ups are only for things that were earned: shade (only throwable when beating you), dares,
