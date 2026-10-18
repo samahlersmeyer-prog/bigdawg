@@ -3368,10 +3368,22 @@ const lowG = g => !!(typeof GAMEDEFS !== "undefined" && GAMEDEFS[g] && GAMEDEFS[
 const fmtG = (g, n) => (typeof GAMEDEFS !== "undefined" && GAMEDEFS[g] && GAMEDEFS[g].fmt && n > 0) ? GAMEDEFS[g].fmt(n) : String(n || 0);
 const betterG = (g, a, b) => lowG(g) ? (a > 0 && (!(b > 0) || a < b)) : a > b;
 function setBest(g, v) { if (betterG(g, v, aBest[g] || 0)) { aBest[g] = v; store.set("bdd:abest", aBest); return true; } return false; }
+// Arcade bests and saved dares live on the phone, so tie them to whoever is signed in:
+// if a different player signs in on this phone, start them clean (their real bests come back from the server).
+function ownLocal() {
+  if (!me) return;
+  if (store.get("bdd:aowner") !== me.id) {
+    if (store.get("bdd:aowner")) { aDares = []; Object.keys(aBest).forEach(k => aBest[k] = 0); store.set("bdd:dares", aDares); store.set("bdd:abest", aBest); store.set("bdd:zbest", 0); }
+    store.set("bdd:aowner", me.id);
+  }
+  const n = aDares.length; aDares = aDares.filter(d => d.from !== me.id);
+  if (aDares.length !== n) store.set("bdd:dares", aDares);
+  if (aDare && aDare.from === me.id) aDare = null;
+}
 function dropDare(d) { aDares = aDares.filter(x => x.id !== d.id); store.set("bdd:dares", aDares); renderArcSub(); }
 // Start screen for a game: your best, any dares waiting for this game, and a Go button.
 function arcStart(game, panel, onGo) {
-  panel.innerHTML = ""; panel.hidden = false;
+  ownLocal(); panel.innerHTML = ""; panel.hidden = false;
   const dare = aDare && aDare.game === game ? aDare : null;
   panel.append(el("h2", null, dare ? `Beat ${fmtG(game, dare.target)}` : ARC[game].name));
   panel.append(el("p", null, dare ? `${dare.fromName} dared you. Your next run counts.` : ARC[game].how));
@@ -3542,7 +3554,7 @@ window.addEventListener("resize", () => { if (active === "zoomies" && Z.state ==
 document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || (ARC[arcTab] && arcCat(arcTab) === "sports" && active !== "arcade") ? "sports" : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); }).catch(() => {});
+  ownLocal(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); }).catch(() => {});
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
@@ -3582,12 +3594,14 @@ const ARC_ORDER = ["pupman", "zoomies", "snake", "fetch", "drive", "hop", "block
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
 function renderArcSub() {
+  ownLocal();
   ["arcade", "sports"].forEach(cat => {
     const n = aDares.filter(d => ARC[d.game] && arcCat(d.game) === cat).length, total = arcOrder().filter(k => arcCat(k) === cat).length;
     $("sub-" + cat).textContent = n ? `🎯 ${n} dare${n > 1 ? "s" : ""} waiting for you` : `${total} games · just for fun`;
   });
 }
 function renderArcHub(cat) {
+  ownLocal();
   cat = cat || "arcade";
   const box = $(cat === "sports" ? "sp-dares" : "arc-dares"); box.innerHTML = "";
   aDares.filter(d => ARC[d.game] && arcCat(d.game) === cat).slice(-5).reverse().forEach(d => {
