@@ -23,7 +23,7 @@
   // seg: [from, to, lie] in yards from the tee. amp = terrain bumpiness. wmax (max wind) rises through the round.
   // lift: [from, to, +height, ramp] raised plateaus (elevated tees/greens). oaks: [x, height] tall trees the ball can hit.
   const R0 = [-9999, -12, "r"], T0 = [-12, 8, "t"];
-  const HOLES = [
+  const FRONT = [
     { nm: "PUPPY PARK", par: 4, pin: 340, end: 420, ph: 0.4, amp: 0.8, wmax: 3, trees: [-46, -28, 22, 150, 300, 398, 414], oaks: [], lift: [],
       seg: [R0, T0, [8, 26, "r"], [26, 198, "f"], [198, 212, "s"], [212, 306, "f"], [306, 318, "r"], [318, 360, "g"], [360, 368, "r"], [368, 380, "s"], [380, 99999, "r"]] },
     { nm: "POND PUP", par: 3, pin: 150, end: 220, ph: 2.1, amp: 0.7, wmax: 4, trees: [-46, -30, 196, 214], oaks: [], lift: [[-80, 12, 4, 12]],
@@ -43,7 +43,16 @@
     { nm: "HOME STRETCH", par: 4, pin: 418, end: 520, ph: 4.6, amp: 1.2, wmax: 12, trees: [-46, -28, 22, 200, 340, 506], oaks: [], lift: [[394, 446, 7, 10]],
       seg: [R0, T0, [8, 30, "r"], [30, 145, "f"], [145, 192, "w"], [192, 328, "f"], [328, 344, "s"], [344, 388, "f"], [388, 398, "r"], [398, 436, "g"], [436, 446, "r"], [446, 458, "s"], [458, 500, "w"], [500, 99999, "r"]] }
   ];
-  const PAR = HOLES.reduce((a, h) => a + h.par, 0); // 36
+  // Back nine: the front nine's terrain remixed (stretched or squeezed, new names, stiffer wind), played in reverse.
+  const BACKNM = ["BARK BAY", "FETCH FIELD", "BIG BONE", "HYDRANT HILL", "MUTT MARSH", "SQUIRREL RIDGE", "COLLAR CREEK", "THE KENNEL", "DAWG HOUSE"];
+  const BACKF = [1.05, 1.1, 1.05, 1.2, 1.2, 0.85, 1.05, 1.1, 1.15];
+  const BACK = FRONT.map((h, i) => {
+    const f = BACKF[i], sc = v => v >= 26 && v < 99999 ? Math.round(v * f) : v, pin = sc(h.pin);
+    return Object.assign({}, h, { nm: BACKNM[8 - i], pin, end: sc(h.end), par: pin < 230 ? 3 : pin <= 440 ? 4 : 5, ph: h.ph + 1.7, wmax: h.wmax + 3,
+      trees: h.trees.map(sc), oaks: h.oaks.map(([x, r]) => [sc(x), r]), lift: h.lift.map(([a, b, c2, d]) => [sc(a), sc(b), c2, d]), seg: h.seg.map(s => s.length === 3 ? [sc(s[0]), sc(s[1]), s[2]] : s) });
+  }).reverse();
+  let HOLES = FRONT, PAR = 36;
+  const useCourse = list => { HOLES = list; PAR = list.reduce((a, h) => a + h.par, 0); };
   const rel = d => d === 0 ? "E" : d > 0 ? "+" + d : String(d);
   const TRAIL = 14;
 
@@ -274,12 +283,13 @@
         }
     }
   }
-  defGame({
-    key: "golf", name: "Dawg Golf", icon: "🏌️", max: 72, low: true, cat: "sports",
+  const golfDef = {
+    key: "golf", name: "Dawg Golf", icon: "🏌️", max: 72, low: true, cat: "sports", course: FRONT,
     blurb: "Front nine, par 36. Three-tap swing. Mind the wind.",
     how: "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.",
-    fmt(n) { return n > 0 ? `${n} (${rel(n - PAR)})` : "—"; },
+    fmt(n) { return n > 0 ? `${n} (${rel(n - 36)})` : "—"; },
     reset(G) {
+      useCourse(this.course);
       G.s = { hole: 0, parThru: 0, totStrokes: 0, scores: [], ball: { x: 0, y: 0, lie: "t" }, msg: "", msgT: 0, msgC: "#fff",
         trailX: new Float32Array(TRAIL), trailY: new Float32Array(TRAIL), trailN: 0, trailI: 0, tn: 0, zoom: 1, cam: 0, camH: 0 };
       startHole(G, 0);
@@ -499,13 +509,14 @@
         G.text(c, s.card.name, W / 2 + 14, cy + 26, s.card.name.length > 10 ? 12 : 15, "#ffd23f", "center");
         G.text(c, `${s.card.st} STROKES · PAR ${H.par}`, W / 2, cy + 54, 10, col, "center");
         // grid: HOLE / PAR / DAWG rows, 9 columns
-        const lw = 48, colW = (cw - lw - 12) / HOLES.length, gx = cx + 6, gy = cy + 74, rh = 24;
+        const lw = 48, colW = (cw - lw - 12) / 9, gx = cx + 6, gy = cy + 74, rh = 24;
         c.fillStyle = "rgba(255,255,255,0.08)"; c.fillRect(gx, gy, cw - 12, rh * 3);
         G.text(c, "HOLE", gx + 4, gy + rh * 0.5, 10, "#9fb0d8", "left");
         G.text(c, "PAR", gx + 4, gy + rh * 1.5, 10, "#9fb0d8", "left");
         G.text(c, "DAWG", gx + 4, gy + rh * 2.5, 10, "#ffd23f", "left");
-        for (let i = 0; i < HOLES.length; i++) {
-          const X = gx + lw + colW * (i + 0.5);
+        const nine = HOLES.length > 9 && s.hole >= 9 ? 9 : 0;
+        for (let i = nine; i < Math.min(HOLES.length, nine + 9); i++) {
+          const X = gx + lw + colW * (i - nine + 0.5);
           if (i === s.hole) { c.fillStyle = "rgba(255,210,63,0.18)"; c.fillRect(X - colW / 2, gy, colW, rh * 3); }
           G.text(c, String(i + 1), X, gy + rh * 0.5, 10, "#9fb0d8", "center");
           G.text(c, String(HOLES[i].par), X, gy + rh * 1.5, 10, "#fff", "center");
@@ -524,5 +535,12 @@
         if (s.card.age > 0.3) G.text(c, s.hole < HOLES.length - 1 ? "TAP FOR NEXT HOLE" : "TAP TO FINISH", W / 2, cy + 222, 10, Math.floor(G.t * 2.5) % 2 ? "#ffd23f" : "#fff", "center");
       }
     }
-  });
+  };
+  defGame(golfDef);
+  const BPAR = 36 + BACK.reduce((a, h) => a + h.par, 0);
+  defGame(Object.assign({}, golfDef, { key: "golf18", name: "Dawg Golf 18", icon: "🏌️", max: 144, course: FRONT.concat(BACK),
+    blurb: `The full 18, par ${BPAR}. Back nine plays longer and windier.`,
+    how: golfDef.how.replace("Par 36", `Par ${BPAR} over 18 holes`),
+    fmt(n) { return n > 0 ? `${n} (${rel(n - BPAR)})` : "—"; } }));
+
 })();
