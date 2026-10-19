@@ -3418,7 +3418,9 @@ function arcOver(game, score, panel, onAgain, title) {
   const col = el("div", "col");
   const again = el("button", "pill solid", "Run it back"); again.addEventListener("click", e => { e.stopPropagation(); onAgain(); });
   col.append(again);
-  if (score > 0 && me) { const d = el("button", "pill", `🎯 Dare someone to beat ${fmtG(game, score)}`); d.addEventListener("click", e => { e.stopPropagation(); openDarePicker(game, score); }); col.append(d); }
+  const known = game === "zoomies" || (arcade && arcade.games && arcade.games[game]);
+  if (score > 0 && me && arcade && !known) col.append(el("p", "sub", "This game is brand new: leaderboard scores and dares turn on once the server is updated."));
+  if (score > 0 && me && (known || !arcade)) { const d = el("button", "pill", `🎯 Dare someone to beat ${fmtG(game, score)}`); d.addEventListener("click", e => { e.stopPropagation(); openDarePicker(game, score); }); col.append(d); }
   panel.append(col);
 }
 function syncBests() { if (!arcade) return; const g = arcade.games || { zoomies: { myBest: arcade.myBest } }; Object.keys(g).forEach(k => setBest(k, g[k].myBest || 0)); }
