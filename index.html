@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="d4b2ba7419";</script>
+<script>window.GAMES_V="5d9d6ffed7";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3393,7 +3393,9 @@ function arcStart(game, panel, onGo) {
     const b = el("button", "pill", "Take it"); b.addEventListener("click", e => { e.stopPropagation(); aDare = d; arcStart(game, panel, onGo); });
     row.append(b); panel.append(row);
   });
-  const go = el("button", "pill solid", dare ? "🐶 Let's go" : "🐶 Start"); go.addEventListener("click", e => { e.stopPropagation(); onGo(); });
+  const sv = typeof G !== "undefined" && G.saved ? G.saved(game) : null;
+  if (sv) { const cb = el("button", "pill solid", `▶ Continue · ${sv.label}`); cb.addEventListener("click", e => { e.stopPropagation(); onGo(sv); }); panel.append(cb); }
+  const go = el("button", sv ? "pill" : "pill solid", sv ? "New game" : dare ? "🐶 Let's go" : "🐶 Start"); go.addEventListener("click", e => { e.stopPropagation(); if (sv) G.dropSave(game); onGo(); });
   panel.append(go);
 }
 // Game over: saves your best, answers a dare if you took one, offers a rematch or a dare.
@@ -3870,8 +3872,15 @@ G.banner = (c, msg, color, y, size) => {
   c.save(); const sz = size || Math.max(18, Math.min(30, G.W / 13));
   G.text(c, msg, G.W / 2 + 2, (y || G.H * 0.42) + 3, sz, "rgba(0,0,0,0.55)"); G.text(c, msg, G.W / 2, y || G.H * 0.42, sz, color || "#ffd23f"); c.restore();
 };
+// Save & continue: a game with save(G) -> {label, ...} (or null when it's not a good moment) and load(G, snap)
+// gets a checkpoint per player, written about once a second and when the app is hidden. Cleared when the run ends.
+const gSaveKey = k => "bdd:gsave:" + k + ":" + (me ? me.id : "");
+function gCheckpoint() { if (G.state !== "play" || !G.def || !G.def.save) return; try { const sn = G.def.save(G); if (sn) store.set(gSaveKey(G.key), sn); } catch (e) {} }
+G.saved = k => GAMEDEFS[k] && GAMEDEFS[k].save ? store.get(gSaveKey(k)) : null;
+G.dropSave = k => store.del(gSaveKey(k));
 G.over = (score, title) => {
   if (G.state !== "play") return;
+  G.dropSave(G.key);
   G.state = "over"; cancelAnimationFrame(G.raf); gPaint();
   arcOver(G.key, Math.max(0, Math.floor(score || 0)), $("gpanel"), gIdle, title);
 };
@@ -3886,8 +3895,10 @@ function gIdle() {
   G.def.reset(G); gPaint();
   arcStart(G.key, $("gpanel"), gGo);
 }
-function gGo() {
+function gGo(resume) {
   $("gpanel").hidden = true; gSize(); G.s = {}; G.t = 0; G.def.reset(G);
+  if (resume && G.def.load) { try { G.def.load(G, resume); G.t = 99; } catch (e) { G.def.reset(G); } }
+  G.ck = 0;
   G.state = "play"; G.last = performance.now(); gLoop();
 }
 function gLoop() {
@@ -3896,16 +3907,18 @@ function gLoop() {
     if (G.state !== "play") return;
     const dt = Math.min(0.033, Math.max(0, (now - G.last) / 1000)); G.last = now; G.t += dt;
     G.def.update(G, dt);
+    G.ck = (G.ck || 0) + dt; if (G.ck > 1) { G.ck = 0; gCheckpoint(); }
     if (G.state === "play") { gPaint(); gLoop(); }
   });
 }
 function gShown() { requestAnimationFrame(gIdle); if (!arcade) refreshArcade(); }
-function gHidden() { if (G.state === "play") G.state = "idle"; cancelAnimationFrame(G.raf); }
+function gHidden() { gCheckpoint(); if (G.state === "play") G.state = "idle"; cancelAnimationFrame(G.raf); }
 // Open any arcade game by key (the three original games keep their own screens).
 function playGame(key) {
   if (key === "zoomies" || key === "snake" || key === "fetch") { show(key); return; }
   let d = GAMEDEFS[key]; if (!d) return;
   if (!d.update) { toast("Loading " + d.name + "…", 1500); loadGame(key).then(() => playGame(key)).catch(() => toast("Couldn't load the game. Check your connection.", 2400)); return; }
+  if (G.state === "play") gHidden();
   G.key = key; G.def = d; $("g-title").textContent = d.name; $("g-back").dataset.go = d.cat === "sports" ? "sports" : "arcade";
   if (active === "game") gShown(); else show("game");
 }

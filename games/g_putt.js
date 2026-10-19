@@ -535,6 +535,9 @@
     return {
       key: o.key, name: o.name, icon: "⛳", max: holes.length * 50, blurb: o.blurb,
       how: `${holes.length} holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.` + (o.extra || ""),
+      // Checkpoint at the start of each hole after the first.
+      save(G) { const s = G.s; if (!s.hi || s.strokes || s.phase !== "aim") return null; return { label: `Hole ${s.hi + 1}`, hi: s.hi, total: s.total, cards: s.cards.slice() }; },
+      load(G, v) { const s = G.s; s.total = v.total; s.cards = v.cards.slice(); load(G, v.hi); },
       reset(G) {
         const top = 34 + 20 + 6, pad = 8;
         G.s = { holes, x0: pad, y0: top, cw: G.W - pad * 2, ch: G.H - top - pad, total: 0, cards: [], pops: [], ot: 0, clack: 0, snort: 0, wet: 0, flash: null, movers: [] };

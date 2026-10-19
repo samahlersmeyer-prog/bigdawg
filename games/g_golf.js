@@ -288,6 +288,10 @@
     blurb: "Front nine, par 36. Three-tap swing. Mind the wind.",
     how: "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.",
     fmt(n) { return n > 0 ? `${n} (${rel(n - 36)})` : "—"; },
+    // Checkpoint after each finished hole; resuming starts the next hole.
+    save(G) { const s = G.s; if (s.phase !== "card" || s.hole >= HOLES.length - 1) return null;
+      return { label: `Hole ${s.hole + 2}`, hole: s.hole, tot: s.totStrokes, par: s.parThru, scores: s.scores.slice() }; },
+    load(G, v) { const s = G.s; s.totStrokes = v.tot; s.parThru = v.par; s.scores = v.scores.slice(); startHole(G, v.hole + 1); },
     reset(G) {
       useCourse(this.course);
       G.s = { hole: 0, parThru: 0, totStrokes: 0, scores: [], ball: { x: 0, y: 0, lie: "t" }, msg: "", msgT: 0, msgC: "#fff",

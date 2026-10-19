@@ -29,6 +29,10 @@ defGame({
   BOSSES: [{ n: "MAILMAN MAX", em: "📮" }, { n: "THE VACUUM", em: "🧹" }, { n: "BATH TIME", em: "🛁" }, { n: "THE CAT KING", em: "😼" }],
   FOES: { sq: { hp: 2, sp: 54, val: 5, em: "🐿️", sz: 24 }, cat: { hp: 5, sp: 40, val: 9, em: "🐈", sz: 24 }, coon: { hp: 4, sp: 78, val: 10, em: "🦝", sz: 26 }, mail: { hp: 18, sp: 26, val: 30, em: "📮", sz: 30 } },
   ty(t) { return this.LINES[t.k][t.tier]; },
+  // Checkpoint between waves; quitting mid-wave restarts that wave.
+  save(G) { const s = G.s; if (!s.wave || s.toSpawn || s.foes.length) return null;
+    return { label: `Wave ${s.wave + 1}`, money: s.money, lives: s.lives, score: s.score, wave: s.wave, unl: s.unl, sel: s.sel, pads: s.pads.map(p => p.t && { k: p.t.k, tier: p.t.tier, lv: p.t.lv }) }; },
+  load(G, v) { const s = G.s; ["money", "lives", "score", "wave", "unl", "sel"].forEach(k => s[k] = v[k]); s.pads.forEach((p, i) => p.t = v.pads[i] ? Object.assign({ cd: 0 }, v.pads[i]) : null); s.paid = true; s.breakT = 2.5; s.msg = { txt: `WAVE ${s.wave + 1} NEXT`, t: 1.5 }; },
   pos(s, d) { for (const g of s.seg) if (d <= g.s + g.l) { const f = (d - g.s) / g.l; return { x: g.a.x + (g.b.x - g.a.x) * f, y: g.a.y + (g.b.y - g.a.y) * f }; } return s.P[s.P.length - 1]; },
   update(G, dt) {
     const s = G.s;

@@ -11,6 +11,9 @@ defGame({
       pups: [{ n: "BISCUIT", hp: 100, sick: 0, ok: 1 }, { n: "TANK", hp: 100, sick: 0, ok: 1 }, { n: "PICKLES", hp: 100, sick: 0, ok: 1 }, { n: "GRAVY", hp: 100, sick: 0, ok: 1 }],
       log: ["THE PACK SETS OUT WEST!"], mode: "trail", stop: 0, hunt: null, btns: [], endT: null };
   },
+  save(G) { const s = G.s; if (s.mode === "hunt" || s.mode === "end") return null;
+    return { label: `Day ${s.day} · ${s.mi} mi`, v: JSON.parse(JSON.stringify({ mi: s.mi, day: s.day, food: s.food, treats: s.treats, fast: s.fast, pups: s.pups, log: s.log, mode: s.mode, stop: s.stop })) }; },
+  load(G, sv) { Object.assign(G.s, sv.v); },
   alive(s) { return s.pups.filter(p => p.ok); },
   say(s, m) { s.log.unshift(m); s.log.length = Math.min(s.log.length, 4); },
   day(G, kind) {
