@@ -3,7 +3,7 @@
 defGame({
   key: "td", name: "Yard Defense", icon: "🏰", max: 99999,
   blurb: "Tower defense. Post pups, guard the yard.",
-  how: "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to upgrade it (up to ★3). Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.",
+  how: "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to see its range and UPGRADE it (up to ★3) or SELL it back for 75% of what you spent. Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.",
   reset(G) {
     const W = G.W, top = 44, bot = G.H - 78, ph = bot - top;
     const P = [[-0.08, 0.1], [0.76, 0.1], [0.76, 0.36], [0.2, 0.36], [0.2, 0.62], [0.8, 0.62], [0.8, 0.9], [1.08, 0.9]].map(([x, y]) => ({ x: x * W, y: top + y * ph }));
@@ -31,7 +31,7 @@ defGame({
   ty(t) { return this.LINES[t.k][t.tier]; },
   // Checkpoint between waves; quitting mid-wave restarts that wave.
   save(G) { const s = G.s; if (!s.wave || s.toSpawn || s.foes.length) return null;
-    return { label: `Wave ${s.wave + 1}`, money: s.money, lives: s.lives, score: s.score, wave: s.wave, unl: s.unl, sel: s.sel, pads: s.pads.map(p => p.t && { k: p.t.k, tier: p.t.tier, lv: p.t.lv }) }; },
+    return { label: `Wave ${s.wave + 1}`, money: s.money, lives: s.lives, score: s.score, wave: s.wave, unl: s.unl, sel: s.sel, pads: s.pads.map(p => p.t && { k: p.t.k, tier: p.t.tier, lv: p.t.lv, spent: p.t.spent }) }; },
   load(G, v) { const s = G.s; ["money", "lives", "score", "wave", "unl", "sel"].forEach(k => s[k] = v[k]); s.pads.forEach((p, i) => p.t = v.pads[i] ? Object.assign({ cd: 0 }, v.pads[i]) : null); s.paid = true; s.breakT = 2.5; s.msg = { txt: `WAVE ${s.wave + 1} NEXT`, t: 1.5 }; },
   pos(s, d) { for (const g of s.seg) if (d <= g.s + g.l) { const f = (d - g.s) / g.l; return { x: g.a.x + (g.b.x - g.a.x) * f, y: g.a.y + (g.b.y - g.a.y) * f }; } return s.P[s.P.length - 1]; },
   update(G, dt) {
@@ -47,7 +47,7 @@ defGame({
     if (s.toSpawn) {
       s.spawnT -= dt;
       if (s.spawnT <= 0) {
-        const n = s.wave, r = Math.random(), mult = (1 + 0.32 * n) * Math.pow(1.06, n), spd = Math.min(1.5, 1 + 0.015 * n);
+        const n = s.wave, r = Math.random(), mult = (1 + 0.32 * n) * Math.pow(1.09, n), spd = Math.min(1.5, 1 + 0.015 * n);
         if (n % 5 === 0 && s.toSpawn === 1) { // boss closes out every 5th wave
           const bi = (n / 5 - 1) % 4, B = this.BOSSES[bi], tier = Math.floor((n / 5 - 1) / 4), hp = 35 * mult * (1 + bi * 0.5) * (1 + tier);
           const f = { k: "boss", em: B.em, sz: 46, bn: B.n, d: 0, hp, max: hp, sp: 22 * spd, slow: 0, val: 80 + 20 * bi, cost: 4 };
@@ -86,23 +86,37 @@ defGame({
     s.fx.forEach(e => e.t -= dt); s.fx = s.fx.filter(e => e.t > 0);
   },
   next(s, t) { // what tapping a posted dog does next: {c: cost, evolve: bool} or null when maxed / not unlocked yet
-    if (t.lv < 3) return { c: Math.round(this.ty(t).cost * (t.lv === 1 ? 1 : 1.8)) };
-    if (t.tier < s.unl) return { c: Math.round(this.LINES[t.k][t.tier + 1].cost * 0.8), evolve: true };
+    if (t.lv < 3) return { c: Math.round(this.ty(t).cost * (t.lv === 1 ? 0.6 : 0.9)) };
+    if (t.tier < s.unl) return { c: Math.round(this.LINES[t.k][t.tier + 1].cost * 0.6), evolve: true };
     return null;
   },
+  // Selling refunds 75% of everything spent on that dog.
+  refund(t) { return Math.round((t.spent || this.ty(t).cost) * 0.75); },
+  upgrade(G, p) {
+    const s = G.s, nx = this.next(s, p.t);
+    if (!nx) { s.msg = { txt: p.t.tier < 2 ? `NEXT DOG AT ${this.UNLOCK[p.t.tier + 1]} PTS` : "MAXED OUT", t: 1 }; return; }
+    if (s.money < nx.c) { s.msg = { txt: `NEED ${nx.c} 🍖`, t: 0.9 }; return; }
+    s.money -= nx.c; p.t.spent = (p.t.spent || this.ty(p.t).cost) + nx.c;
+    if (nx.evolve) { p.t.tier++; p.t.lv = 1; s.msg = { txt: `${this.ty(p.t).name}!`, t: 1 }; } else p.t.lv++; G.sfx("win");
+  },
+  sell(G, p) { const s = G.s, r = this.refund(p.t); s.money += r; p.t = null; s.pick = null; s.fx.push({ x: p.x, y: p.y, t: 0.6, txt: `+${r}` }); G.sfx("pop"); },
+  // The little menu that pops up over a selected dog: [UPGRADE / SWAP] [SELL]
+  menu(G, p) { const w = 128, h = 46, y = p.y > G.s.bot - 120 ? p.y - 30 - h : p.y + 30, x = Math.max(6, Math.min(G.W - 2 * w - 12, p.x - w - 3)); return { up: { x, y, w, h }, sell: { x: x + w + 6, y, w, h } }; },
   tap(G, x, y) {
-    const s = G.s;
+    const s = G.s, hit = (r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    if (s.pick != null) {
+      const p = s.pads[s.pick], m = this.menu(G, p);
+      if (p.t && hit(m.up)) { this.upgrade(G, p); return; }
+      if (p.t && hit(m.sell)) { this.sell(G, p); return; }
+      s.pick = null;
+    }
     if (y > s.bot) { const i = Math.floor(x / (G.W / 3)); if (this.LINES[i]) s.sel = i; return; }
-    const p = s.pads.find(p => Math.hypot(p.x - x, p.y - y) < 30); if (!p) return;
+    const pi = s.pads.findIndex(p => Math.hypot(p.x - x, p.y - y) < 30); if (pi < 0) return;
+    const p = s.pads[pi];
     if (!p.t) {
       const ty = this.LINES[s.sel][s.unl]; if (s.money < ty.cost) { s.msg = { txt: `NEED ${ty.cost} 🍖`, t: 0.9 }; return; }
-      s.money -= ty.cost; p.t = { k: s.sel, tier: s.unl, lv: 1, cd: 0 }; G.sfx("pop");
-    } else {
-      const nx = this.next(s, p.t);
-      if (!nx) { s.msg = { txt: p.t.tier < 2 ? `NEXT DOG AT ${this.UNLOCK[p.t.tier + 1]} PTS` : "MAXED OUT", t: 1 }; return; }
-      if (s.money < nx.c) { s.msg = { txt: `${nx.evolve ? "SWAP" : "UPGRADE"} ${nx.c} 🍖`, t: 0.9 }; return; }
-      s.money -= nx.c; if (nx.evolve) { p.t.tier++; p.t.lv = 1; s.msg = { txt: `${this.ty(p.t).name}!`, t: 1 }; } else p.t.lv++; G.sfx("win");
-    }
+      s.money -= ty.cost; p.t = { k: s.sel, tier: s.unl, lv: 1, cd: 0, spent: ty.cost }; G.sfx("pop");
+    } else s.pick = pi;
   },
   draw(G, c) {
     const s = G.s, W = G.W, H = G.H, dark = G.dark(), T = this.LINES.map(l => l[s.unl || 0]);
@@ -132,6 +146,13 @@ defGame({
       else if (e.line) { c.strokeStyle = "rgba(255,210,63,0.9)"; c.lineWidth = 3; c.beginPath(); c.moveTo(e.fx, e.fy); c.lineTo(e.x, e.y); c.stroke(); }
       else G.text(c, e.txt, e.x, e.y - 20 - (0.4 - e.t) * 40, 10, "#ffd23f");
     });
+    if (s.pick != null && s.pads[s.pick].t) {
+      const p = s.pads[s.pick], ty = this.ty(p.t), rng = ty.range * (1 + 0.12 * (p.t.lv - 1)), m = this.menu(G, p), nx = this.next(s, p.t);
+      c.fillStyle = "rgba(255,255,255,0.12)"; c.strokeStyle = "rgba(255,255,255,0.7)"; c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y, rng, 0, 7); c.fill(); c.stroke();
+      const btn = (r, l1, l2, bg, fg) => { c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(r.x + 2, r.y + 3, r.w, r.h); c.fillStyle = bg; c.fillRect(r.x, r.y, r.w, r.h); G.text(c, l1, r.x + r.w / 2, r.y + 15, 10, fg); G.text(c, l2, r.x + r.w / 2, r.y + 32, 10, fg); };
+      btn(m.up, nx ? (nx.evolve ? `SWAP ${this.LINES[p.t.k][p.t.tier + 1].name}` : `UPGRADE ★${p.t.lv + 1}`) : "MAXED", nx ? `${nx.c} 🍖` : "", nx && s.money >= nx.c ? "#ffd23f" : "#777", "#222");
+      btn(m.sell, "SELL", `+${this.refund(p.t)} 🍖`, "#e57373", "#222");
+    }
     G.hud(c, `🍖${s.money}`, `WAVE ${s.wave} · ${s.score}`, `❤️${Math.max(0, s.lives)}`);
     if (s.boss && !s.boss.dead) { const b = s.boss, bw = W - 40; c.fillStyle = "rgba(0,0,0,0.6)"; c.fillRect(20, 40, bw, 16); c.fillStyle = "#e53935"; c.fillRect(22, 42, (bw - 4) * Math.max(0, b.hp / b.max), 12); G.text(c, b.bn, W / 2, 48, 9, "#fff"); }
     else if (s.unl < 2) { const a = this.UNLOCK[s.unl], b = this.UNLOCK[s.unl + 1]; c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(20, 40, W - 40, 6); c.fillStyle = "#ffd23f"; c.fillRect(20, 40, (W - 40) * Math.min(1, (s.score - a) / (b - a)), 6); }
