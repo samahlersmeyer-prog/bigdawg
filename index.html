@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="9c8b6ad583";</script>
+<script>window.GAMES_V="307e716116";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3600,7 +3600,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["party", "pupman", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "mow", "td", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["party", "pupman", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "mow", "td", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -3727,7 +3727,7 @@ window.addEventListener("resize", () => { if (active === "snake" && SN.state !==
 
 // ================= ARCADE: FETCH BREAKOUT =================
 // Arkanoid-style: drag the dog bed, bounce the tennis ball, smash rows of treat bricks.
-const FB = { state: "idle", W: 0, H: 0, dpr: 1, raf: 0, last: 0, px: 0, tx: 0, pw: 84, key: 0, bx: 0, by: 0, vx: 0, vy: 0, stuck: true, bricks: [], level: 1, score: 0, lives: 3, hurt: 0, pops: [] };
+const FB = { state: "idle", W: 0, H: 0, dpr: 1, raf: 0, last: 0, px: 0, tx: 0, pw: 84, key: 0, balls: [], caps: [], shots: [], fx: {}, stuck: true, bricks: [], level: 1, score: 0, lives: 3, hurt: 0, pops: [] };
 const TREATS = [["🦴", "#f3ead7"], ["🥓", "#f2a6a0"], ["🧀", "#f6d36b"], ["🍪", "#d9a86c"], ["🍖", "#e98d6b"], ["🥩", "#e57a7a"]];
 function fSize() {
   const w = $("fwrap"), c = $("fc"), r = w.getBoundingClientRect();
@@ -3735,49 +3735,89 @@ function fSize() {
   c.width = Math.round(r.width * FB.dpr); c.height = Math.round(r.height * FB.dpr);
   FB.pw = Math.max(70, Math.min(110, r.width * 0.22));
 }
+// Power-ups drop from smashed treats: catch the capsule with the bed.
+const FPUPS = [
+  { k: "multi", e: "🎾", c: "#7cff6b", n: "MULTI BALL", w: 3 },
+  { k: "wide", e: "↔️", c: "#4dd0e1", n: "BIG BED", w: 3, dur: 12 },
+  { k: "fire", e: "🔥", c: "#ff7043", n: "FIRE BALL", w: 2, dur: 8 },
+  { k: "laser", e: "📣", c: "#ffd23f", n: "BARK BLASTER", w: 2, dur: 8 },
+  { k: "slow", e: "🐌", c: "#b39ddb", n: "SLOW-MO", w: 2, dur: 10 },
+  { k: "life", e: "❤️", c: "#ff5c8a", n: "EXTRA BALL", w: 1 },
+  { k: "tiny", e: "🔻", c: "#9e9e9e", n: "TINY BED", w: 2, dur: 10 }
+];
+function fPick() { const tot = FPUPS.reduce((a, p) => a + p.w, 0); let r = Math.random() * tot; for (const p of FPUPS) { r -= p.w; if (r <= 0) return p; } return FPUPS[0]; }
 function fLevel() {
-  const cols = 7, rows = Math.min(7, 3 + FB.level), gap = 5, bw = (FB.W - 20 - gap * (cols - 1)) / cols, bh = 22;
+  const cols = 7, rows = Math.min(8, 3 + FB.level), gap = 5, bw = (FB.W - 20 - gap * (cols - 1)) / cols, bh = 22, pat = (FB.level - 1) % 4;
   FB.bricks = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-    const tough = FB.level >= 2 && r === 0;
-    FB.bricks.push({ x: 10 + c * (bw + gap), y: 54 + r * (bh + gap), w: bw, h: bh, hp: tough ? 2 : 1, t: TREATS[(r + FB.level - 1) % TREATS.length] });
+    if (pat === 1 && Math.abs(c - 3) > r) continue;          // pyramid
+    if (pat === 2 && (r + c) % 2) continue;                    // checkerboard
+    if (pat === 3 && (c === 1 || c === 5) && r % 3 !== 0) continue; // pillars
+    const hp = FB.level >= 4 && r === 0 ? 3 : FB.level >= 2 && r <= (FB.level >= 5 ? 1 : 0) ? 2 : 1;
+    FB.bricks.push({ x: 10 + c * (bw + gap), y: 54 + r * (bh + gap), w: bw, h: bh, hp, max: hp, t: TREATS[(r + FB.level - 1) % TREATS.length] });
   }
-  fStick();
+  FB.caps = []; FB.shots = []; FB.fx = {}; fStick();
 }
-function fStick() { FB.stuck = true; FB.vx = 0; FB.vy = 0; FB.bx = FB.px; FB.by = FB.H - 64 - 9; }
-function fReset() { FB.level = 1; FB.score = 0; FB.lives = 3; FB.px = FB.tx = FB.W / 2; FB.pops = []; fLevel(); }
+function fStick() { const py = FB.H - 64; FB.stuck = true; FB.balls = [{ x: FB.px, y: py - 9, vx: 0, vy: 0 }]; }
+function fReset() { FB.level = 1; FB.score = 0; FB.lives = 3; FB.px = FB.tx = FB.W / 2; FB.pops = []; FB.msg = null; FB.fx = {}; fLevel(); }
 function fSpeed() { return Math.min(580, 350 + FB.level * 30); }
-function fLaunch() { if (FB.state !== "play" || !FB.stuck) return; FB.stuck = false; const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.7, sp = fSpeed(); FB.vx = Math.cos(a) * sp; FB.vy = Math.sin(a) * sp; chime("pop"); }
+function fLaunch() { if (FB.state !== "play" || !FB.stuck) return; FB.stuck = false; const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.7, sp = fSpeed(); FB.balls.forEach(b => { b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }); chime("pop"); }
 function fGo() { $("fpanel").hidden = true; fSize(); fReset(); FB.state = "play"; FB.last = performance.now(); fLoop(); }
 function fLoop() {
   cancelAnimationFrame(FB.raf);
   FB.raf = requestAnimationFrame(now => { const dt = Math.min(0.033, (now - FB.last) / 1000); FB.last = now; if (FB.state === "play") fStep(dt); fDraw(); if (FB.state === "play") fLoop(); });
 }
+function fBedW() { return FB.pw * (FB.fx.wide > 0 ? 1.6 : FB.fx.tiny > 0 ? 0.6 : 1); }
+function fBreak(b, by) {
+  b.hp--; if (b.hp > 0) return;
+  FB.score += 10 * FB.level; FB.pops.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0.4, e: b.t[0] }); chime("pop");
+  if (Math.random() < 0.17 && FB.caps.length < 3) FB.caps.push(Object.assign({ x: b.x + b.w / 2, y: b.y + b.h / 2 }, { p: fPick() }));
+}
+function fPower(p) {
+  FB.msg = { t: 1.3, txt: p.n, c: p.c }; chime("win");
+  if (p.k === "multi") { const add = []; FB.balls.forEach(b => { const sp = Math.hypot(b.vx, b.vy) || fSpeed(), a = Math.atan2(b.vy || -1, b.vx); [-0.4, 0.4].forEach(d => add.push({ x: b.x, y: b.y, vx: Math.cos(a + d) * sp, vy: Math.sin(a + d) * sp })); }); FB.balls = FB.balls.concat(add).slice(0, 12); if (FB.stuck) fLaunch(); }
+  else if (p.k === "life") FB.lives = Math.min(5, FB.lives + 1);
+  else { FB.fx[p.k] = p.dur; if (p.k === "wide") FB.fx.tiny = 0; if (p.k === "tiny") FB.fx.wide = 0; }
+}
 function fStep(dt) {
   const py = FB.H - 64, R = 9;
+  Object.keys(FB.fx).forEach(k => { if (FB.fx[k] > 0) FB.fx[k] -= dt; });
+  if (FB.msg) { FB.msg.t -= dt; if (FB.msg.t <= 0) FB.msg = null; }
+  const pw = fBedW();
   if (FB.key) FB.tx += FB.key * 420 * dt;
-  FB.tx = Math.max(FB.pw / 2 + 4, Math.min(FB.W - FB.pw / 2 - 4, FB.tx));
+  FB.tx = Math.max(pw / 2 + 4, Math.min(FB.W - pw / 2 - 4, FB.tx));
   FB.px += (FB.tx - FB.px) * Math.min(1, dt * 18);
-  if (FB.stuck) { FB.bx = FB.px; FB.by = py - R; return; }
-  const n = 4;
-  for (let i = 0; i < n; i++) {
-    const ox = FB.bx, oy = FB.by; FB.bx += FB.vx * dt / n; FB.by += FB.vy * dt / n;
-    if (FB.bx < R) { FB.bx = R; FB.vx = Math.abs(FB.vx); } if (FB.bx > FB.W - R) { FB.bx = FB.W - R; FB.vx = -Math.abs(FB.vx); }
-    if (FB.by < 30 + R) { FB.by = 30 + R; FB.vy = Math.abs(FB.vy); }
-    // the dog bed: where it hits decides the bounce angle
-    if (FB.vy > 0 && FB.by + R >= py && FB.by + R <= py + 14 && Math.abs(FB.bx - FB.px) <= FB.pw / 2 + R) {
-      const off = (FB.bx - FB.px) / (FB.pw / 2), sp = Math.min(fSpeed() + 40, Math.hypot(FB.vx, FB.vy) * 1.01), a = -Math.PI / 2 + off * 1.05;
-      FB.vx = Math.cos(a) * sp; FB.vy = Math.sin(a) * sp; FB.by = py - R; chime("pop");
+  // falling power-up capsules
+  FB.caps.forEach(cp => { cp.y += 150 * dt; if (!cp.got && cp.y + 10 >= py && cp.y - 10 <= py + 14 && Math.abs(cp.x - FB.px) <= pw / 2 + 14) { cp.got = 1; fPower(cp.p); } });
+  FB.caps = FB.caps.filter(cp => !cp.got && cp.y < FB.H + 20);
+  // bark blaster: the bed shoots bones up
+  if (FB.fx.laser > 0 && !FB.stuck) { FB.shotT = (FB.shotT || 0) - dt; if (FB.shotT <= 0) { FB.shotT = 0.32; FB.shots.push({ x: FB.px - pw / 2 + 8, y: py }, { x: FB.px + pw / 2 - 8, y: py }); } }
+  FB.shots.forEach(s => { s.y -= 620 * dt; const b = FB.bricks.find(b => b.hp > 0 && s.x >= b.x && s.x <= b.x + b.w && s.y >= b.y && s.y <= b.y + b.h); if (b) { s.gone = 1; fBreak(b); } });
+  FB.shots = FB.shots.filter(s => !s.gone && s.y > 30);
+  if (FB.stuck) { FB.balls[0].x = FB.px; FB.balls[0].y = py - R; }
+  else {
+    const slow = FB.fx.slow > 0 ? 0.65 : 1, fire = FB.fx.fire > 0, n = 4;
+    for (const ball of FB.balls) for (let i = 0; i < n && !ball.lost; i++) {
+      const ox = ball.x, oy = ball.y; ball.x += ball.vx * slow * dt / n; ball.y += ball.vy * slow * dt / n;
+      if (ball.x < R) { ball.x = R; ball.vx = Math.abs(ball.vx); } if (ball.x > FB.W - R) { ball.x = FB.W - R; ball.vx = -Math.abs(ball.vx); }
+      if (ball.y < 30 + R) { ball.y = 30 + R; ball.vy = Math.abs(ball.vy); }
+      if (ball.vy > 0 && ball.y + R >= py && ball.y + R <= py + 14 && Math.abs(ball.x - FB.px) <= pw / 2 + R) {
+        const off = (ball.x - FB.px) / (pw / 2), sp = Math.min(fSpeed() + 40, Math.hypot(ball.vx, ball.vy) * 1.01), a = -Math.PI / 2 + Math.max(-1, Math.min(1, off)) * 1.05;
+        ball.vx = Math.cos(a) * sp; ball.vy = Math.sin(a) * sp; ball.y = py - R; chime("pop");
+      }
+      for (const b of FB.bricks) {
+        if (b.hp <= 0 || ball.x + R < b.x || ball.x - R > b.x + b.w || ball.y + R < b.y || ball.y - R > b.y + b.h) continue;
+        if (fire) { b.hp = 1; fBreak(b); continue; } // fire ball plows straight through
+        if (oy + R <= b.y || oy - R >= b.y + b.h) ball.vy = -ball.vy; else ball.vx = -ball.vx;
+        ball.x = ox; ball.y = oy; fBreak(b);
+        break;
+      }
+      if (ball.y > FB.H + R) ball.lost = 1;
     }
-    for (const b of FB.bricks) {
-      if (b.hp <= 0 || FB.bx + R < b.x || FB.bx - R > b.x + b.w || FB.by + R < b.y || FB.by - R > b.y + b.h) continue;
-      if (oy + R <= b.y || oy - R >= b.y + b.h) FB.vy = -FB.vy; else FB.vx = -FB.vx;
-      FB.bx = ox; FB.by = oy; b.hp--;
-      if (b.hp <= 0) { FB.score += 10 * FB.level; FB.pops.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, t: 0.4, e: b.t[0] }); chime("pop"); }
-      break;
-    }
-    if (FB.by > FB.H + R) {
+    FB.balls = FB.balls.filter(b => !b.lost);
+    if (!FB.balls.length) {
       FB.lives--; chime("lose"); if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+      FB.fx = {}; FB.caps = []; FB.shots = [];
       if (FB.lives <= 0) { fDie(); return; }
       toast(`${FB.lives} ball${FB.lives > 1 ? "s" : ""} left`, 1000); fStick(); return;
     }
@@ -3787,26 +3827,31 @@ function fStep(dt) {
 }
 function fDie() { FB.state = "over"; fDraw(); arcOver("fetch", FB.score, $("fpanel"), fIdle, FB.level >= 3 ? hype(HYPE.win, 70 + FB.level) : "Ball's gone."); }
 function fDraw() {
-  const c = $("fc").getContext("2d"), W = FB.W, H = FB.H, py = H - 64;
+  const c = $("fc").getContext("2d"), W = FB.W, H = FB.H, py = H - 64, pw = fBedW();
   c.setTransform(FB.dpr, 0, 0, FB.dpr, 0, 0);
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1f3b73"); g.addColorStop(1, "#3c6fb0"); c.fillStyle = g; c.fillRect(0, 0, W, H);
   c.fillStyle = "rgba(255,255,255,0.06)"; for (let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2); // CRT scanlines
   c.textAlign = "center"; c.textBaseline = "middle";
   FB.bricks.forEach(b => {
     if (b.hp <= 0) return;
-    c.fillStyle = b.hp > 1 ? "#c7c7d1" : b.t[1]; c.fillRect(b.x, b.y, b.w, b.h);
+    c.fillStyle = b.hp >= 3 ? "#8e8e9c" : b.hp > 1 ? "#c7c7d1" : b.t[1]; c.fillRect(b.x, b.y, b.w, b.h);
     c.fillStyle = "rgba(255,255,255,0.45)"; c.fillRect(b.x, b.y, b.w, 3); c.fillStyle = "rgba(0,0,0,0.22)"; c.fillRect(b.x, b.y + b.h - 3, b.w, 3);
     c.font = '14px system-ui, "Apple Color Emoji"'; c.fillText(b.hp > 1 ? "🔩" : b.t[0], b.x + b.w / 2, b.y + b.h / 2 + 1);
   });
   FB.pops.forEach(p => { c.globalAlpha = p.t / 0.4; c.font = '20px system-ui, "Apple Color Emoji"'; c.fillText(p.e, p.x, p.y - (0.4 - p.t) * 40); c.globalAlpha = 1; });
+  (FB.caps || []).forEach(cp => { c.fillStyle = cp.p.c; c.beginPath(); if (c.roundRect) c.roundRect(cp.x - 17, cp.y - 11, 34, 22, 11); else c.rect(cp.x - 17, cp.y - 11, 34, 22); c.fill(); c.strokeStyle = "#fff"; c.lineWidth = 2; c.stroke(); c.font = '14px system-ui, "Apple Color Emoji"'; c.fillText(cp.p.e, cp.x, cp.y + 1); });
+  (FB.shots || []).forEach(s => { c.font = '13px system-ui, "Apple Color Emoji"'; c.fillText("🦴", s.x, s.y); });
   // dog bed paddle with the Big Dawg riding it
-  c.fillStyle = "#8a4b2a"; c.beginPath(); if (c.roundRect) c.roundRect(FB.px - FB.pw / 2, py, FB.pw, 14, 7); else c.rect(FB.px - FB.pw / 2, py, FB.pw, 14); c.fill();
-  c.fillStyle = "#e9c48f"; c.fillRect(FB.px - FB.pw / 2 + 8, py + 3, FB.pw - 16, 5);
+  c.fillStyle = FB.fx.wide > 0 ? "#2a7f8a" : FB.fx.tiny > 0 ? "#6b6b6b" : "#8a4b2a"; c.beginPath(); if (c.roundRect) c.roundRect(FB.px - pw / 2, py, pw, 14, 7); else c.rect(FB.px - pw / 2, py, pw, 14); c.fill();
+  c.fillStyle = "#e9c48f"; c.fillRect(FB.px - pw / 2 + 8, py + 3, pw - 16, 5);
+  if (FB.fx.laser > 0) { c.font = '14px system-ui, "Apple Color Emoji"'; c.fillText("📣", FB.px - pw / 2 + 8, py - 6); c.fillText("📣", FB.px + pw / 2 - 8, py - 6); }
   const img = zFace(FB.state === "over" ? ":dawgpain:" : FB.stuck ? ":dawgpog:" : ":dawgW:"); if (img.complete) c.drawImage(img, FB.px - 15, py + 12, 30, 30);
-  c.font = '18px system-ui, "Apple Color Emoji"'; c.fillText("🎾", FB.bx, FB.by + 1);
+  (FB.balls || []).forEach(b => { if (FB.fx.fire > 0) { c.fillStyle = "rgba(255,112,67,0.45)"; c.beginPath(); c.arc(b.x, b.y, 14, 0, 7); c.fill(); } c.font = '18px system-ui, "Apple Color Emoji"'; c.fillText("🎾", b.x, b.y + 1); });
   c.font = "11px 'Press Start 2P', monospace"; c.fillStyle = "#fff"; c.textAlign = "left"; c.fillText(`SCORE ${FB.score}`, 10, 16);
   c.textAlign = "right"; c.fillText("🎾".repeat(Math.max(0, FB.lives)), W - 8, 16);
   c.textAlign = "center"; c.fillStyle = "#ffd23f"; c.fillText(`LEVEL ${FB.level}`, W / 2, 16);
+  const act = FPUPS.filter(p => p.dur && FB.fx && FB.fx[p.k] > 0); if (act.length) { c.font = '12px system-ui, "Apple Color Emoji"'; c.textAlign = "left"; act.forEach((p, i) => { c.fillStyle = "#fff"; c.fillText(`${p.e}${Math.ceil(FB.fx[p.k])}`, 10 + i * 44, 38); }); c.textAlign = "center"; }
+  if (FB.msg) { c.font = "14px 'Press Start 2P', monospace"; c.fillStyle = "rgba(0,0,0,0.5)"; c.fillText(FB.msg.txt, W / 2 + 2, H * 0.55 + 2); c.fillStyle = FB.msg.c; c.fillText(FB.msg.txt, W / 2, H * 0.55); }
   if (FB.state === "play" && FB.stuck) { c.fillStyle = "#fff"; c.font = "10px 'Press Start 2P', monospace"; c.fillText("TAP TO LAUNCH", W / 2, py - 60); }
 }
 function fIdle() { cancelAnimationFrame(FB.raf); FB.state = "idle"; fSize(); fReset(); fDraw(); arcStart("fetch", $("fpanel"), fGo); }
@@ -3968,6 +4013,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_bowl.js", "key": "bowl", "name": "Bowl-a-Dawg", "icon": "🎳", "blurb": "10 frames. Swipe to roll. Curve it.", "how": "Swipe up from the bottom to roll. Where you start = where you stand, the swipe's direction = your aim, bend the swipe to hook it, flick faster for more speed. Hit the pocket (just beside the head pin) for strikes. 10 frames, real scoring, 300 is perfect.", "cat": "sports", "max": 300},
 {"file": "g_cross.js", "key": "cross", "name": "Dawg Crossing", "icon": "🚗", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
+{"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track, so get out of the way. Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.", "max": 999999},
 {"file": "g_dawgball.js", "key": "dawgball", "name": "Dawg Ball", "icon": "🧢", "blurb": "3-inning baseball vs the Cats.", "how": "3 innings vs the Alley Cats. When you PITCH: pick Fastball, Curve or Changeup, then tap to stop the aim circle. Paint the corners and mix your pitches - the same pitch twice gets hit harder. When you BAT: a ring shows where the pitch will cross - tap anywhere when the shrinking ring closes on it (green = swing now). A RED ring is a ball: let it go. Score: runs x10, +50 for a win, +10 per strikeout.", "cat": "sports", "max": 999},
 {"file": "g_derby.js", "key": "derby", "name": "Dawg Derby", "icon": "⚾", "blurb": "Home run derby. Time your swing.", "how": "The cat pitches, you tap anywhere to swing when the ball reaches the plate. Perfect timing = a moonshot. Any swing that isn't a homer is an out, and so is taking a strike. Balls wide of the plate are free: let them go. 10 outs. Score = total home-run feet.", "cat": "sports", "max": 99999},
 {"file": "g_drip.js", "key": "drip", "name": "Dawg Drip", "icon": "👗", "blurb": "Style the pup. Win the runway.", "how": "Each round has a theme. You get 30 seconds: use the tabs at the bottom to pick a hat, top, eyewear, shoes, an accessory and a color. Hit WALK THE RUNWAY and 3 judges score theme match, color harmony and completeness. Perfect 10s earn bonus points. 5 rounds.", "max": 9999},
