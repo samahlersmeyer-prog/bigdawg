@@ -14,13 +14,13 @@
   const FRONT = [
     { name: "STRAIGHT SHOT", par: 2, out: R(.22, .08, .78, .94), tee: [.5, .84], cup: [.5, .2], tip: "NICE AND EASY",
       deco: [["dog", .11, .6], ["🌻", .89, .28], ["🦴", .9, .78], ["🌼", .1, .2]] },
-    { name: "DOG-LEG", par: 3, out: [[.1, .94], [.42, .94], [.42, .42], [.9, .42], [.9, .08], [.1, .08]], tee: [.26, .84], cup: [.76, .24], tip: "BANK IT AROUND THE CORNER",
+    { name: "DOG-LEG", pw: 1.3, par: 3, out: [[.1, .94], [.42, .94], [.42, .42], [.9, .42], [.9, .08], [.1, .08]], tee: [.26, .84], cup: [.76, .24], tip: "BANK IT AROUND THE CORNER",
       deco: [["🌷", .7, .62], ["🐿️", .8, .84], ["🌼", .58, .76], ["🥏", .92, .95]] },
-    { name: "BANK SHOT", par: 3, out: R(.1, .08, .9, .94), blocks: [[.1, .47, .62, .53]], tee: [.26, .84], cup: [.24, .2], tip: "USE THE WALLS" },
+    { name: "BANK SHOT", pw: 1.45, par: 3, out: R(.1, .08, .9, .94), blocks: [[.1, .47, .62, .53]], tee: [.26, .84], cup: [.24, .2], tip: "USE THE WALLS" },
     { name: "DOG HOUSE", par: 2, out: R(.18, .08, .82, .94), movers: [{ kind: "house", u: .5, v: .5, w: .3, h: .09, amp: .11, sp: 1.6 }], tee: [.5, .85], cup: [.5, .18], tip: "TIME IT PAST THE HOUSE",
       deco: [["🌻", .08, .3], ["🦴", .91, .7], ["🌷", .09, .82]] },
-    { name: "NAP TIME", par: 3, out: R(.12, .08, .88, .94), sand: [[.28, .26, .72, .36]], dogs: [[.5, .58, .11]], tee: [.5, .86], cup: [.5, .17], tip: "LET SLEEPING DOGS LIE" },
-    { name: "THE POND", par: 3, out: R(.1, .08, .9, .94), water: [[.1, .42, .64, .6]], tee: [.3, .85], cup: [.3, .18], tip: "WATER COSTS A STROKE" },
+    { name: "NAP TIME", pw: 1.15, par: 3, out: R(.12, .08, .88, .94), sand: [[.28, .26, .72, .36]], dogs: [[.5, .58, .11]], tee: [.5, .86], cup: [.5, .17], tip: "LET SLEEPING DOGS LIE" },
+    { name: "THE POND", pw: 1.15, par: 3, out: R(.1, .08, .9, .94), water: [[.1, .42, .64, .6]], tee: [.3, .85], cup: [.3, .18], tip: "WATER COSTS A STROKE" },
     { name: "BOUNCE HOUSE", par: 2, out: R(.14, .08, .86, .94), bump: [[.5, .5, .07], [.3, .36, .06], [.7, .36, .06], [.32, .67, .05], [.68, .67, .05]], tee: [.5, .86], cup: [.5, .17], tip: "BOING BOING" },
     { name: "THE BRIDGE", par: 2, out: R(.1, .08, .9, .94), water: [[.1, .4, .9, .6]], bridges: [[.42, .4, .58, .6]], tee: [.5, .86], cup: [.36, .18], tip: "STAY ON THE BRIDGE" },
     { name: "WINDMILL BONE", par: 3, out: R(.12, .08, .88, .94), blocks: [[.12, .48, .36, .54], [.64, .48, .88, .54]], bone: { u: .5, v: .51, len: .085, sp: 1.8 },
@@ -30,7 +30,7 @@
     { name: "LOOP-DE-LOOP", par: 3, out: R(.2, .06, .8, .94), tee: [.5, .86], cup: [.5, .17], tip: "TOO SLOW & IT ROLLS BACK",
       ramp: [.2, .4, .8, .68], loop: [.38, .34, .62, .4], blocks: [[.2, .34, .38, .4], [.62, .34, .8, .4]],
       deco: [["🌻", .1, .8], ["🐿️", .9, .22], ["🦴", .9, .74]] },
-    { name: "UNDER THE DECK", par: 2, out: R(.12, .06, .88, .94), tee: [.32, .86], cup: [.72, .18], tip: "PICK A TUNNEL",
+    { name: "UNDER THE DECK", pw: 1.2, par: 2, out: R(.12, .06, .88, .94), tee: [.32, .86], cup: [.72, .18], tip: "PICK A TUNNEL",
       deck: { r: [.12, .36, .88, .6], tunnels: [[.2, .31], [.45, .55], [.69, .8]] }, bump: [[.5, .74, .045]] },
     { name: "SPRINKLER", par: 3, out: R(.1, .06, .9, .94), tee: [.5, .87], cup: [.5, .17], tip: "DODGE THE SPRAY",
       sprink: { u: .5, v: .5, R: .42, sp: 1.3, F: 640 }, deco: [["🐸", .05, .3], ["🌷", .95, .62]] },
@@ -44,7 +44,7 @@
       bump: [[.3, .72, .05], [.7, .72, .05], [.5, .6, .05], [.3, .48, .05], [.7, .48, .05], [.5, .36, .05], [.3, .24, .05]] },
     { name: "SHORTCUT", par: 3, out: R(.1, .06, .9, .94), tee: [.28, .86], cup: [.72, .82], tip: "THE DOGGY DOOR IS FASTER",
       blocks: [[.46, .26, .54, .6], [.46, .67, .54, .94]], sand: [[.6, .1, .86, .2]] },
-    { name: "THE DOGHOUSE", par: 3, out: R(.12, .06, .88, .94), tee: [.5, .87], cup: [.5, .2], tip: "PUTT IT THROUGH THE DOOR",
+    { name: "THE DOGHOUSE", pw: 1.3, par: 3, out: R(.12, .06, .88, .94), tee: [.5, .87], cup: [.5, .2], tip: "PUTT IT THROUGH THE DOOR",
       dh: { r: [.34, .1, .66, .3], door: [.44, .56] }, bump: [[.5, .58, .055], [.28, .44, .045], [.72, .44, .045]] },
   ];
 
@@ -169,7 +169,7 @@
   function shoot(G, ux, uy, p) {
     const s = G.s, b = s.ball;
     if (s.phase !== "aim" || p < 0.04) return;
-    const v = p * s.vmax; b.vx = ux * v; b.vy = uy * v;
+    const v = p * s.vmax * (s.hole.pw || 1); b.vx = ux * v; b.vy = uy * v;
     s.last.x = b.x; s.last.y = b.y; s.strokes++; s.phase = "roll"; s.rt = 0; s.drag = null; s.kshow = false; s.intro = 0;
     G.sfx("pop");
   }
