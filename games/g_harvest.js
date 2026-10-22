@@ -47,6 +47,9 @@
     key: "harvest", name: "Harvest Dawg", icon: "🚜", max: 99999,
     blurb: "Drive a giant combine. Clear the crops.",
     how: "Hold your thumb down and drag: the combine drives toward your finger and its giant header cuts everything it rolls over. Clear 90% of the field before the clock runs out to move on (plus bonus time). Rocks stop you dead and cost 3 seconds. Don't run over the cows. Wheat, then corn, then sunflowers: worth more each field.",
+    // Checkpoint at the start of each field after the first.
+    save(G) { const s = G.s; if (s.lvl < 2 || s.left < s.total - 60) return null; return { label: `Field ${s.lvl}`, lvl: s.lvl, time: s.time, score: s.score }; },
+    load(G, v) { const s = G.s; s.lvl = v.lvl; s.time = v.time; s.score = v.score; s.nextBale = 0.12; field(G); },
     reset(G) { G.s = { lvl: 1, time: 60, score: 0, combo: 0, chaff: [], bales: [], hold: null, shake: 0, stall: 0 }; field(G); },
     down(G, x, y) { G.s.hold = { x, y }; }, move(G, x, y) { if (G.s.hold) G.s.hold = { x, y }; }, up(G) { G.s.hold = null; },
     update(G, dt) {

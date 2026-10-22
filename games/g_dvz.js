@@ -16,6 +16,19 @@
     key: "dvz", name: "Dawgs vs Zombies", icon: "🧟", max: 99999,
     blurb: "Lane defense. Hold the yard.",
     how: "Zombies shuffle in from the right. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.",
+    // Save & continue: the whole yard (defenders, zombies, timers) checkpoints as you play.
+    save(G) {
+      const s = G.s; if (!s.t || s.t < 3) return null;
+      return { label: `Wave ${s.wave} · ${Math.floor(s.t / 60)}:${String(Math.floor(s.t % 60)).padStart(2, "0")}`,
+        v: { bones: s.bones, score: s.score, t: s.t, wave: s.wave, waveT: s.waveT, spawn: s.spawn, dropT: s.dropT, mowers: s.mowers.slice(), cool: s.cool.slice(),
+          grid: s.grid.map(row => row.map(p => p && { k: p.u.k, hp: p.hp, t: p.t, fuse: p.fuse })),
+          zs: s.zs.map(z => ({ r: z.r, x: z.x, hp: z.hp, max: z.max, sp: z.sp, e: z.e, hat: z.hat, v: z.v, sz: z.sz, delay: z.delay, slow: z.slow })) } };
+    },
+    load(G, sv) {
+      const s = G.s, v = sv.v; ["bones", "score", "t", "wave", "waveT", "spawn", "dropT", "mowers", "cool", "zs"].forEach(k => s[k] = v[k]);
+      s.grid = v.grid.map(row => row.map(p => p && Object.assign({ u: UNITS.find(u => u.k === p.k) }, p)));
+      s.msg = { txt: "WELCOME BACK!", t: 1.5 };
+    },
     reset(G) {
       G.s = { bones: 150, score: 0, t: 0, grid: [], zs: [], shots: [], drops: [], fx: [], sel: null, cool: UNITS.map(() => 0), mowers: [1, 1, 1, 1, 1], mow: [], spawn: 18, wave: 1, waveT: 90, flag: 0, msg: { txt: "HERE THEY COME...", t: 2 }, dropT: 4 };
       for (let r = 0; r < ROWS; r++) G.s.grid.push(new Array(COLS).fill(null));
