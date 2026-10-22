@@ -11,22 +11,25 @@
   ];
   const ZOMB = { walk: { hp: 8, sp: 12, e: "🧟", v: 10 }, cone: { hp: 26, sp: 13, e: "🧟", hat: "🎃", v: 20 }, run: { hp: 8, sp: 26, e: "🧟‍♀️", v: 15 }, big: { hp: 70, sp: 8, e: "🧟‍♂️", hat: "📮", v: 60, sz: 1.35 } };
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const UPWAVE = [0, 0, 2, 4]; // wave a star level unlocks at
+  const upCost = p => p.u.cost * p.lv;
+  const maxHp = p => p.u.hp * (p.u.k === "house" ? p.lv * 1.8 : 1 + (p.lv - 1) * 0.5);
   function geo(G) { const cw = Math.min(G.W / (COLS + 0.6), (G.H - TOP - 10) / ROWS); return { cw, ch: (G.H - TOP - 10) / ROWS, x0: 4 }; }
   defGame({
     key: "dvz", name: "Dawgs vs Zombies", icon: "🧟", max: 99999,
     blurb: "Lane defense. Hold the yard.",
-    how: "Zombies shuffle in from the right. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.",
+    how: "Zombies shuffle in from the right. Tap a defender you've placed to UPGRADE it (★2 from wave 2, ★3 from wave 4) or DIG it up for half your bones back. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.",
     // Save & continue: the whole yard (defenders, zombies, timers) checkpoints as you play.
     save(G) {
       const s = G.s; if (!s.t || s.t < 3) return null;
       return { label: `Wave ${s.wave} · ${Math.floor(s.t / 60)}:${String(Math.floor(s.t % 60)).padStart(2, "0")}`,
         v: { bones: s.bones, score: s.score, t: s.t, wave: s.wave, waveT: s.waveT, spawn: s.spawn, dropT: s.dropT, mowers: s.mowers.slice(), cool: s.cool.slice(),
-          grid: s.grid.map(row => row.map(p => p && { k: p.u.k, hp: p.hp, t: p.t, fuse: p.fuse })),
+          grid: s.grid.map(row => row.map(p => p && { k: p.u.k, hp: p.hp, t: p.t, fuse: p.fuse, lv: p.lv || 1 })),
           zs: s.zs.map(z => ({ r: z.r, x: z.x, hp: z.hp, max: z.max, sp: z.sp, e: z.e, hat: z.hat, v: z.v, sz: z.sz, delay: z.delay, slow: z.slow })) } };
     },
     load(G, sv) {
       const s = G.s, v = sv.v; ["bones", "score", "t", "wave", "waveT", "spawn", "dropT", "mowers", "cool", "zs"].forEach(k => s[k] = v[k]);
-      s.grid = v.grid.map(row => row.map(p => p && Object.assign({ u: UNITS.find(u => u.k === p.k) }, p)));
+      s.grid = v.grid.map(row => row.map(p => p && Object.assign({ u: UNITS.find(u => u.k === p.k), lv: 1 }, p)));
       s.msg = { txt: "WELCOME BACK!", t: 1.5 };
     },
     reset(G) {
@@ -36,15 +39,28 @@
     cell(G, x, y) { const g = geo(G), c = Math.floor((x - g.x0) / g.cw), r = Math.floor((y - TOP) / g.ch); return r >= 0 && r < ROWS && c >= 0 && c < COLS ? [r, c] : null; },
     cx(G, c) { const g = geo(G); return g.x0 + c * g.cw + g.cw / 2; },
     cy(G, r) { const g = geo(G); return TOP + r * g.ch + g.ch / 2; },
+    menu(G, r, c) { const g = geo(G), w = 118, h = 44, cx = this.cx(G, c), cy = this.cy(G, r), y = r >= 3 ? cy - g.ch / 2 - h - 4 : cy + g.ch / 2 + 4, x = Math.max(4, Math.min(G.W - 2 * w - 10, cx - w)); return { up: { x, y, w, h }, dig: { x: x + w + 6, y, w, h } }; },
     tap(G, x, y) {
-      const s = G.s;
+      const s = G.s, hit = q => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h;
+      if (s.pick) {
+        const [r, c] = s.pick, p = s.grid[r][c], m = this.menu(G, r, c); s.pick = null;
+        if (p && hit(m.up)) {
+          if (p.u.k === "bomb" || p.lv >= 3) { s.msg = { txt: "MAXED OUT", t: 0.8 }; return; }
+          if (s.wave < UPWAVE[p.lv + 1]) { s.msg = { txt: `★${p.lv + 1} UNLOCKS WAVE ${UPWAVE[p.lv + 1]}`, t: 1 }; return; }
+          if (s.bones < upCost(p)) { s.msg = { txt: `NEED ${upCost(p)} 🦴`, t: 0.8 }; return; }
+          s.bones -= upCost(p); p.lv++; p.hp = maxHp(p); G.sfx("win"); s.fx.push({ x: this.cx(G, c), y: this.cy(G, r), t: 0.5, txt: "★".repeat(p.lv) }); return;
+        }
+        if (p && hit(m.dig)) { const back = Math.floor(p.u.cost * (p.lv * (p.lv + 1) / 2) / 2); s.bones += back; s.grid[r][c] = null; G.sfx("pop"); s.fx.push({ x: this.cx(G, c), y: this.cy(G, r), t: 0.5, txt: `+${back}` }); return; }
+      }
       // bones first (they float on top)
       const d = s.drops.find(d => Math.hypot(d.x - x, d.y - y) < 40); if (d) { d.got = 1; s.bones += 25; G.sfx("pop"); return; }
       if (y < TOP - 4 && y > 38) { const i = Math.floor(x / (G.W / UNITS.length)); const u = UNITS[i]; if (!u) return; if (s.cool[i] > 0) { s.msg = { txt: "RECHARGING", t: 0.7 }; return; } if (s.bones < u.cost) { s.msg = { txt: `NEED ${u.cost} 🦴`, t: 0.8 }; return; } s.sel = s.sel === i ? null : i; return; }
-      const cl = this.cell(G, x, y); if (!cl || s.sel == null) return;
-      const [r, c] = cl; if (s.grid[r][c]) { s.msg = { txt: "TAKEN", t: 0.6 }; return; }
+      const cl = this.cell(G, x, y); if (!cl) return;
+      const [r, c] = cl;
+      if (s.grid[r][c]) { if (s.sel == null) s.pick = [r, c]; else s.msg = { txt: "TAKEN", t: 0.6 }; return; }
+      if (s.sel == null) return;
       const u = UNITS[s.sel]; if (s.bones < u.cost) return;
-      s.bones -= u.cost; s.cool[s.sel] = u.cd; s.grid[r][c] = { u, hp: u.hp, t: u.k === "bowl" ? 5 : 0, fuse: u.fuse || 0 }; s.sel = null; G.sfx("pop");
+      s.bones -= u.cost; s.cool[s.sel] = u.cd; s.grid[r][c] = { u, hp: u.hp, lv: 1, t: u.k === "bowl" ? 5 : 0, fuse: u.fuse || 0 }; s.sel = null; G.sfx("pop");
     },
     update(G, dt) {
       const s = G.s, g = geo(G); s.t += dt;
@@ -61,8 +77,12 @@
       // defenders
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         const p = s.grid[r][c]; if (!p) continue; const x = this.cx(G, c), y = this.cy(G, r);
-        if (p.u.k === "bowl") { p.t -= dt; if (p.t <= 0) { p.t = 10; s.drops.push({ x: x + rnd(-10, 10), y: y - 10, ty: y + 6, t: 12 }); } }
-        if (p.u.rate) { p.t -= dt; if (p.t <= 0 && s.zs.some(z => z.r === r && z.x > x - 10 && z.x < G.W + 10)) { p.t = p.u.rate; s.shots.push({ r, x: x + 14, y: y - 4, dmg: p.u.dmg, slow: p.u.slow }); } }
+        if (p.u.k === "bowl") { p.t -= dt; if (p.t <= 0) { p.t = [10, 10, 7, 5][p.lv || 1]; s.drops.push({ x: x + rnd(-10, 10), y: y - 10, ty: y + 6, t: 12 }); } }
+        if (p.u.rate) { p.t -= dt; if (p.t <= 0 && s.zs.some(z => z.r === r && z.x > x - 10 && z.x < G.W + 10)) {
+          const lv = p.lv || 1; p.t = p.u.rate * (p.u.slow ? [1, 1, 0.8, 0.65][lv] : 1);
+          const n = p.u.slow ? 1 : lv; // launchers fire 1, 2, then 3 balls per volley
+          for (let i = 0; i < n; i++) s.shots.push({ r, x: x + 14 - i * 16, y: y - 4, dmg: p.u.dmg * (p.u.slow && lv === 3 ? 2 : 1), slow: p.u.slow });
+        } }
         if (p.u.k === "bomb") { p.fuse -= dt; if (p.fuse <= 0) { s.grid[r][c] = null; s.fx.push({ x, y, t: 0.5, boom: g.cw * 1.6 }); G.sfx("lose"); G.buzz(); s.zs.forEach(z => { if (Math.abs(z.r - r) <= 1 && Math.abs(z.x - x) < g.cw * 1.6) z.hp -= 90; }); } }
       }
       // tennis balls
@@ -73,7 +93,7 @@
         if (z.delay > 0) { z.delay -= dt; return; }
         const c = Math.floor((z.x - 14 - g.x0) / g.cw), p = c >= 0 && c < COLS ? s.grid[z.r][c] : null;
         const sp = z.sp * (z.slow > 0 ? 0.5 : 1); if (z.slow > 0) z.slow -= dt;
-        if (p && p.u.k !== "bomb" && z.x - this.cx(G, c) < g.cw * 0.55) { p.hp -= dt * (z.slow > 0 ? 0.5 : 1); z.chew = (z.chew || 0) + dt; if (p.hp <= 0) s.grid[z.r][c] = null; }
+        if (p && p.u.k !== "bomb" && z.x - this.cx(G, c) < g.cw * 0.55) { p.hp -= dt * (z.slow > 0 ? 0.5 : 1); z.chew = (z.chew || 0) + dt; if (p.u.k === "house" && p.lv === 3) z.hp -= dt * 1.5; if (p.hp <= 0) s.grid[z.r][c] = null; }
         else z.x -= sp * dt;
         if (z.x < 8) {
           if (s.mowers[z.r]) { s.mowers[z.r] = 0; s.mow.push({ r: z.r, x: 0 }); G.sfx("win"); s.msg = { txt: "LAWN MOWER!", t: 1 }; }
@@ -114,7 +134,10 @@
         const p = s.grid[r][q]; if (!p) continue; const x = this.cx(G, q), y = this.cy(G, r), sz = Math.min(g.cw, g.ch) * 0.7;
         if (p.u.face) { G.img(c, p.u.face, x, y, sz); G.emoji(c, p.u.e, x + sz * 0.35, y + sz * 0.3, sz * 0.45); }
         else G.emoji(c, p.u.e, x, y, p.u.k === "bomb" ? sz * (1 + 0.15 * Math.sin(G.t * 20)) : sz);
-        if (p.hp < p.u.hp && p.u.k !== "bomb") { c.fillStyle = "#300"; c.fillRect(x - 14, y + sz / 2, 28, 3); c.fillStyle = "#5be35b"; c.fillRect(x - 14, y + sz / 2, 28 * p.hp / p.u.hp, 3); }
+        if (p.hp < maxHp(p) && p.u.k !== "bomb") { c.fillStyle = "#300"; c.fillRect(x - 14, y + sz / 2, 28, 3); c.fillStyle = "#5be35b"; c.fillRect(x - 14, y + sz / 2, 28 * p.hp / maxHp(p), 3); }
+        if (p.lv > 1) G.text(c, "★".repeat(p.lv), x, y - sz / 2 - 2, 9, "#ffd23f");
+        const can = p.u.k !== "bomb" && p.lv < 3 && s.wave >= UPWAVE[p.lv + 1] && s.bones >= upCost(p);
+        if (can) { c.fillStyle = "#2e7d32"; c.beginPath(); c.arc(x - sz * 0.42, y + sz * 0.32, 8, 0, 7); c.fill(); G.text(c, "▲", x - sz * 0.42, y + sz * 0.33, 8, "#fff"); }
       }
       s.shots.forEach(b => G.emoji(c, b.slow ? "❄️" : "🎾", b.x, b.y, 14));
       // zombies (sorted by lane so lower lanes overlap upper)
@@ -126,9 +149,16 @@
       });
       s.drops.forEach(d => { const a = d.t < 2 ? (Math.floor(G.t * 8) % 2 ? 0.4 : 1) : 1; c.globalAlpha = a; c.fillStyle = "rgba(255,210,63,0.35)"; c.beginPath(); c.arc(d.x, d.y, 20, 0, 7); c.fill(); G.emoji(c, "🦴", d.x, d.y, 26); c.globalAlpha = 1; });
       s.fx.forEach(e => { if (e.boom) { c.fillStyle = `rgba(255,140,40,${e.t})`; c.beginPath(); c.arc(e.x, e.y, e.boom * (1.2 - e.t), 0, 7); c.fill(); } else G.text(c, e.txt, e.x, e.y - 20 - (0.5 - e.t) * 30, 10, "#ffd23f"); });
+      if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.5, s.msg.txt.length > 12 ? 15 : undefined);
+      if (s.pick && s.grid[s.pick[0]][s.pick[1]]) {
+        const [r, q] = s.pick, p = s.grid[r][q], m = this.menu(G, r, q), lock = s.wave < UPWAVE[Math.min(3, p.lv + 1)], max = p.u.k === "bomb" || p.lv >= 3;
+        c.strokeStyle = "#ffd23f"; c.lineWidth = 3; c.strokeRect(g.x0 + q * g.cw + 2, TOP + r * g.ch + 2, g.cw - 4, g.ch - 4);
+        const btn = (b, l1, l2, bg) => { c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(b.x + 2, b.y + 3, b.w, b.h); c.fillStyle = bg; c.fillRect(b.x, b.y, b.w, b.h); G.text(c, l1, b.x + b.w / 2, b.y + 14, 10, "#222"); G.text(c, l2, b.x + b.w / 2, b.y + 31, 10, "#222"); };
+        btn(m.up, max ? "MAXED" : `UPGRADE ★${p.lv + 1}`, max ? "" : lock ? `WAVE ${UPWAVE[p.lv + 1]}` : `${upCost(p)} 🦴`, !max && !lock && s.bones >= upCost(p) ? "#ffd23f" : "#9e9e9e");
+        btn(m.dig, "DIG UP", `+${Math.floor(p.u.cost * (p.lv * (p.lv + 1) / 2) / 2)} 🦴`, "#e57373");
+      }
       G.hud(c, `🦴${s.bones}`, `WAVE ${s.wave}`, `${Math.round(s.score)}`);
       if (s.sel != null) G.text(c, `TAP A SQUARE FOR ${UNITS[s.sel].n}`, W / 2, TOP + 8, 9, "#fff");
-      if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.5, s.msg.txt.length > 12 ? 15 : undefined);
       G.hint(c, "TAP A CARD, THEN A SQUARE", 5);
     }
   });
