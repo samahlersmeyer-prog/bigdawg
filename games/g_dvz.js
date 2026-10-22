@@ -4,12 +4,12 @@
   const ROWS = 5, COLS = 7, TOP = 112;
   const UNITS = [
     { k: "bowl", n: "BOWL", e: "🥣", cost: 50, hp: 5, cd: 6, desc: "MAKES BONES" },
-    { k: "ball", n: "LAUNCHER", e: "🎾", face: ":dawgW:", cost: 100, hp: 5, cd: 6, rate: 1.0, dmg: 1 },
+    { k: "ball", n: "LAUNCHER", e: "🎾", face: ":dawgW:", cost: 100, hp: 5, cd: 5, rate: 0.9, dmg: 1 },
     { k: "house", n: "DOGHOUSE", e: "🏠", cost: 50, hp: 30, cd: 18 },
     { k: "snow", n: "SNOW PUP", e: "❄️", face: ":dawgpog:", cost: 175, hp: 5, cd: 8, rate: 1.4, dmg: 1, slow: 1 },
     { k: "bomb", n: "BARK BOMB", e: "💣", cost: 150, hp: 99, cd: 30, fuse: 1 }
   ];
-  const ZOMB = { walk: { hp: 10, sp: 13, e: "🧟", v: 10 }, cone: { hp: 26, sp: 13, e: "🧟", hat: "🎃", v: 20 }, run: { hp: 8, sp: 26, e: "🧟‍♀️", v: 15 }, big: { hp: 70, sp: 8, e: "🧟‍♂️", hat: "📮", v: 60, sz: 1.35 } };
+  const ZOMB = { walk: { hp: 8, sp: 12, e: "🧟", v: 10 }, cone: { hp: 26, sp: 13, e: "🧟", hat: "🎃", v: 20 }, run: { hp: 8, sp: 26, e: "🧟‍♀️", v: 15 }, big: { hp: 70, sp: 8, e: "🧟‍♂️", hat: "📮", v: 60, sz: 1.35 } };
   const rnd = (a, b) => a + Math.random() * (b - a);
   function geo(G) { const cw = Math.min(G.W / (COLS + 0.6), (G.H - TOP - 10) / ROWS); return { cw, ch: (G.H - TOP - 10) / ROWS, x0: 4 }; }
   defGame({
@@ -30,7 +30,7 @@
       s.msg = { txt: "WELCOME BACK!", t: 1.5 };
     },
     reset(G) {
-      G.s = { bones: 150, score: 0, t: 0, grid: [], zs: [], shots: [], drops: [], fx: [], sel: null, cool: UNITS.map(() => 0), mowers: [1, 1, 1, 1, 1], mow: [], spawn: 18, wave: 1, waveT: 90, flag: 0, msg: { txt: "HERE THEY COME...", t: 2 }, dropT: 4 };
+      G.s = { bones: 200, score: 0, t: 0, grid: [], zs: [], shots: [], drops: [], fx: [], sel: null, cool: UNITS.map(() => 0), mowers: [1, 1, 1, 1, 1], mow: [], spawn: 25, wave: 1, waveT: 120, flag: 0, msg: { txt: "HERE THEY COME...", t: 2 }, dropT: 4 };
       for (let r = 0; r < ROWS; r++) G.s.grid.push(new Array(COLS).fill(null));
     },
     cell(G, x, y) { const g = geo(G), c = Math.floor((x - g.x0) / g.cw), r = Math.floor((y - TOP) / g.ch); return r >= 0 && r < ROWS && c >= 0 && c < COLS ? [r, c] : null; },
@@ -39,7 +39,7 @@
     tap(G, x, y) {
       const s = G.s;
       // bones first (they float on top)
-      const d = s.drops.find(d => Math.hypot(d.x - x, d.y - y) < 30); if (d) { d.got = 1; s.bones += 25; G.sfx("pop"); return; }
+      const d = s.drops.find(d => Math.hypot(d.x - x, d.y - y) < 40); if (d) { d.got = 1; s.bones += 25; G.sfx("pop"); return; }
       if (y < TOP - 4 && y > 38) { const i = Math.floor(x / (G.W / UNITS.length)); const u = UNITS[i]; if (!u) return; if (s.cool[i] > 0) { s.msg = { txt: "RECHARGING", t: 0.7 }; return; } if (s.bones < u.cost) { s.msg = { txt: `NEED ${u.cost} 🦴`, t: 0.8 }; return; } s.sel = s.sel === i ? null : i; return; }
       const cl = this.cell(G, x, y); if (!cl || s.sel == null) return;
       const [r, c] = cl; if (s.grid[r][c]) { s.msg = { txt: "TAKEN", t: 0.6 }; return; }
@@ -51,17 +51,17 @@
       if (s.msg) { s.msg.t -= dt; if (s.msg.t <= 0) s.msg = null; }
       s.cool = s.cool.map(v => Math.max(0, v - dt));
       // free bones fall from the sky
-      s.dropT -= dt; if (s.dropT <= 0) { s.dropT = 7; s.drops.push({ x: rnd(30, G.W - 30), y: TOP, ty: rnd(TOP + 40, G.H - 40), t: 9 }); }
+      s.dropT -= dt; if (s.dropT <= 0) { s.dropT = 6; s.drops.push({ x: rnd(30, G.W - 30), y: TOP, ty: rnd(TOP + 40, G.H - 40), t: 12 }); }
       s.drops.forEach(d => { if (d.y < d.ty) d.y += 60 * dt; d.t -= dt; }); s.drops = s.drops.filter(d => !d.got && d.t > 0);
       // spawning: steady trickle that speeds up, plus a big wave every 50s
       s.spawn -= dt; s.waveT -= dt;
       const lvl = 1 + s.t / 60;
       if (s.waveT <= 0) { s.waveT = 55; s.wave++; s.msg = { txt: "A HUGE WAVE IS COMING!", t: 2 }; for (let i = 0; i < 1 + s.wave * 2; i++) this.addZ(G, i * 1.2, lvl); }
-      if (s.spawn <= 0) { s.spawn = Math.max(2.8, 14 - s.t / 25) * rnd(0.7, 1.2); this.addZ(G, 0, lvl); }
+      if (s.spawn <= 0) { s.spawn = Math.max(3, 16 - s.t / 35) * rnd(0.7, 1.2); this.addZ(G, 0, lvl); }
       // defenders
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         const p = s.grid[r][c]; if (!p) continue; const x = this.cx(G, c), y = this.cy(G, r);
-        if (p.u.k === "bowl") { p.t -= dt; if (p.t <= 0) { p.t = 10; s.drops.push({ x: x + rnd(-10, 10), y: y - 10, ty: y + 6, t: 9 }); } }
+        if (p.u.k === "bowl") { p.t -= dt; if (p.t <= 0) { p.t = 10; s.drops.push({ x: x + rnd(-10, 10), y: y - 10, ty: y + 6, t: 12 }); } }
         if (p.u.rate) { p.t -= dt; if (p.t <= 0 && s.zs.some(z => z.r === r && z.x > x - 10 && z.x < G.W + 10)) { p.t = p.u.rate; s.shots.push({ r, x: x + 14, y: y - 4, dmg: p.u.dmg, slow: p.u.slow }); } }
         if (p.u.k === "bomb") { p.fuse -= dt; if (p.fuse <= 0) { s.grid[r][c] = null; s.fx.push({ x, y, t: 0.5, boom: g.cw * 1.6 }); G.sfx("lose"); G.buzz(); s.zs.forEach(z => { if (Math.abs(z.r - r) <= 1 && Math.abs(z.x - x) < g.cw * 1.6) z.hp -= 90; }); } }
       }
@@ -89,7 +89,7 @@
     },
     addZ(G, delay, lvl) {
       const s = G.s, r = Math.floor(Math.random() * ROWS), q = Math.random();
-      const k = s.t > 150 && q < 0.12 ? "big" : s.t > 60 && q < 0.35 ? "run" : s.t > 30 && q < 0.6 ? "cone" : "walk", Z = ZOMB[k], hpm = 1 + (lvl - 1) * 0.3;
+      const k = s.t > 240 && q < 0.12 ? "big" : s.t > 150 && q < 0.35 ? "run" : s.t > 75 && q < 0.6 ? "cone" : "walk", Z = ZOMB[k], hpm = 1 + (lvl - 1) * 0.25;
       s.zs.push({ r, x: G.W + 20 + Math.random() * 20, hp: Z.hp * hpm, max: Z.hp * hpm, sp: Z.sp * rnd(0.9, 1.1), e: Z.e, hat: Z.hat, v: Z.v, sz: Z.sz || 1, delay, slow: 0 });
     },
     draw(G, c) {
