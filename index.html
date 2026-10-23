@@ -135,6 +135,20 @@ input { -webkit-user-select: text; user-select: text; }
 .gotd b { font-size: 14.5px; } .gotd span { font-size: 13px; opacity: 0.95; } .gotd small { font-size: 12px; opacity: 0.9; }
 .arc-cell.isgotd { border: 2px solid #ff5c8a; }
 .medals { font-size: 13px; color: var(--muted); } .medalwin { font-weight: 800; font-size: 16px; } .soclose { font-size: 14px; margin: 2px 0; } .gotdline { font-weight: 700; color: #ff5c8a; }
+.pstats { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.pst-top { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.pst-top b { display: block; font-size: 22px; font-family: var(--title); } .pst-top small { font-size: 11px; color: var(--muted); }
+.pst-sec h4 { margin: 0 0 5px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.pst-row { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; margin: 2px 0; font-size: 12px; font-weight: 700; }
+.pst-track { display: flex; flex-direction: column; gap: 2px; }
+.pst-bar { background: #6aaa64; color: #fff; font-size: 11px; font-weight: 800; text-align: right; padding: 1px 5px; border-radius: 3px; min-height: 16px; box-sizing: border-box; }
+.pst-bar.meh { background: #787c7e; }
+.pst-ghost { height: 5px; background: #6aaa64; opacity: 0.35; border-radius: 3px; }
+.pst-line { font-size: 13px; margin: 0; } .pst-key { font-size: 11.5px; margin: 0; }
+.pst-trend { color: #6aaa64; } .pst-trend small { display: block; font-size: 11px; color: var(--muted); }
+.pst-form { display: grid; grid-template-columns: 34px repeat(4, 22px); gap: 4px; align-items: center; justify-content: start; }
+.pst-form small { font-size: 11px; color: var(--muted); text-align: center; } .pst-day { text-align: left !important; }
+.pst-sq { width: 22px; height: 22px; border-radius: 4px; display: block; } .pst-sq.good { background: #6aaa64; } .pst-sq.ok { background: #c9b458; } .pst-sq.bad { background: #3a3a3c; } .pst-sq.none { border: 1.5px dashed var(--line); }
 .arc-sec { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -2px; }
 .arc-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 9px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); min-width: 0; }
 .arc-cell .gicon { width: 48px; height: 48px; font-size: 28px; }
@@ -3295,6 +3309,58 @@ const BADGES = [
   ["bestStreak", "🔥", "Best streak (days)", v => v >= 3],
   ["perfectWeek", "💯", "Perfect week: all 4 games, 7 days", v => !!v]
 ];
+// Stats on the player card: Wordle-style bars, times with a 14-day trend, and the last 7 days.
+// On a friend's card, your own numbers show as a lighter bar underneath for comparison.
+function statsBlock(s, mine, name) {
+  const box = el("div", "pstats");
+  box.appendChild(el("h3", "lbl2", "Stats"));
+  const top = el("div", "pst-top");
+  [[s.played, "Played"], [s.winPct + "%", "Five win %"], [s.cur || 0, "Streak"], [s.best || 0, "Best streak"]].forEach(([v, l]) => { const d = el("div"); d.append(el("b", null, String(v)), el("small", null, l)); top.appendChild(d); });
+  box.appendChild(top);
+  if (mine) box.appendChild(el("p", "sub pst-key", `Solid = ${name} · light = you`));
+  const bars = (title, labels, a, b, goodIdx) => {
+    const sec = el("div", "pst-sec"); sec.appendChild(el("h4", null, title));
+    const max = Math.max(1, ...a, ...(b || []));
+    labels.forEach((lb, i) => {
+      const row = el("div", "pst-row"), track = el("div", "pst-track");
+      const bar = el("div", "pst-bar" + (i >= goodIdx ? " meh" : "")); bar.style.width = Math.max(a[i] ? 8 : 0, 100 * a[i] / max) + "%"; bar.textContent = a[i] ? a[i] : ""; if (!a[i]) { bar.style.padding = "0"; bar.style.minHeight = "16px"; bar.style.background = "transparent"; }
+      track.appendChild(bar);
+      if (b) { const g = el("div", "pst-ghost"); g.style.width = 100 * b[i] / max + "%"; track.appendChild(g); }
+      row.append(el("span", null, lb), track); sec.appendChild(row);
+    });
+    return sec;
+  };
+  box.appendChild(bars("Five: solved in", ["1", "2", "3", "4", "5", "6", "X"], s.five, mine && mine.five, 6));
+  box.appendChild(bars("Groups: mistakes", ["0", "1", "2", "3", "X"], s.groups, mine && mine.groups, 4));
+  const timed = (title, x, y, extra, extraY) => {
+    const sec = el("div", "pst-sec"); sec.appendChild(el("h4", null, title));
+    if (!x.n) { sec.appendChild(el("p", "sub", "Not played yet.")); return sec; }
+    const avg = Math.round(x.sum / x.n), line = `Avg ${fmtTime(avg)} · Best ${fmtTime(x.best)} · ${extra}` + (y && y.n ? `  (you: avg ${fmtTime(Math.round(y.sum / y.n))}${extraY ? ", " + extraY : ""})` : "");
+    sec.appendChild(el("p", "pst-line", line));
+    const tr = x.trend; if (tr.length >= 2) {
+      const W = 260, H = 44, mx = Math.max(...tr), mn = Math.min(...tr), sp = Math.max(1, mx - mn);
+      const pts = tr.map((v, i) => `${(i / (tr.length - 1) * (W - 8) + 4).toFixed(1)},${(4 + (v - mn) / sp * (H - 8)).toFixed(1)}`).join(" ");
+      const wrap = el("div", "pst-trend"); wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><small>Last ${tr.length} days · higher = faster</small>`;
+      sec.appendChild(wrap);
+    }
+    return sec;
+  };
+  // flip times so the line goes UP when you get faster
+  const flip = x => Object.assign({}, x, { trend: x.trend.map(v => -v) });
+  box.appendChild(timed("Strands", flip(s.st), mine && mine.st, `hints ${s.st.n ? Math.round(100 * s.st.hints / s.st.n) : 0}% of days`, mine && mine.st.n ? `hints ${Math.round(100 * mine.st.hints / mine.st.n)}%` : ""));
+  box.appendChild(timed("Mini", flip(s.mi), mine && mine.mi, `Check ${s.mi.n ? Math.round(100 * s.mi.checks / s.mi.n) : 0}% of days`, mine && mine.mi.n ? `Check ${Math.round(100 * mine.mi.checks / mine.mi.n)}%` : ""));
+  // last 7 days
+  const form = el("div", "pst-sec"); form.appendChild(el("h4", null, "Last 7 days"));
+  const g = el("div", "pst-form"); g.appendChild(el("span")); ["F", "G", "S", "M"].forEach(h => g.appendChild(el("small", null, h)));
+  const col = v => v === 2 ? "good" : v === 1 ? "ok" : v === 0 ? "bad" : "none";
+  s.form.forEach(f => {
+    const dt = new Date(f.d + "T12:00:00"); g.appendChild(el("small", "pst-day", dt.toLocaleDateString(undefined, { weekday: "short" })));
+    ["f", "g", "s", "c"].forEach(k => g.appendChild(el("i", "pst-sq " + col(f[k]))));
+  });
+  form.appendChild(g); form.appendChild(el("p", "sub pst-key", "🟩 great · 🟨 got it (more guesses, mistakes, hints or Check) · ⬛ missed · blank = didn't play"));
+  box.appendChild(form);
+  return box;
+}
 function openCard(id) {
   if (!me) return;
   const p = playerInfo(id), isMe = id === me.id;
@@ -3311,6 +3377,7 @@ function openCard(id) {
       d.append(el("b", null, icon), txt); grid.appendChild(d);
     });
     body.appendChild(grid);
+    if (c.stats) body.appendChild(statsBlock(c.stats, c.mine, isMe ? null : c.name));
     if (c.h2h) {
       const h = c.h2h, tot = [0, 1, 2].map(i => h.five[i] + h.groups[i] + h.mini[i] + h.strands[i]);
       const box = el("div", "h2h");
