@@ -4,8 +4,24 @@ defGame({
   key: "dash", name: "Dawg Dash", icon: "🛹", max: 999999,
   blurb: "Endless runner. Swipe to dodge trains.",
   how: "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.",
+  // Missions: 3 at a time, each "in one run". Finish all 3 and your score multiplier goes up for good (x1 -> x2 ...).
+  MISS: { bones: ["GRAB {n} BONES", 30, 25], jumps: ["JUMP {n} TIMES", 10, 6], slides: ["SLIDE {n} TIMES", 8, 5], roofs: ["LAND ON {n} TRAIN ROOFS", 3, 2], dist: ["RUN {n}M", 400, 300], pups: ["GRAB {n} POWER-UPS", 1, 1] },
+  mkey() { return "bdd:dash:" + (typeof me !== "undefined" && me ? me.id : ""); },
+  mload() {
+    let m = null; try { m = store.get(this.mkey()); } catch (e) {}
+    if (!m || !m.set) { m = { mult: 1, set: null }; m.set = this.newSet(1); }
+    return m;
+  },
+  newSet(mult) { const ks = Object.keys(this.MISS).sort(() => Math.random() - 0.5).slice(0, 3); return ks.map(k => ({ k, n: this.MISS[k][1] + this.MISS[k][2] * (mult - 1), done: false })); },
+  mlabel(q) { return this.MISS[q.k][0].replace("{n}", q.n).replace("1 POWER-UPS", "A POWER-UP").replace("1 TRAIN ROOFS", "A TRAIN ROOF"); },
+  bump(G, k, n) {
+    const s = G.s; s.st[k] = (s.st[k] || 0) + (n || 1); const m = s.miss;
+    m.set.forEach(q => { if (!q.done && q.k === k && s.st[k] >= q.n) { q.done = true; s.pops.push({ t: 1.6, txt: "MISSION DONE!" }); G.sfx("win"); } });
+    if (m.set.every(q => q.done)) { m.mult = Math.min(30, m.mult + 1); m.set = this.newSet(m.mult); s.pops.push({ t: 2, txt: `MULTIPLIER x${m.mult}!` }); }
+    try { store.set(this.mkey(), m); } catch (e) {}
+  },
   reset(G) {
-    G.s = { lane: 0, lx: 0, y: 0, vy: 0, roll: 0, dist: 0, sp: 16, bones: 0, score: 0, objs: [], nextZ: 26, mag: 0, dbl: 0, shield: 0, flash: 0, dead: 0, pops: [] };
+    G.s = { st: {}, miss: this.mload(), lane: 0, lx: 0, y: 0, vy: 0, roll: 0, dist: 0, sp: 16, bones: 0, score: 0, objs: [], nextZ: 26, mag: 0, dbl: 0, shield: 0, flash: 0, dead: 0, pops: [] };
     this.spawnRow(G.s, 26, true); this.spawnRow(G.s, 42);
   },
   ZMAX: 70, TOP: 2.6, RL: 4,
@@ -29,8 +45,8 @@ defGame({
   swipe(G, dx, dy) {
     const s = G.s; if (s.dead) return;
     if (dx) s.lane = Math.max(-1, Math.min(1, s.lane + dx));
-    else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) { s.vy = 9.2; s.roll = 0; }
-    else if (dy > 0) { if (s.y > (s.gnd || 0) + 0.05) s.vy = -16; s.roll = 0.62; }
+    else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) { s.vy = 9.2; s.roll = 0; this.bump(G, "jumps"); }
+    else if (dy > 0) { if (s.y > (s.gnd || 0) + 0.05) s.vy = -16; s.roll = 0.62; this.bump(G, "slides"); }
   },
   // Height of the surface under you in a lane: a train roof, a ramp, or the ground.
   ground(s, lane) {
@@ -51,10 +67,12 @@ defGame({
     const me0 = Math.round(s.lx), gnd = this.ground(s, me0);
     s.vy -= 26 * dt; s.y += s.vy * dt;
     if (s.y <= gnd + 0.02 && s.vy <= 0) { s.y = gnd; s.vy = 0; } // walk up ramps, ride roofs, fall off the end
+    if (gnd >= this.TOP && (s.gnd || 0) < this.TOP && s.y >= this.TOP - 0.01) this.bump(G, "roofs");
     s.gnd = gnd;
+    const m10 = Math.floor(s.dist / 10); if (m10 > (s.lastM || 0)) { s.lastM = m10; s.st.dist = Math.floor(s.dist); this.bump(G, "dist", 0); }
     if (s.roll > 0) s.roll -= dt;
     ["mag", "dbl", "shield", "flash"].forEach(k => { if (s[k] > 0) s[k] -= dt; });
-    s.score += Math.round(mv * (s.dbl > 0 ? 2 : 1));
+    s.acc = (s.acc || 0) + mv * (s.dbl > 0 ? 2 : 1) * s.miss.mult; const add = Math.floor(s.acc); s.acc -= add; s.score += add;
     s.objs.forEach(o => o.z -= mv);
     s.nextZ -= mv; if (s.nextZ < this.ZMAX - 16) { const gap = Math.max(13, (s.far || 0) + 6) + Math.random() * 6; s.far = 0; s.nextZ += gap; this.spawnRow(s, s.nextZ); }
     const me = Math.round(s.lx);
@@ -64,8 +82,8 @@ defGame({
         const pull = o.k === "bone" && s.mag > 0 && o.z < 6;
         if (o.z < 0.5 && o.z > -0.6 && (o.lane === me || pull) && Math.abs(s.y - (o.h || 0)) < 1.6) {
           o.gone = 1;
-          if (o.k === "bone") { const v = s.dbl > 0 ? 20 : 10; s.bones++; s.score += v; G.sfx("pop"); }
-          else { s[o.k] = o.k === "shield" ? 12 : 9; s.pops.push({ t: 1, txt: { mag: "MAGNET!", dbl: "2X POINTS!", shield: "BOARD UP!" }[o.k] }); G.sfx("win"); }
+          if (o.k === "bone") { const v = (s.dbl > 0 ? 20 : 10) * s.miss.mult; s.bones++; s.score += v; G.sfx("pop"); this.bump(G, "bones"); }
+          else { this.bump(G, "pups"); s[o.k] = o.k === "shield" ? 12 : 9; s.pops.push({ t: 1, txt: { mag: "MAGNET!", dbl: "2X POINTS!", shield: "BOARD UP!" }[o.k] }); G.sfx("win"); }
         }
         continue;
       }
@@ -128,7 +146,14 @@ defGame({
     }
     if (!drewMe) drawMe();
     // HUD
-    G.hud(c, `🦴${s.bones}`, `${s.score}`, [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : ""].join(""));
+    // missions card for the first few seconds of each run
+    if (G.t < 4.5 && !s.dead) {
+      const a = Math.min(1, 4.5 - G.t); c.globalAlpha = a; c.fillStyle = "rgba(0,0,0,0.6)"; c.fillRect(16, 48, W - 32, 96);
+      G.text(c, `MISSIONS · MULTIPLIER x${s.miss.mult}`, W / 2, 62, 10, "#ffd23f");
+      s.miss.set.forEach((q, i) => G.text(c, (q.done ? "✓ " : "· ") + this.mlabel(q) + (q.done ? "" : ` (${Math.min(q.n, s.st[q.k] || 0)}/${q.n})`), W / 2, 84 + i * 20, 10, q.done ? "#7cff6b" : "#fff"));
+      c.globalAlpha = 1;
+    }
+    G.hud(c, `🦴${s.bones} x${s.miss.mult}`, `${s.score}`, [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : ""].join(""));
     s.pops.forEach((p, i) => G.text(c, p.txt, W / 2, H * 0.32 + i * 18 - (1 - p.t) * 12, p.txt.length > 4 ? 12 : 11, "#ffd23f"));
     if (s.dead) G.banner(c, "BUSTED!", "#ff5252");
     G.hint(c, "SWIPE ← → ↑ ↓", 4);

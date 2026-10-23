@@ -42,7 +42,7 @@
   defGame({
     key: "kickret", name: "Dawg Return", icon: "🏈", max: 9999, cat: "sports",
     blurb: "Return the kick. Juke the cats. Score.",
-    how: "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.",
+    how: "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.",
     reset(G) {
       const Y = Math.max(18, Math.min(28, G.H / 25));
       G.s = { ypx: Y, tds: 0, score: 0, lives: 3, ret: 1, hold: false, fx: G.W / 2, kl: 0, kr: 0, pops: [], lastYds: 0 };
@@ -69,7 +69,8 @@
         s.pt -= dt; s.ball = Math.max(0, s.pt / 1.1);
         if (s.pt <= 0) { s.phase = "run"; s.ball = 0; G.sfx("pop"); }
       } else {
-        const boost = s.hold || s.kl || s.kr ? 1.16 : 1;
+        if (s.juke > 0) s.juke -= dt; if (s.jukeCd > 0) s.jukeCd -= dt;
+        const boost = (s.hold || s.kl || s.kr ? 1.16 : 1) * (s.juke > 0 ? 1.3 : 1);
         p.f = Y * 6.9 * boost;
         let tx = p.x;
         if (s.hold) tx = s.fx; else if (s.kl || s.kr) tx = p.x + (s.kr - s.kl) * 200;
@@ -104,13 +105,20 @@
         const ax = wx - k.vx, ay = wy - k.vy, am = Math.hypot(ax, ay), m = Math.min(am, k.acc * dt);
         if (am > 0) { k.vx += ax / am * m; k.vy += ay / am * m; }
         k.x += k.vx * dt; k.y += k.vy * dt;
-        if (s.phase === "run" && Math.hypot(k.x - p.x, k.y - p.y) < 20) { endReturn(G, false); return; }
+        if (s.phase === "run" && Math.hypot(k.x - p.x, k.y - p.y) < 20) {
+          if (s.juke > 0) { k.down = 1.4; k.vx = k.vy = 0; s.score += 1; s.broke = (s.broke || 0) + 1; s.pops.push({ x: k.x, y: k.y, t: 0.7, txt: "WHIFF! +1" }); G.sfx("pop"); continue; }
+          endReturn(G, false); return;
+        }
       }
     },
-    down(G, x) { G.s.hold = true; G.s.fx = x; },
+    down(G, x) {
+      const s = G.s; s.hold = true; s.fx = x;
+      if (G.t - (s.lastTap || -9) < 0.32 && s.phase === "run" && !(s.jukeCd > 0)) { s.juke = 0.55; s.jukeCd = 3.2; s.pops.push({ x: s.p.x, y: s.p.y, t: 0.6, txt: "JUKE!" }); G.sfx("pop"); }
+      s.lastTap = G.t;
+    },
     move(G, x) { G.s.fx = x; },
     up(G) { G.s.hold = false; },
-    onKey(G, k, d) { if (k === "ArrowLeft" || k === "a") G.s.kl = d ? 1 : 0; if (k === "ArrowRight" || k === "d") G.s.kr = d ? 1 : 0; },
+    onKey(G, k, d) { if (k === " " && d) { const s = G.s; if (s.phase === "run" && !(s.jukeCd > 0)) { s.juke = 0.55; s.jukeCd = 3.2; } } if (k === "ArrowLeft" || k === "a") G.s.kl = d ? 1 : 0; if (k === "ArrowRight" || k === "d") G.s.kr = d ? 1 : 0; },
     draw(G, c) {
       const s = G.s, W = G.W, H = G.H, Y = s.ypx, p = s.p, dark = G.dark();
       const camY = H * 0.8 + Math.min(p.y, Y * 104);
@@ -170,7 +178,8 @@
       c.fillStyle = "rgba(0,0,0,0.28)"; c.beginPath(); c.ellipse(p.x + 3, py + 8, 17, 11, 0, 0, 7); c.fill();
       c.fillStyle = TEAM; c.beginPath(); c.arc(p.x, py + bob * 0.5, 17, 0, 7); c.fill(); c.strokeStyle = TEAM2; c.lineWidth = 3; c.stroke();
       const face = s.phase === "tackle" ? ":dawgpain:" : s.phase === "td" ? ":dawgpog:" : ":dawgW:";
-      G.img(c, face, p.x, py - 4 + bob, 36, s.phase === "tackle" ? 0.5 : p.vx / W * 0.25);
+      if (s.juke > 0) { c.strokeStyle = "rgba(255,210,63,0.8)"; c.lineWidth = 3; c.beginPath(); c.arc(p.x, py, 24 + (0.55 - s.juke) * 20, 0, 7); c.stroke(); }
+      G.img(c, face, p.x, py - 4 + bob, 36, s.phase === "tackle" ? 0.5 : s.juke > 0 ? (0.55 - s.juke) * 22 : p.vx / W * 0.25);
       if (s.phase === "kick") {
         const bh = s.ball; // ball falling from the sky
         c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.ellipse(p.x, py - 30 + 10, 8 * (1 - bh) + 3, 4, 0, 0, 7); c.fill();
@@ -194,7 +203,9 @@
         G.banner(c, "TACKLED!", "#ff6b6b", by);
         G.text(c, `${s.lastYds} YDS  +${Math.floor(s.lastYds / 10)}`, W / 2, by + 32, 12, "#fff");
       }
-      G.hint(c, "HOLD + DRAG TO STEER", 5, H - 26);
+      G.hint(c, G.t < 5 ? "HOLD + DRAG TO STEER" : "DOUBLE-TAP = JUKE", 9, H - 26);
+      // juke meter (bottom-left): fills while recharging
+      if (s.phase === "run") { const r = s.jukeCd > 0 ? 1 - s.jukeCd / 3.2 : 1; c.fillStyle = "rgba(0,0,0,0.5)"; c.beginPath(); c.arc(30, H - 70, 20, 0, 7); c.fill(); c.strokeStyle = r >= 1 ? "#ffd23f" : "#888"; c.lineWidth = 4; c.beginPath(); c.arc(30, H - 70, 18, -Math.PI / 2, -Math.PI / 2 + r * 6.283); c.stroke(); G.text(c, "JUKE", 30, H - 70, 8, r >= 1 ? "#ffd23f" : "#bbb"); }
       // HUD: TDs | points | returns left, then a small yard-line pill
       G.hud(c, `TD ${s.tds}`, `PTS ${s.score}`, "🏈".repeat(Math.max(0, s.lives)) || "-");
       const yd = Math.floor(p.y / Y), yl = yd >= 100 ? "TD" : yd <= 50 ? (yd === 50 ? "MID 50" : "OWN " + yd) : "OPP " + (100 - yd);

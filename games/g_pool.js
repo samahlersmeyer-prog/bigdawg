@@ -218,8 +218,15 @@
       const f = pots.find(n => n !== 8); if (f) { s.groups[sh] = grp(f); s.groups[op] = grp(f) === "s" ? "t" : "s"; say(s, (sh === "p" ? "YOU: " : "SHARK: ") + (grp(f) === "s" ? "SOLIDS" : "STRIPES"), "#7fe08a", 1.4); }
     }
     pots.forEach(n => { const owner = s.groups.p && grp(n) === s.groups.p ? "p" : s.groups.c && grp(n) === s.groups.c ? "c" : null; if (owner) s.potted[owner].push(n); });
-    if (sh === "p" && s.groups.p) pots.forEach(n => { if (grp(n) === s.groups.p) s.score += 50; });
+    const mine = sh === "p" && s.groups.p ? pots.filter(n => grp(n) === s.groups.p).length : 0;
+    s.score += mine * 50;
     const keep = !foul && pots.some(n => n !== 8 && (!s.groups[sh] || grp(n) === s.groups[sh]));
+    // Style points: more than one ball in a shot, and sinking shot after shot without giving up the table.
+    if (sh === "p") {
+      s.pShots = (s.pShots || 0) + 1;
+      if (mine >= 2) { s.score += 75 * (mine - 1); say(s, mine === 2 ? "DOUBLE! +75" : `${mine} BALLS! +${75 * (mine - 1)}`, "#ffd23f", 1.3); }
+      if (keep) { s.run = (s.run || 0) + 1; if (s.run >= 2) { s.score += 25 * s.run; if (mine < 2) say(s, `RUN x${s.run} +${25 * s.run}`, "#7fe08a", 1.0); } } else s.run = 0;
+    }
     s.breakShot = false; s.shot = null;
     if (!s.cue.in) { s.cue.in = true; s.cue.sink = 0; s.cue.vx = s.cue.vy = 0; s.cue.x = L.w / 2; s.cue.y = L.headY; let t = 0; while (!cueOk(s, s.cue.x, s.cue.y) && t++ < 40) { s.cue.x = L.R + Math.random() * (L.w - 2 * L.R); s.cue.y = L.R + Math.random() * (L.h - 2 * L.R); } }
     if (foul) { s.turn = op; s.bih = true; say(s, why + (op === "p" ? " BALL IN HAND" : ""), "#ff6b6b", 1.8); G.buzz(); }
@@ -240,7 +247,7 @@
   defGame({
     key: "pool", name: "Dawg Pool", icon: "🎱", max: 9999, cat: "sports",
     blurb: "8-ball vs the pool shark cat.",
-    how: "One rack of 8-ball vs the pool shark cat. Drag anywhere to swing the cue (or tap a spot to aim at it). Pull the POWER slider down and let go to shoot. Sink your group (solids or stripes), then the 8. Scratch or miss = ball in hand: drag the cue ball. Early 8 loses the rack. 50 per ball, 300 per rack, 500 for the match.",
+    how: "One rack of 8-ball vs the pool shark cat. Drag anywhere to swing the cue (or tap a spot to aim at it). Pull the POWER slider down and let go to shoot. Sink your group (solids or stripes), then the 8. Scratch or miss = ball in hand: drag the cue ball. Early 8 loses the rack. Scoring: 50 per ball, +75 for each extra ball in one shot, a growing bonus for sinking shot after shot (RUN x3...), 300 for the rack, 500 for the win, and up to 600 more for winning in fewer shots.",
     reset(G) {
       G.s = { L: layout(G), wins: { p: 0, c: 0 }, rackN: 1, score: 0, msg: "", msgT: 0, sub: "", drag: null, power: 0 };
       rack(G, "p");
@@ -259,7 +266,7 @@
         s.endT -= dt;
         if (s.endT <= 0) {
           if (s.wins.p >= NEED || s.wins.c >= NEED) {
-            const won = s.wins.p >= NEED; if (won) s.score += 500;
+            const won = s.wins.p >= NEED; if (won) { s.score += 500 + Math.max(0, 600 - 40 * Math.max(0, (s.pShots || 0) - 8)); } // fewer shots = bigger win
             G.over(Math.min(9999, s.score), won ? "Table cleared. Good dawg!" : "Hustled by the cat.");
             return;
           }

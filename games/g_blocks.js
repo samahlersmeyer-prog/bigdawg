@@ -69,7 +69,7 @@
     const s = G.s, t = s.next; s.next = nextType(s);
     const m = SHAPES[t];
     s.p = { t, m, x: Math.floor((COLS - m.length) / 2), y: t === "I" ? -1 : 0 };
-    s.lock = 0; s.resets = 0; s.fall = 0;
+    s.lock = 0; s.resets = 0; s.fall = 0; s.canHold = true;
     if (!fits(s, m, s.p.x, s.p.y)) { die(G); return false; }
     return true;
   }
@@ -94,6 +94,14 @@
       const k = KICKS[i];
       if (fits(s, m, s.p.x + k[0], s.p.y + k[1])) { s.p.m = m; s.p.x += k[0]; s.p.y += k[1]; touched(s); return; }
     }
+  }
+  // HOLD: stash the current piece (or swap with the stashed one). Once per piece.
+  function hold(G) {
+    const s = G.s; if (!s.p || s.dead || s.clr || !s.canHold) return;
+    const cur = s.p.t;
+    if (!s.held) { s.held = cur; spawn(G); }
+    else { const t = s.held; s.held = cur; const m = SHAPES[t]; s.p = { t, m, x: Math.floor((COLS - m.length) / 2), y: t === "I" ? -1 : 0 }; s.lock = 0; s.resets = 0; s.fall = 0; if (!fits(s, m, s.p.x, s.p.y)) { die(G); return; } }
+    s.canHold = false; G.sfx("pop");
   }
   function ghostY(s) { let y = s.p.y; while (fits(s, s.p.m, s.p.x, y + 1)) y++; return y; }
   function hardDrop(G) {
@@ -176,7 +184,7 @@
   defGame({
     key: "blocks", name: "Block Dawg", icon: "🧱", max: 9999999,
     blurb: "Stack the blocks. Clear the lines.",
-    how: "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. 4 lines at once = big points. Don't let the stack reach the top!",
+    how: "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!",
     reset(G) {
       const L = layout(G);
       const s = G.s = { L, rows: L.rows, board: [], bag: [], next: null, p: null, score: 0, lines: 0, level: 1,
@@ -213,6 +221,7 @@
     up(G) { const s = G.s; s.rep = null; if (s.hotT <= 0) s.hot = -1; },
     tap(G, x, y) {
       const s = G.s; if (s.onBtn) return;
+      const h = s.L.holdBox; if (h && x >= h.x - 6 && x <= h.x + h.w + 6 && y >= h.y - 6 && y <= h.y + h.h + 6) { hold(G); return; }
       if (y < s.L.by - 6) rotate(G);
     },
     swipe(G, dx, dy) {
@@ -227,6 +236,7 @@
       else if (k === "ArrowRight" || k === "d") move(G, 1);
       else if (k === "ArrowUp" || k === "w") rotate(G);
       else if (k === " ") hardDrop(G);
+      else if (k === "c" || k === "Shift") hold(G);
     },
     draw(G, c) {
       const s = G.s, L = s.L, W = G.W, H = G.H, dark = G.dark(), z = L.cell;
@@ -280,10 +290,23 @@
         drawMatrix(c, m, s.next, bx + (bz - w) / 2 - minC * pz, byy + (bz * 0.7 - h) / 2 - minR * pz, pz);
       }
       y = byy + bz * 0.7 + 10;
+      // hold box
+      G.text(c, "HOLD", px + pw / 2, y + 8, 10, sub);
+      const hy = y + 18; L.holdBox = { x: bx, y: hy, w: bz, h: bz * 0.6 };
+      c.fillStyle = s.canHold ? (dark ? "#5a4a8a" : "#7a4a2a") : "#777"; c.fillRect(bx - 3, hy - 3, bz + 6, bz * 0.6 + 6);
+      c.fillStyle = dark ? "#0d0b1a" : "#2a2238"; c.fillRect(bx, hy, bz, bz * 0.6);
+      if (s.held) {
+        const m = SHAPES[s.held], n = m.length, pz = Math.floor(Math.min(z * 0.75, (bz - 10) / 4));
+        let minR = n, maxR = -1, minC = n, maxC = -1;
+        for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) if (m[r][q]) { minR = Math.min(minR, r); maxR = Math.max(maxR, r); minC = Math.min(minC, q); maxC = Math.max(maxC, q); }
+        const w = (maxC - minC + 1) * pz, h = (maxR - minR + 1) * pz;
+        c.globalAlpha = s.canHold ? 1 : 0.45; drawMatrix(c, m, s.held, bx + (bz - w) / 2 - minC * pz, hy + (bz * 0.6 - h) / 2 - minR * pz, pz); c.globalAlpha = 1;
+      } else G.text(c, "TAP", px + pw / 2, hy + bz * 0.3, 9, sub);
+      y = hy + bz * 0.6 + 10;
       // the dawg
       const top = stackTop(s);
       const face = s.dead ? ":dawgpain:" : s.pog > 0 ? ":dawgpog:" : top < Math.max(5, L.rows * 0.3) ? ":dawgsweat:" : ":dawgW:";
-      const fs = Math.min(pw - 10, 78), bob = s.pog > 0 ? Math.sin(G.t * 18) * 3 : Math.sin(G.t * 3) * 1.5;
+      const fs = Math.min(pw - 10, 60), bob = s.pog > 0 ? Math.sin(G.t * 18) * 3 : Math.sin(G.t * 3) * 1.5;
       G.img(c, face, px + pw / 2, y + fs / 2 + bob, fs);
       y += fs + 14;
       const rows = [["LEVEL", "" + s.level], ["LINES", "" + s.lines]];
