@@ -3513,7 +3513,9 @@ function arcOver(game, score, panel, onAgain, title) {
   const prev = aBest[game] || 0, prevMedal = medalOf(game, prev);
   const newBest = setBest(game, score) && score > 0;
   // Older servers only know Zoomies; don't let other games' scores land on its board.
-  if (score > 0 && me && (game === "zoomies" || (arcade && arcade.games && arcade.games[game]))) API("submitArcade", me.id, KEY, score, game).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); }).catch(() => {});
+  // Post the score. If the leaderboard hasn't loaded yet or the network hiccups, keep it and retry later
+  // (it used to be skipped silently, which could lose a great round).
+  if (score > 0 && me && (game === "zoomies" || !arcade || !arcade.games || arcade.games[game])) postArcade(game, score, KEY);
   panel.innerHTML = ""; panel.hidden = false;
   panel.append(el("h2", null, newBest ? "New best! 🐶" : title || (score === 0 ? "Bonk." : "Ruff.")));
   panel.append(el("div", "zbig", fmtG(game, score)), el("p", null, `Best: ${fmtG(game, aBest[game] || 0)}`));
@@ -3536,6 +3538,15 @@ function arcOver(game, score, panel, onAgain, title) {
   if (score > 0 && me && (known || !arcade)) { const d = el("button", "pill", `🎯 Dare someone to beat ${fmtG(game, score)}`); d.addEventListener("click", e => { e.stopPropagation(); openDarePicker(game, score); }); col.append(d); }
   panel.append(col);
 }
+function postArcade(game, score, day) {
+  const pend = (store.get("bdd:apend") || []).filter(p => !(p.g === game && p.d === day && !betterG(game, score, p.s)));
+  pend.push({ g: game, s: score, d: day, id: me.id }); store.set("bdd:apend", pend.slice(-30));
+  return API("submitArcade", me.id, day, score, game).then(a => {
+    store.set("bdd:apend", (store.get("bdd:apend") || []).filter(p => !(p.g === game && p.d === day && p.s === score)));
+    arcade = a; syncBests(); renderArcade(); renderArcSub();
+  }).catch(e => { if (/newest server/.test(errMsg(e))) store.set("bdd:apend", (store.get("bdd:apend") || []).filter(p => p.g !== game)); });
+}
+function retryArcade() { if (!me) return; (store.get("bdd:apend") || []).filter(p => p.id === me.id).slice(0, 5).forEach(p => postArcade(p.g, p.s, p.d)); }
 function syncBests() { if (!arcade) return; const g = arcade.games || { zoomies: { myBest: arcade.myBest } }; Object.keys(g).forEach(k => setBest(k, g[k].myBest || 0)); }
 const Z = { state: "idle", raf: 0, last: 0, W: 0, H: 0, dpr: 1, y: 0, vy: 0, pipes: [], score: 0, t: 0, dist: 0, dead: 0 };
 const ZC = { grav: 1500, flap: -440, r: 18, pw: 62, space: 210 };
@@ -3671,7 +3682,7 @@ window.addEventListener("resize", () => { if (active === "zoomies" && Z.state ==
 document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || (ARC[arcTab] && arcCat(arcTab) === "sports" && active !== "arcade") ? "sports" : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  ownLocal(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports") renderArcHub(active); }).catch(() => {});
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports") renderArcHub(active); }).catch(() => {});
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
