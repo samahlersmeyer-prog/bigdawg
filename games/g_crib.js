@@ -32,8 +32,18 @@
     blurb: "Cribbage vs Old Tom the cat. First to 121.",
     how: "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).",
     // Save & continue at the start of each deal.
-    save(G) { const s = G.s; if (s.phase !== "discard" || s.hand < 2 || s.sel.length) return null; return { label: `${s.score[0]}–${s.score[1]}`, score: s.score.slice(), dealer: s.dealer, hand: s.hand }; },
-    load(G, v) { const s = G.s; s.score = v.score.slice(); s.back = v.score.slice(); s.dealer = 1 - v.dealer; s.hand = v.hand - 1; this.deal(G); },
+    // Save & continue: the whole game (hands, crib, pegging, board) is saved as you play.
+    save(G) {
+      const s = G.s; if (s.phase === "cutdeal" || s.phase === "over" || s.phase === "cut" || s.phase === "pegdone") return null;
+      const v = JSON.parse(JSON.stringify(Object.assign({}, s, { btns: [], pops: [], sel: [] })));
+      return { label: `You ${s.score[0]} · Tom ${s.score[1]}`, v };
+    },
+    load(G, sv) {
+      const s = G.s;
+      if (!sv.v) { s.score = sv.score.slice(); s.back = sv.score.slice(); s.dealer = 1 - sv.dealer; s.hand = sv.hand - 1; return this.deal(G); } // older between-hands save
+      Object.assign(s, sv.v); s.sel = []; s.pops = []; s.wait = 0.6; s.clearPile = false;
+      if (s.show) s.show.rev = s.show.items.length; // no need to replay the count
+    },
     reset(G) { G.s = { score: [0, 0], back: [0, 0], dealer: 0, pops: [], btns: [], hand: 0, sel: [], crib: [], hands: [[], []] }; this.cutForDeal(G); },
     // Cut for deal: everyone picks a card from the spread; low card deals (aces are low). Ties cut again.
     cutForDeal(G) {

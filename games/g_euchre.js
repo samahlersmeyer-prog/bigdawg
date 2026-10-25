@@ -20,8 +20,16 @@
     blurb: "You + Biscuit vs the cats. First to 10.",
     how: "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.",
     // Save & continue between hands.
-    save(G) { const s = G.s; if (s.phase !== "bid1" || s.passes || s.hand < 2) return null; return { label: `${s.score[0]}–${s.score[1]}`, score: s.score.slice(), dealer: s.dealer, hand: s.hand }; },
-    load(G, v) { const s = G.s; s.score = v.score.slice(); s.dealer = (v.dealer + 3) % 4; s.hand = v.hand - 1; this.deal(G); },
+    // Save & continue: the whole table (hands, trick, bids, score) is saved as you play, so you pick up mid-hand.
+    save(G) {
+      const s = G.s; if (s.phase === "jacks" || s.phase === "trickEnd" || s.phase === "handEnd") return null;
+      const v = JSON.parse(JSON.stringify(Object.assign({}, s, { btns: [], say: [null, null, null, null], gone: [] })));
+      return { label: `${s.score[0]}–${s.score[1]}, hand ${s.hand}`, v };
+    },
+    load(G, sv) {
+      if (!sv.v) { const s = G.s; s.score = sv.score.slice(); s.dealer = (sv.dealer + 3) % 4; s.hand = sv.hand - 1; return this.deal(G); } // older between-hands save
+      Object.assign(G.s, sv.v); G.s.wait = 0.6; G.s.jpiles = null; G.s.msg = "Welcome back. " + (G.s.msg || "");
+    },
     reset(G) {
       G.s = { score: [0, 0], dealer: 0, say: [null, null, null, null], btns: [], msg: "", t: 0, hands: [[], [], [], []], trick: [], gone: [], hand: 0, tricks: [0, 0] };
       this.jacks(G);
