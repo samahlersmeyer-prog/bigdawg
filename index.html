@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="ae481bcb4b";</script>
+<script>window.GAMES_V="6552bcfd17";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3467,7 +3467,7 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   darts: [500, 900, 1300], bowl: [100, 150, 200], punch: [500, 3000, 6000], volley: [1000, 2000, 3000], swim: [1500, 3000, 4000], shred: [1000, 2500, 4500],
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
-  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500] };
+  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200] };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
 // Game of the Day (from the server): today's game, its daily board, and yesterday's champ.
@@ -3717,7 +3717,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["party", "euchre", "crib", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -4052,6 +4052,42 @@ G.hint = (c, msg, secs = 4, y) => {
   c.fillStyle = "rgba(0,0,0,0.6)"; c.beginPath(); if (c.roundRect) c.roundRect(G.W / 2 - w / 2, yy - 15, w, 30, 15); else c.rect(G.W / 2 - w / 2, yy - 15, w, 30); c.fill();
   G.text(c, msg, G.W / 2, yy, sz, "#fff"); c.restore();
 };
+// Playing cards for the card games. card = { r: 1..14 (11 J, 12 Q, 13 K, 14 or 1 = A), s: 0 ♠ 1 ♥ 2 ♦ 3 ♣ }.
+// G.card(c, x, y, w, card, faceUp, { hl, dim, rot }) draws a card centered at x,y (height = 1.4 * width).
+G.SUIT = ["♠", "♥", "♦", "♣"];
+G.rankTxt = r => r === 1 || r === 14 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r);
+G.card = (c, x, y, w, card, up, o = {}) => {
+  const h = w * 1.4, r = w * 0.12;
+  c.save(); c.translate(x, y); if (o.rot) c.rotate(o.rot); if (o.dim) c.globalAlpha = 0.45;
+  const rr = (x0, y0, ww, hh, rad) => { c.beginPath(); if (c.roundRect) c.roundRect(x0, y0, ww, hh, rad); else c.rect(x0, y0, ww, hh); };
+  c.fillStyle = "rgba(0,0,0,0.28)"; rr(-w / 2 + 2, -h / 2 + 3, w, h, r); c.fill();
+  if (!up) {
+    c.fillStyle = "#fff"; rr(-w / 2, -h / 2, w, h, r); c.fill();
+    const gr = c.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2); gr.addColorStop(0, "#c62828"); gr.addColorStop(1, "#8e1b1b");
+    c.fillStyle = gr; rr(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, r * 0.7); c.fill();
+    c.save(); rr(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, r * 0.7); c.clip();
+    c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 1;
+    for (let k = -h; k < h; k += 7) { c.beginPath(); c.moveTo(-w / 2, k); c.lineTo(w / 2, k + w); c.stroke(); }
+    c.restore();
+    G.emoji(c, "🐾", 0, 0, w * 0.42);
+  } else {
+    c.fillStyle = "#fffdf7"; rr(-w / 2, -h / 2, w, h, r); c.fill();
+    c.strokeStyle = o.hl ? "#ffb300" : "rgba(0,0,0,0.25)"; c.lineWidth = o.hl ? 3 : 1; rr(-w / 2, -h / 2, w, h, r); c.stroke();
+    const red = card.s === 1 || card.s === 2, col = red ? "#d32f2f" : "#1a1a1a", rk = G.rankTxt(card.r), su = G.SUIT[card.s];
+    c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle";
+    const fs = Math.round(w * 0.3);
+    c.font = `800 ${fs}px system-ui, -apple-system, sans-serif`; c.fillText(rk, -w / 2 + w * 0.2, -h / 2 + fs * 0.75);
+    c.font = `${Math.round(fs * 0.9)}px system-ui, sans-serif`; c.fillText(su, -w / 2 + w * 0.2, -h / 2 + fs * 1.65);
+    c.save(); c.rotate(Math.PI); c.font = `800 ${fs}px system-ui, sans-serif`; c.fillText(rk, -w / 2 + w * 0.2, -h / 2 + fs * 0.75); c.font = `${Math.round(fs * 0.9)}px system-ui, sans-serif`; c.fillText(su, -w / 2 + w * 0.2, -h / 2 + fs * 1.65); c.restore();
+    if (card.r >= 11 && card.r <= 13) {
+      c.fillStyle = red ? "rgba(211,47,47,0.1)" : "rgba(0,0,0,0.07)"; rr(-w * 0.28, -h * 0.28, w * 0.56, h * 0.56, 6); c.fill();
+      G.img(c, card.r === 11 ? ":dawgsus:" : card.r === 12 ? ":dawgpog:" : ":dawgW:", 0, h * 0.02, w * 0.5);
+      if (card.r === 13) G.emoji(c, "👑", 0, -h * 0.2, w * 0.24);
+      if (card.r === 12) G.emoji(c, "🎀", w * 0.14, -h * 0.17, w * 0.2);
+    } else { c.fillStyle = col; c.font = `${Math.round(w * 0.55)}px system-ui, sans-serif`; c.fillText(su, 0, h * 0.04); }
+  }
+  c.restore();
+};
 // Big centered banner text with a shadow ("GOAL!", "STRIKE!").
 G.banner = (c, msg, color, y, size) => {
   c.save(); const sz = size || Math.max(18, Math.min(30, G.W / 13));
@@ -4137,6 +4173,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_archery.js", "key": "archery", "name": "Bow Wow", "icon": "🏹", "blurb": "Archery. 10 arrows, mind the wind.", "how": "Put your thumb down and drag to move the crosshair onto the target, then let go to shoot. The wind pushes your arrow (watch the flag), and if you hold too long your aim starts to wobble. 10 arrows, bullseye is 10. Perfect is 100.", "cat": "sports", "max": 100},
 {"file": "g_blocks.js", "key": "blocks", "name": "Block Dawg", "icon": "🧱", "blurb": "Stack the blocks. Clear the lines.", "how": "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!", "max": 9999999},
 {"file": "g_bowl.js", "key": "bowl", "name": "Bowl-a-Dawg", "icon": "🎳", "blurb": "10 frames. Swipe to roll. Curve it.", "how": "Swipe up from the bottom to roll. Where you start = where you stand, the swipe's direction = your aim, bend the swipe to hook it, flick faster for more speed. Hit the pocket (just beside the head pin) for strikes. 10 frames, real scoring, 300 is perfect.", "cat": "sports", "max": 300},
+{"file": "g_crib.js", "key": "crib", "name": "Dawg Cribbage", "icon": "🎯", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "max": 500},
 {"file": "g_cross.js", "key": "cross", "name": "Dawg Crossing", "icon": "🚗", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
 {"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.", "max": 999999},
@@ -4146,6 +4183,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_drive.js", "key": "drive", "name": "Road Dawg", "icon": "🚙", "blurb": "Floor it. Weave through traffic.", "how": "Drag or hold anywhere: the car steers toward your finger. Quick tap = TURBO (3 s cooldown). Dodge traffic and oil slicks, stay off the grass, grab ⛽ before the tank runs dry. 🦴 = +50. 3 bonks and you're done.", "max": 99999},
 {"file": "g_duck.js", "key": "duck", "name": "Duck Dawg", "icon": "🦆", "blurb": "Tap the ducks before they fly off.", "how": "Ducks flap up out of the grass. Tap them to pop them with the tennis-ball launcher. 3 shots per release, 10 ducks a round (2 at a time from round 3). Hit at least 6 of 10 to pass (it goes up later). 500+ points a duck, more each round, 10/10 = perfect bonus.", "cat": "sports", "max": 99999},
 {"file": "g_dvz.js", "key": "dvz", "name": "Dawgs vs Zombies", "icon": "🧟", "blurb": "Lane defense. Hold the yard.", "how": "Zombies shuffle in from the right. Tap a defender you've placed to UPGRADE it (★2 from wave 2, ★3 from wave 4) or DIG it up for half your bones back. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.", "max": 99999},
+{"file": "g_euchre.js", "key": "euchre", "name": "Dawg Euchre", "icon": "🃏", "blurb": "You + Biscuit vs the cats. First to 10.", "how": "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.", "max": 300},
 {"file": "g_fg.js", "key": "fg", "name": "Kick Dawg", "icon": "🏈", "blurb": "Field goals. Read the wind. Split the uprights.", "how": "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter. WIND (top left, and the flags on the posts) bends the ball, so aim into it. Every make scores its yards and moves you back 5. 3 misses and you're done.", "cat": "sports", "max": 9999},
 {"file": "g_golf.js", "key": "golf", "name": "Dawg Golf", "icon": "🏌️", "blurb": "Front nine, par 36. Three-tap swing. Mind the wind.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.", "cat": "sports", "max": 72, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 36 ? "E" : (n > 36 ? "+" : "") + (n - 36)) + ")" : "—"},
 {"file": "g_golf.js", "key": "golf18", "name": "Dawg Golf 18", "icon": "🏌️", "blurb": "The full 18, par 74. Back nine plays longer and windier.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 74 over 18 holes: fewest strokes wins.", "cat": "sports", "max": 144, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 74 ? "E" : (n > 74 ? "+" : "") + (n - 74)) + ")" : "—"},
