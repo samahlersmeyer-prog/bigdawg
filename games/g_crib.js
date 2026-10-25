@@ -34,7 +34,20 @@
     // Save & continue at the start of each deal.
     save(G) { const s = G.s; if (s.phase !== "discard" || s.hand < 2 || s.sel.length) return null; return { label: `${s.score[0]}–${s.score[1]}`, score: s.score.slice(), dealer: s.dealer, hand: s.hand }; },
     load(G, v) { const s = G.s; s.score = v.score.slice(); s.back = v.score.slice(); s.dealer = 1 - v.dealer; s.hand = v.hand - 1; this.deal(G); },
-    reset(G) { G.s = { score: [0, 0], back: [0, 0], dealer: Math.random() < 0.5 ? 0 : 1, pops: [], btns: [], hand: 0 }; this.deal(G); },
+    reset(G) { G.s = { score: [0, 0], back: [0, 0], dealer: 0, pops: [], btns: [], hand: 0, sel: [], crib: [], hands: [[], []] }; this.cutForDeal(G); },
+    // Cut for deal: everyone picks a card from the spread; low card deals (aces are low). Ties cut again.
+    cutForDeal(G) {
+      const s = G.s, d = []; for (let su = 0; su < 4; su++) for (let r = 1; r <= 13; r++) d.push({ r, s: su }); shuffle(d);
+      s.spread = d.slice(0, 18); s.picks = [null, null]; s.phase = "cutdeal"; s.wait = 0; s.msg = "Cut for deal: pick a card. Low card deals.";
+    },
+    pickCut(G, i) {
+      const s = G.s; if (s.picks[0] || !s.spread[i]) return;
+      s.picks[0] = s.spread[i]; s.spread[i] = null; G.sfx("pop");
+      const left = s.spread.map((c, k) => c ? k : -1).filter(k => k >= 0), j = left[Math.floor(Math.random() * left.length)];
+      s.picks[1] = s.spread[j]; s.spread[j] = null; s.wait = 2.2;
+      const a = s.picks[0].r, b = s.picks[1].r;
+      s.msg = a === b ? "Tie! Cut again." : a < b ? "You cut low. Your deal (and your crib)!" : "Tom cut low. Tom deals.";
+    },
     deal(G) {
       const s = G.s; s.dealer = 1 - s.dealer; s.hand++;
       const d = []; for (let su = 0; su < 4; su++) for (let r = 1; r <= 13; r++) d.push({ r, s: su }); shuffle(d);
@@ -129,6 +142,7 @@
       if (s.wait > 0) { s.wait -= dt; if (s.wait > 0) return; }
       if (s.phase === "over") { const p = s.winner, m = s.score[p] - s.score[1 - p]; G.over(p === 0 ? Math.min(500, 100 + m + 100 * s.skunk) : Math.floor(s.score[0] / 2), p === 0 ? (s.skunk === 2 ? "DOUBLE SKUNK! 🦨🦨" : s.skunk ? "SKUNKED HIM! 🦨" : `You win by ${m}!`) : (s.skunk ? "Tom skunked you. 🦨" : `Tom wins by ${m}.`)); return; }
       if (s.phase === "cut") return this.startPeg(G);
+      if (s.phase === "cutdeal" && s.picks[1]) { const a = s.picks[0].r, b = s.picks[1].r; if (a === b) return this.cutForDeal(G); s.dealer = a < b ? 1 : 0; return this.deal(G); } // deal() flips the dealer
       if (s.phase === "pegdone") return this.startShow(G);
       if (s.clearPile) { s.clearPile = false; s.pile = []; }
       if (s.phase === "peg") {
@@ -147,6 +161,7 @@
       if (s.phase === "show" && s.show && s.show.rev >= s.show.items.length && !(s.wait > 0)) { this.nextShow(G); return; }
       if (s.phase === "show" && s.show) { s.show.rev = s.show.items.length; return; }
       const b = s.btns.find(b => x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h); if (b) { b.fn(); return; }
+      if (s.phase === "cutdeal") { const sp = this.spreadPos(G); for (let i = sp.length - 1; i >= 0; i--) { const q = sp[i]; if (q.c && Math.abs(x - q.x) < 16 && Math.abs(y - q.y) < 34) { this.pickCut(G, i); return; } } return; }
       const L = this.L(G), pos = this.handPos(G);
       for (let i = pos.length - 1; i >= 0; i--) {
         const q = pos[i]; if (Math.abs(x - q.x) > L.cw / 2 || Math.abs(y - q.y) > L.ch / 2) continue;
@@ -169,6 +184,7 @@
       c.fillStyle = "rgba(255,255,255,0.5)"; c.fillRect(X(90) - 1, y - 2, 2, 44); c.fillRect(X(WIN) - 1, y - 2, 2, 44);
       G.text(c, "90", X(90), y + 50, 8, "#fff"); G.text(c, "121", X(WIN) - 6, y + 50, 8, "#fff");
     },
+    spreadPos(G) { const s = G.s, n = s.spread.length, W = G.W, gap = (W - 70) / (n - 1), cy = G.H * 0.5; return s.spread.map((c, i) => ({ c, x: 35 + i * gap, y: cy + Math.abs(i - (n - 1) / 2) * 3, rot: (i - (n - 1) / 2) * 0.03 })); },
     btn(c, G, x, y, w, h, label, fn, hot) {
       G.s.btns.push({ x, y, w, h, fn });
       c.fillStyle = "rgba(0,0,0,0.3)"; c.beginPath(); if (c.roundRect) c.roundRect(x + 1, y + 3, w, h, 12); else c.rect(x + 1, y + 3, w, h); c.fill();
@@ -178,17 +194,17 @@
     draw(G, c) {
       const s = G.s, L = this.L(G), W = L.W, H = L.H; s.btns = [];
       const g = c.createRadialGradient(W / 2, H * 0.5, 30, W / 2, H * 0.5, H * 0.75); g.addColorStop(0, "#1f6f8b"); g.addColorStop(1, "#0d3b4c"); c.fillStyle = g; c.fillRect(0, 0, W, H);
-      G.hud(c, `YOU ${s.score[0]}`, `HAND ${s.hand}`, `TOM ${s.score[1]}`);
+      const cutting = s.phase === "cutdeal";
+      G.hud(c, `YOU ${s.score[0]}`, cutting ? "CUT FOR DEAL" : `HAND ${s.hand}`, `TOM ${s.score[1]}`);
       this.board(G, c, 44);
       // Old Tom
       const ty = 150; G.emoji(c, "😼", 44, ty, 40); G.text(c, OPP, 44, ty + 30, 9, "#fff");
-      const oc = s.phase === "peg" || s.phase === "pegdone" ? s.left[1].length : s.phase === "discard" ? 6 : 4;
+      const oc = cutting ? 0 : s.phase === "peg" || s.phase === "pegdone" ? s.left[1].length : s.phase === "discard" ? 6 : 4;
       for (let i = 0; i < oc; i++) G.card(c, 96 + i * 16, ty, 30, null, false, { rot: (i - oc / 2) * 0.05 });
-      if (s.dealer === 1) { c.fillStyle = "#fff"; c.beginPath(); c.arc(66, ty - 18, 9, 0, 7); c.fill(); G.text(c, "D", 66, ty - 17, 8, "#222"); }
+      if (s.dealer === 1 && !cutting) { c.fillStyle = "#fff"; c.beginPath(); c.arc(66, ty - 18, 9, 0, 7); c.fill(); G.text(c, "D", 66, ty - 17, 8, "#222"); }
       // starter + crib
       const sx = W - 46, sy = ty;
-      if (s.starter) G.card(c, sx, sy, 40, s.starter, true); else G.card(c, sx, sy, 40, null, false);
-      G.text(c, "CUT", sx, sy + 36, 8, "#fff");
+      if (!cutting) { if (s.starter) G.card(c, sx, sy, 40, s.starter, true); else G.card(c, sx, sy, 40, null, false); G.text(c, "CUT", sx, sy + 36, 8, "#fff"); }
       if (s.crib.length && s.phase !== "show") { for (let i = 0; i < 4; i++) G.card(c, sx - 54 + i * 3, sy, 40, null, false); G.text(c, s.dealer === 0 ? "YOUR CRIB" : "TOM'S CRIB", sx - 50, sy + 36, 8, "#fff"); }
       // pegging pile + count
       if (s.phase === "peg" || s.phase === "pegdone") {
@@ -197,9 +213,15 @@
         c.fillStyle = "rgba(0,0,0,0.45)"; c.beginPath(); c.arc(W / 2, L.cy - 70, 26, 0, 7); c.fill();
         G.text(c, String(s.cnt), W / 2, L.cy - 72, 18, s.cnt === 15 || s.cnt === 31 ? "#ffd23f" : "#fff"); G.text(c, "COUNT", W / 2, L.cy - 54, 7, "#ccc");
       }
+      if (s.phase === "cutdeal") {
+        this.spreadPos(G).forEach(q => { if (q.c) G.card(c, q.x, q.y, 44, null, false, { rot: q.rot }); });
+        if (!s.picks[0]) G.text(c, "TAP A CARD", W / 2, H * 0.5 + 56, 11, Math.floor(G.t * 2.5) % 2 ? "#fff" : "#ffd23f");
+        if (s.picks[0]) { G.card(c, W / 2 - 60, H * 0.72, 64, s.picks[0], true, { hl: s.picks[1] && s.picks[0].r < s.picks[1].r }); G.text(c, "YOU", W / 2 - 60, H * 0.72 + 58, 10, "#fff"); }
+        if (s.picks[1]) { G.card(c, W / 2 + 60, H * 0.72, 64, s.picks[1], true, { hl: s.picks[1].r < s.picks[0].r }); G.text(c, "TOM", W / 2 + 60, H * 0.72 + 58, 10, "#fff"); }
+      }
       // your hand
-      if (s.phase !== "show") this.handPos(G).forEach((q, i) => G.card(c, q.x, q.y, L.cw, q.c, true, { dim: !q.ok && s.phase === "peg", hl: s.sel.includes(q.c) }));
-      if (s.dealer === 0) { c.fillStyle = "#fff"; c.beginPath(); c.arc(20, L.hy - L.ch / 2 - 14, 9, 0, 7); c.fill(); G.text(c, "D", 20, L.hy - L.ch / 2 - 13, 8, "#222"); }
+      if (s.phase !== "show" && s.phase !== "cutdeal") this.handPos(G).forEach((q, i) => G.card(c, q.x, q.y, L.cw, q.c, true, { dim: !q.ok && s.phase === "peg", hl: s.sel.includes(q.c) }));
+      if (s.dealer === 0 && !cutting) { c.fillStyle = "#fff"; c.beginPath(); c.arc(20, L.hy - L.ch / 2 - 14, 9, 0, 7); c.fill(); G.text(c, "D", 20, L.hy - L.ch / 2 - 13, 8, "#222"); }
       if (s.phase === "discard") this.btn(c, G, W / 2 - 80, L.hy - L.ch / 2 - 80, 160, 46, s.sel.length === 2 ? (s.dealer === 0 ? "TO MY CRIB" : "TO TOM'S CRIB") : `PICK ${2 - s.sel.length} MORE`, () => this.toCrib(G), s.sel.length === 2);
       // show (counting) panel
       if (s.show) {
