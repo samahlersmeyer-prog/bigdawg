@@ -42,7 +42,7 @@
       s.jto = (s.jto + 1) % 4; s.wait = 0.38;
     },
     deal(G) {
-      const s = G.s; s.dealer = (s.dealer + 1) % 4; s.hand++;
+      const s = G.s; s.dealer = (s.dealer + 1) % 4; s.hand++; s.jpiles = null; s.jwho = -1; // clear the who-deals table (also when continuing a saved game)
       const deck = []; for (let su = 0; su < 4; su++) for (let r = 9; r <= 14; r++) deck.push({ r, s: su }); shuffle(deck);
       s.hands = [0, 1, 2, 3].map(i => deck.slice(i * 5, i * 5 + 5)); s.up = deck[20];
       s.trump = null; s.maker = -1; s.alone = -1; s.tricks = [0, 0]; s.trick = []; s.led = null; s.passes = 0; s.aloneTog = false;
