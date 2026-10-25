@@ -149,6 +149,11 @@ input { -webkit-user-select: text; user-select: text; }
 .pst-form { display: grid; grid-template-columns: 34px repeat(4, 22px); gap: 4px; align-items: center; justify-content: start; }
 .pst-form small { font-size: 11px; color: var(--muted); text-align: center; } .pst-day { text-align: left !important; }
 .pst-sq { width: 22px; height: 22px; border-radius: 4px; display: block; } .pst-sq.good { background: #6aaa64; } .pst-sq.ok { background: #c9b458; } .pst-sq.bad { background: #3a3a3c; } .pst-sq.none { border: 1.5px dashed var(--line); }
+.at-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 2px; border-bottom: 1px solid var(--line); }
+.at-row.me { background: var(--raise); border-radius: 8px; padding: 8px 6px; }
+.at-left { display: flex; align-items: center; gap: 8px; min-width: 0; } .at-right { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.at-right b { font-size: 17px; font-variant-numeric: tabular-nums; } .at-right small { font-size: 11px; color: var(--muted); }
+#alltime-seg { margin: 6px 0 4px; }
 .arc-sec { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -2px; }
 .arc-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 9px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); min-width: 0; }
 .arc-cell .gicon { width: 48px; height: 48px; font-size: 28px; }
@@ -756,6 +761,12 @@ input { -webkit-user-select: text; user-select: text; }
         <ol class="rank-list" id="league-list"></ol>
         <p class="note" id="league-champ"></p>
         <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you. Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
+      </div>
+      <div class="box" id="alltime">
+        <div class="sechead"><h2>All time</h2><span id="alltime-sub"></span></div>
+        <div class="seg" id="alltime-seg"><button data-k="pts" class="on">Points</button><button data-k="avg">Per day</button><button data-k="wins">👑 Wins</button></div>
+        <ol class="rank-list" id="alltime-list"><li class="dim">Loading…</li></ol>
+        <p class="note" id="alltime-note">Every day's points added up since day one (no best-5 rule). Per day needs 5+ days played. Tap a name for their stats.</p>
       </div>
       <div class="box" id="awards" hidden>
         <div class="sechead"><h2 id="awards-title">Weekly awards</h2><span id="awards-sub"></span></div>
@@ -3272,7 +3283,29 @@ function scoreTab(t) {
   const sc = document.querySelector("#v-scores .scroll"); if (sc) sc.scrollTop = 0;
 }
 $("home-settings").addEventListener("click", () => { show("scores"); scoreTab("more"); });
-document.querySelectorAll("#sc-tabs button").forEach(b => b.addEventListener("click", () => { scoreTab(b.dataset.tab); if (b.dataset.tab === "arcade") refreshArcade(); }));
+document.querySelectorAll("#sc-tabs button").forEach(b => b.addEventListener("click", () => { scoreTab(b.dataset.tab); if (b.dataset.tab === "arcade") refreshArcade(); if (b.dataset.tab === "week") loadAllTime(); }));
+// All-time puzzle leaderboard (Week tab): total points, points per day, or daily wins.
+let allTime = null, allTimeK = "pts";
+function loadAllTime() { if (!me) return; API("getAllTime", me.id, KEY).then(r => { allTime = r || []; renderAllTime(); }).catch(e => { $("alltime-list").innerHTML = ""; $("alltime-list").appendChild(el("li", "dim", /newest server|not a function/i.test(errMsg(e)) ? "Turns on after the next server update." : errMsg(e))); }); }
+function renderAllTime() {
+  const ol = $("alltime-list"); if (!allTime) return; ol.innerHTML = "";
+  const k = allTimeK, avg = r => r.days ? r.pts / r.days : 0;
+  let list = allTime.slice();
+  if (k === "avg") list = list.filter(r => r.days >= 5).sort((a, b) => avg(b) - avg(a));
+  else if (k === "wins") list = list.filter(r => r.wins > 0).sort((a, b) => b.wins - a.wins || b.pts - a.pts);
+  if (!list.length) { ol.appendChild(el("li", "dim", k === "avg" ? "Nobody has 5 days in yet." : "No wins yet.")); return; }
+  list.slice(0, 25).forEach((r, i) => {
+    const li = el("li" + "", r.id === (me && me.id) ? "me" : null);
+    const nmb = el("button", "pname tap", r.name); nmb.dataset.card = r.id;
+    const main = k === "avg" ? avg(r).toFixed(1) : k === "wins" ? `👑 ${r.wins}` : String(r.pts);
+    const sub = `${r.days} day${r.days === 1 ? "" : "s"} · ${avg(r).toFixed(1)}/day · 👑 ${r.wins}` + (r.fiveN ? ` · Five avg ${(r.fiveG / r.fiveN).toFixed(1)}` : "");
+    const left = el("span", "at-left"); left.append(el("span", "rank" + (i === 0 ? " r1" : ""), i + 1), nmb);
+    const right = el("span", "at-right"); right.append(el("b", null, main), el("small", null, sub));
+    li.className = (li.className ? li.className + " " : "") + "at-row"; li.append(left, right); ol.appendChild(li);
+  });
+  $("alltime-sub").textContent = `${allTime.length} players`;
+}
+document.querySelectorAll("#alltime-seg button").forEach(b => b.addEventListener("click", () => { allTimeK = b.dataset.k; document.querySelectorAll("#alltime-seg button").forEach(x => x.classList.toggle("on", x === b)); renderAllTime(); }));
 const AWARDS = {
   grinder: ["🐶", "Grinder"], speed: ["⚡", "Speed Demon"], sniper: ["🧵", "Strand Sniper"], brain: ["🧠", "Big Brain"],
   sweep: ["💎", "Clean Sweep"], choke: [":dawgL:", "Biggest Choke"], merchant: ["🎯", "Shade Merchant"],
