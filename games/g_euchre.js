@@ -23,8 +23,23 @@
     save(G) { const s = G.s; if (s.phase !== "bid1" || s.passes || s.hand < 2) return null; return { label: `${s.score[0]}–${s.score[1]}`, score: s.score.slice(), dealer: s.dealer, hand: s.hand }; },
     load(G, v) { const s = G.s; s.score = v.score.slice(); s.dealer = (v.dealer + 3) % 4; s.hand = v.hand - 1; this.deal(G); },
     reset(G) {
-      G.s = { score: [0, 0], dealer: Math.floor(Math.random() * 4), say: [null, null, null, null], btns: [], msg: "", t: 0, hands: [[], [], [], []], trick: [], gone: [], hand: 0 };
-      this.deal(G);
+      G.s = { score: [0, 0], dealer: 0, say: [null, null, null, null], btns: [], msg: "", t: 0, hands: [[], [], [], []], trick: [], gone: [], hand: 0, tricks: [0, 0] };
+      this.jacks(G);
+    },
+    // Old-school start: cards go face up around the table, one at a time. First black jack deals.
+    jacks(G) {
+      const s = G.s, d = []; for (let su = 0; su < 4; su++) for (let r = 9; r <= 14; r++) d.push({ r, s: su }); shuffle(d);
+      s.phase = "jacks"; s.jdeck = d; s.jpiles = [[], [], [], []]; s.jto = Math.floor(Math.random() * 4); s.jwho = -1; s.wait = 0.6;
+      s.msg = "Dealing for deal: first black jack deals.";
+    },
+    jackStep(G) {
+      const s = G.s, c = s.jdeck.pop(); s.jpiles[s.jto].push({ c, a: 0 }); G.sfx("pop");
+      if (c.r === 11 && (c.s === 0 || c.s === 3)) {
+        s.jwho = s.jto; s.wait = 2.4; this.sayAt(G, s.jto, "Black jack!");
+        s.msg = s.jto === 0 ? "You got the black jack. You deal first!" : `${NAMES[s.jto]} got the black jack and deals first.`;
+        return;
+      }
+      s.jto = (s.jto + 1) % 4; s.wait = 0.38;
     },
     deal(G) {
       const s = G.s; s.dealer = (s.dealer + 1) % 4; s.hand++;
@@ -135,8 +150,10 @@
       const s = G.s; s.t += dt;
       s.say.forEach((b, i) => { if (b) { b.t -= dt; if (b.t <= 0) s.say[i] = null; } });
       s.trick.forEach(t => t.a = Math.min(1, t.a + dt * 4));
+      if (s.jpiles) s.jpiles.forEach(p => p.forEach(q => q.a = Math.min(1, q.a + dt * 5)));
       if (s.goneT > 0) { s.goneT -= dt; if (s.goneT <= 0) s.gone = []; }
       if (s.wait > 0) { s.wait -= dt; if (s.wait > 0) return; }
+      if (s.phase === "jacks") { if (s.jwho >= 0) { s.dealer = (s.jwho + 3) % 4; s.jpiles = null; return this.deal(G); } return this.jackStep(G); }
       if (s.phase === "trickEnd") return this.endTrick(G);
       if (s.phase === "handEnd") return this.afterHand(G);
       if (s.turn === 0 || s.phase === "discard") return; // waiting on you
@@ -153,6 +170,7 @@
     tap(G, x, y) {
       const s = G.s;
       if (s.phase === "handEnd") { s.wait = 0; return; }
+      if (s.phase === "jacks") { if (s.jwho < 0) { while (s.jwho < 0) this.jackStep(G); s.jpiles.forEach(p => p.forEach(q => q.a = 1)); } else s.wait = 0; return; } // tap to hurry it along
       const b = s.btns.find(b => x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h); if (b) { b.fn(); return; }
       const L = this.L(G), pos = this.handPos(G);
       for (let i = pos.length - 1; i >= 0; i--) {
@@ -181,12 +199,12 @@
         if (p === 2) G.img(c, ":dawgpog:", x, y, 46); else G.emoji(c, p === 1 ? "😼" : "🐱", x, y, 40);
         G.text(c, NAMES[p], x, y + 32, 9, "#fff");
         const n = s.hands[p].length; for (let i = 0; i < n; i++) { const off = (i - (n - 1) / 2) * 7; if (p === 2) G.card(c, x + 40 + off, y - 4, 20, null, false); else G.card(c, x + off * 0.3, y - 44 - (p === 1 ? 0 : 0), 18, null, false, { rot: p === 1 ? 0.15 * (i - 2) : -0.15 * (i - 2) }); }
-        if (s.dealer === p) { c.fillStyle = "#fff"; c.beginPath(); c.arc(x + 22, y + 16, 9, 0, 7); c.fill(); G.text(c, "D", x + 22, y + 17, 8, "#222"); }
+        if (s.dealer === p && s.phase !== "jacks") { c.fillStyle = "#fff"; c.beginPath(); c.arc(x + 22, y + 16, 9, 0, 7); c.fill(); G.text(c, "D", x + 22, y + 17, 8, "#222"); }
         if (s.maker === p && s.trump != null) G.text(c, "★", x - 24, y - 18, 12, "#ffd23f");
         c.globalAlpha = 1;
         const b = s.say[p]; if (b) { const by = p === 2 ? y + 52 : y - 74, bw = Math.max(64, b.txt.length * 7.4 + 16), bx = Math.max(4, Math.min(W - bw - 4, x - bw / 2)); c.fillStyle = "#fff"; c.beginPath(); if (c.roundRect) c.roundRect(bx, by - 13, bw, 26, 13); else c.rect(bx, by - 13, bw, 26); c.fill(); c.fillStyle = "#222"; c.font = "700 13px system-ui, sans-serif"; c.textAlign = "center"; c.fillText(b.txt, bx + bw / 2, by + 1); }
       });
-      if (s.dealer === 0) { c.fillStyle = "#fff"; c.beginPath(); c.arc(22, H - L.ch - 50, 9, 0, 7); c.fill(); G.text(c, "D", 22, H - L.ch - 49, 8, "#222"); }
+      if (s.dealer === 0 && s.phase !== "jacks") { c.fillStyle = "#fff"; c.beginPath(); c.arc(22, H - L.ch - 50, 9, 0, 7); c.fill(); G.text(c, "D", 22, H - L.ch - 49, 8, "#222"); }
       if (s.say[0]) G.text(c, s.say[0].txt, W / 2, L.hy - L.ch / 2 - 74, 11, "#ffd23f");
       // center: turned-up card while bidding, or the trick
       const slot = [[0, 46], [-50, 0], [0, -46], [50, 0]];
@@ -194,6 +212,17 @@
       if (s.phase === "bid2") { G.card(c, L.cx, L.cy, 58, s.up, false, { rot: 1.4 }); G.text(c, `NO ${G.SUIT[s.up.s]} — CALL A SUIT`, L.cx, L.cy + 58, 10, "#fff"); }
       s.trick.forEach(t => { const [sx, sy] = L.seat[t.p], e = 1 - Math.pow(1 - t.a, 3); G.card(c, sx + (L.cx + slot[t.p][0] - sx) * e, sy + (L.cy + slot[t.p][1] - sy) * e, 56, t.c, true, { hl: s.phase === "trickEnd" && t.p === s.win, rot: (t.p - 1.5) * 0.06 }); });
       (s.gone || []).forEach(t => { const k = 1 - Math.max(0, s.goneT) / 0.45, [tx, ty] = L.seat[t.to]; G.card(c, L.cx + (tx - L.cx) * k, L.cy + (ty - L.cy) * k, 56 * (1 - k * 0.5), t.c, true); });
+      // dealing for deal: face-up piles in front of each seat
+      if (s.jpiles) {
+        const spot = [[W / 2, H - 150], [96, L.cy], [W / 2, 170], [W - 96, L.cy]];
+        s.jpiles.forEach((pile, p) => pile.forEach((q, i) => {
+          const e = 1 - Math.pow(1 - q.a, 3), tx = spot[p][0] + (p % 2 ? 0 : (i - 1) * 12), ty = spot[p][1] + (p % 2 ? (i - 1) * 12 : 0);
+          const isJ = s.jwho === p && i === pile.length - 1;
+          G.card(c, L.cx + (tx - L.cx) * e, L.cy + (ty - L.cy) * e, isJ ? 54 : 46, q.c, true, { hl: isJ, rot: (p - 1.5) * 0.05 });
+        }));
+        if (s.jwho < 0) { G.card(c, L.cx, L.cy, 46, null, false); G.text(c, "TAP TO SKIP", W / 2, H - 60, 10, "#fff"); }
+        else G.banner(c, s.jwho === 0 ? "YOU DEAL!" : `${NAMES[s.jwho]} DEALS`, "#ffd23f", H - 70, 20);
+      }
       // your hand
       this.handPos(G).forEach((q, i) => G.card(c, q.x, q.y, L.cw, q.c, true, { dim: !q.ok, rot: (i - (s.hands[0].length - 1) / 2) * 0.04 }));
       if (s.turn === 0 && (s.phase === "play" || s.phase.startsWith("bid")) && !(s.wait > 0)) { c.fillStyle = "#ffd23f"; c.fillRect(W / 2 - 30, H - 6, 60, 4); }
@@ -215,7 +244,7 @@
         }
       }
       // HUD
-      G.hud(c, `US ${s.score[0]}`, s.trump != null ? `TRUMP ${G.SUIT[s.trump]} · ${s.tricks[0]}–${s.tricks[1]}` : `HAND ${s.hand}`, `THEM ${s.score[1]}`);
+      G.hud(c, `US ${s.score[0]}`, s.phase === "jacks" ? "WHO DEALS?" : s.trump != null ? `TRUMP ${G.SUIT[s.trump]} · ${s.tricks[0]}–${s.tricks[1]}` : `HAND ${s.hand}`, `THEM ${s.score[1]}`);
       if (s.trump != null) { const red = s.trump === 1 || s.trump === 2; c.fillStyle = "#fffdf7"; c.beginPath(); c.arc(W / 2 + 70, 17, 0, 0, 7); c.fill(); }
       // message strip
       c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 36, W, 22); c.fillStyle = "#fff"; c.font = "600 12.5px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s.phase === "play" && s.turn === 0 && !(s.wait > 0) ? "Your play" + (s.led != null ? ` — ${G.SUIT[s.led]} led` : " — you lead") : s.msg, W / 2, 47);
