@@ -725,11 +725,23 @@ function getAllTime(id, dateKey) {
   const mStart = dateKey.slice(0, 8) + '01', yStart = dateKey.slice(0, 5) + '01-01';
   const prevEnd = addDays_(mStart, -1), prevStart = prevEnd.slice(0, 8) + '01';
   const byPts = a => a.sort((x, y) => y.pts - x.pts || y.wins - x.wins);
+  // Puzzle Hall of Fame: fastest clean Mini / Strands (personal bests), best Five and Groups averages (7+ games).
+  const pb = { c: {}, s: {} }, av = { f: {}, g: {} };
+  Object.keys(days).filter(d => d <= dateKey).forEach(d => Object.keys(days[d]).forEach(k => {
+    if (!names[k]) return; const t = days[d][k];
+    if (t.c && !t.c.k && t.c.t > 0 && (!pb.c[k] || t.c.t < pb.c[k].v)) pb.c[k] = { v: t.c.t, d: d };
+    if (t.s && !t.s.h && t.s.t > 0 && (!pb.s[k] || t.s.t < pb.s[k].v)) pb.s[k] = { v: t.s.t, d: d };
+    if (t.f) { const a = av.f[k] || (av.f[k] = { sum: 0, n: 0, best: 0 }); a.sum += t.f.w ? t.f.n : 7; a.n++; if (t.f.w && t.f.n <= 2) a.best++; }
+    if (t.g) { const a = av.g[k] || (av.g[k] = { sum: 0, n: 0, best: 0 }); a.sum += t.g.w ? t.g.m : 4; a.n++; if (t.g.w && t.g.m === 0) a.best++; }
+  }));
+  const fast = m => Object.keys(m).map(k => ({ id: k, name: names[k], v: m[k].v, d: m[k].d })).sort((a, b) => a.v - b.v).slice(0, 5);
+  const avgs = m => Object.keys(m).filter(k => m[k].n >= 7).map(k => ({ id: k, name: names[k], v: Math.round(100 * m[k].sum / m[k].n) / 100, n: m[k].n, best: m[k].best })).sort((a, b) => a.v - b.v || b.n - a.n).slice(0, 5);
+  const hof = { mini: fast(pb.c), strands: fast(pb.s), five: avgs(av.f), groups: avgs(av.g) };
   const last = byPts(table(prevStart, prevEnd, 20));
   return {
     month: byPts(table(mStart, dateKey, 20)), year: byPts(table(yStart, dateKey, 200)),
     all: table('0000', dateKey).sort((x, y) => (y.days >= 10) - (x.days >= 10) || y.avg - x.avg),
-    monthKey: mStart, yearKey: yStart.slice(0, 4), lastMonth: last.length && last[0].pts > 0 ? { name: last[0].name, pts: last[0].pts, key: prevStart } : null
+    hof: hof, monthKey: mStart, yearKey: yStart.slice(0, 4), lastMonth: last.length && last[0].pts > 0 ? { name: last[0].name, pts: last[0].pts, key: prevStart } : null
   };
 }
 // A player's trophy case, plus your all-time record against them.

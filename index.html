@@ -153,7 +153,8 @@ input { -webkit-user-select: text; user-select: text; }
 .at-row.me { background: var(--raise); border-radius: 8px; padding: 8px 6px; }
 .at-left { display: flex; align-items: center; gap: 8px; min-width: 0; } .at-right { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 .at-right b { font-size: 17px; font-variant-numeric: tabular-nums; } .at-right small { font-size: 11px; color: var(--muted); }
-#alltime-seg { margin: 6px 0 4px; }
+#alltime-seg, #phof-seg { margin: 6px 0 4px; }
+#phof-seg { grid-template-columns: repeat(4, 1fr) !important; } #phof-seg button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 .arc-sec { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -2px; }
 .arc-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 9px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); min-width: 0; }
 .arc-cell .gicon { width: 48px; height: 48px; font-size: 28px; }
@@ -767,6 +768,12 @@ input { -webkit-user-select: text; user-select: text; }
         <div class="seg" id="alltime-seg"><button data-k="month" class="on">Month</button><button data-k="year">Year</button><button data-k="all">All time</button></div>
         <ol class="rank-list" id="alltime-list"><li class="dim">Loading…</li></ol>
         <p class="note" id="alltime-note"></p>
+      </div>
+      <div class="box" id="phof">
+        <div class="sechead"><h2>Hall of Fame</h2><span>Puzzles, all time</span></div>
+        <div class="seg" id="phof-seg"><button data-k="mini" class="on">Mini</button><button data-k="strands">Strands</button><button data-k="five">Five</button><button data-k="groups">Groups</button></div>
+        <ol class="rank-list" id="phof-list"><li class="dim">Loading…</li></ol>
+        <p class="note" id="phof-note"></p>
       </div>
       <div class="box" id="awards" hidden>
         <div class="sechead"><h2 id="awards-title">Weekly awards</h2><span id="awards-sub"></span></div>
@@ -3286,7 +3293,7 @@ $("home-settings").addEventListener("click", () => { show("scores"); scoreTab("m
 document.querySelectorAll("#sc-tabs button").forEach(b => b.addEventListener("click", () => { scoreTab(b.dataset.tab); if (b.dataset.tab === "arcade") refreshArcade(); if (b.dataset.tab === "week") loadAllTime(); }));
 // All-time puzzle leaderboard (Week tab): total points, points per day, or daily wins.
 let allTime = null, allTimeK = "month";
-function loadAllTime() { if (!me) return; API("getAllTime", me.id, KEY).then(r => { allTime = r || []; renderAllTime(); }).catch(e => { $("alltime-list").innerHTML = ""; $("alltime-list").appendChild(el("li", "dim", /newest server|not a function/i.test(errMsg(e)) ? "Turns on after the next server update." : errMsg(e))); }); }
+function loadAllTime() { if (!me) return; API("getAllTime", me.id, KEY).then(r => { allTime = r || []; renderAllTime(); renderPhof(); }).catch(e => { $("alltime-list").innerHTML = ""; $("alltime-list").appendChild(el("li", "dim", /newest server|not a function/i.test(errMsg(e)) ? "Turns on after the next server update." : errMsg(e))); }); }
 function renderAllTime() {
   const ol = $("alltime-list"); if (!allTime) return; ol.innerHTML = "";
   if (Array.isArray(allTime)) { ol.appendChild(el("li", "dim", "Turns on after the next server update.")); return; }
@@ -3306,6 +3313,24 @@ function renderAllTime() {
   });
   $("alltime-sub").textContent = k === "month" ? mName(allTime.monthKey) : k === "year" ? allTime.yearKey : `${list.length} players`;
 }
+// Puzzle Hall of Fame (Week tab, under Standings)
+let phofK = "mini";
+function renderPhof() {
+  const ol = $("phof-list"); ol.innerHTML = "";
+  const h = allTime && !Array.isArray(allTime) && allTime.hof; if (!h) { ol.appendChild(el("li", "dim", allTime ? "Turns on after the next server update." : "Loading…")); return; }
+  const k = phofK, list = h[k] || [], medal = ["🥇", "🥈", "🥉", "4", "5"];
+  $("phof-note").textContent = k === "mini" ? "Fastest Mini ever, no Check. Personal bests." : k === "strands" ? "Fastest Strands ever, no hints. Personal bests." : k === "five" ? "Best average guesses (a miss counts as 7). 7+ games to qualify. 🧠 = solved in 1 or 2." : "Fewest mistakes on average (a loss counts as 4). 7+ games to qualify. 💎 = perfect games.";
+  if (!list.length) { ol.appendChild(el("li", "dim", k === "five" || k === "groups" ? "Nobody has 7 games in yet." : "No records yet.")); return; }
+  list.forEach((r, i) => {
+    const li = el("li", "at-row" + (r.id === (me && me.id) ? " me" : "")), nmb = el("button", "pname tap", r.name); nmb.dataset.card = r.id;
+    const left = el("span", "at-left"); left.append(el("span", "rank" + (i === 0 ? " r1" : ""), medal[i]), nmb);
+    const right = el("span", "at-right");
+    if (k === "mini" || k === "strands") right.append(el("b", null, fmtTime(r.v)), el("small", null, new Date(r.d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })));
+    else right.append(el("b", null, r.v.toFixed(2)), el("small", null, `${r.n} games · ${k === "five" ? "🧠" : "💎"} ${r.best}`));
+    li.append(left, right); ol.appendChild(li);
+  });
+}
+document.querySelectorAll("#phof-seg button").forEach(b => b.addEventListener("click", () => { phofK = b.dataset.k; document.querySelectorAll("#phof-seg button").forEach(x => x.classList.toggle("on", x === b)); renderPhof(); }));
 document.querySelectorAll("#alltime-seg button").forEach(b => b.addEventListener("click", () => { allTimeK = b.dataset.k; document.querySelectorAll("#alltime-seg button").forEach(x => x.classList.toggle("on", x === b)); renderAllTime(); }));
 const AWARDS = {
   grinder: ["🐶", "Grinder"], speed: ["⚡", "Speed Demon"], sniper: ["🧵", "Strand Sniper"], brain: ["🧠", "Big Brain"],
