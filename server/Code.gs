@@ -716,11 +716,16 @@ function getAllTime(id, dateKey) {
     const day = days[d], pts = dayPoints_(day), win = dayWinners_(day);
     Object.keys(day).forEach(k => { if (names[k]) (per[k] || (per[k] = [])).push({ d: d, p: pts[k] || 0, w: win.indexOf(k) >= 0 }); });
   });
+  // Weekly champions: winner of every finished Mon-Sun league week.
+  const champs = [], thisWeek = weekStart_(dateKey), seenW = {};
+  Object.keys(days).filter(d => d <= dateKey).forEach(d => { const w = weekStart_(d); if (w < thisWeek) seenW[w] = true; });
+  Object.keys(seenW).sort().forEach(w => { const t = weekTable_(days, w, addDays_(w, 6), names); if (t.length && t[0].pts > 0) champs.push({ week: w, id: t[0].id, name: t[0].name, pts: t[0].pts }); });
+  const titles = (k, from, to) => champs.filter(c => c.id === k && c.week >= from.slice(0, 10) && addDays_(c.week, 6) <= to).length;
   const table = (from, to, best) => Object.keys(per).map(k => {
     const list = per[k].filter(x => x.d >= from && x.d <= to); if (!list.length) return null;
     const top = list.map(x => x.p).sort((a, b) => b - a).slice(0, best || list.length);
     const total = list.reduce((a, x) => a + x.p, 0);
-    return { id: k, name: names[k], pts: top.reduce((a, b) => a + b, 0), total: total, days: list.length, wins: list.filter(x => x.w).length, avg: Math.round(10 * total / list.length) / 10 };
+    return { id: k, name: names[k], pts: top.reduce((a, b) => a + b, 0), total: total, days: list.length, wins: list.filter(x => x.w).length, titles: titles(k, from, to), avg: Math.round(10 * total / list.length) / 10 };
   }).filter(Boolean);
   const mStart = dateKey.slice(0, 8) + '01', yStart = dateKey.slice(0, 5) + '01-01';
   const prevEnd = addDays_(mStart, -1), prevStart = prevEnd.slice(0, 8) + '01';
@@ -741,7 +746,7 @@ function getAllTime(id, dateKey) {
   return {
     month: byPts(table(mStart, dateKey, 20)), year: byPts(table(yStart, dateKey, 200)),
     all: table('0000', dateKey).sort((x, y) => (y.days >= 10) - (x.days >= 10) || y.avg - x.avg),
-    hof: hof, monthKey: mStart, yearKey: yStart.slice(0, 4), lastMonth: last.length && last[0].pts > 0 ? { name: last[0].name, pts: last[0].pts, key: prevStart } : null
+    hof: hof, champs: champs.slice(-26).reverse(), monthKey: mStart, yearKey: yStart.slice(0, 4), lastMonth: last.length && last[0].pts > 0 ? { name: last[0].name, pts: last[0].pts, key: prevStart } : null
   };
 }
 // A player's trophy case, plus your all-time record against them.

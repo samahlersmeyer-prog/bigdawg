@@ -154,6 +154,7 @@ input { -webkit-user-select: text; user-select: text; }
 .at-left { display: flex; align-items: center; gap: 8px; min-width: 0; } .at-right { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 .at-right b { font-size: 17px; font-variant-numeric: tabular-nums; } .at-right small { font-size: 11px; color: var(--muted); }
 #alltime-seg, #phof-seg { margin: 6px 0 4px; }
+#alltime-seg { grid-template-columns: repeat(4, 1fr) !important; } #alltime-seg button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 #phof-seg { grid-template-columns: repeat(4, 1fr) !important; } #phof-seg button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 .arc-sec { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -2px; }
 .arc-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 9px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); min-width: 0; }
@@ -765,7 +766,7 @@ input { -webkit-user-select: text; user-select: text; }
       </div>
       <div class="box" id="alltime">
         <div class="sechead"><h2>Standings</h2><span id="alltime-sub"></span></div>
-        <div class="seg" id="alltime-seg"><button data-k="month" class="on">Month</button><button data-k="year">Year</button><button data-k="all">All time</button></div>
+        <div class="seg" id="alltime-seg"><button data-k="month" class="on">Month</button><button data-k="year">Year</button><button data-k="all">All time</button><button data-k="champs">Champs</button></div>
         <ol class="rank-list" id="alltime-list"><li class="dim">Loading…</li></ol>
         <p class="note" id="alltime-note"></p>
       </div>
@@ -3298,6 +3299,21 @@ function renderAllTime() {
   const ol = $("alltime-list"); if (!allTime) return; ol.innerHTML = "";
   if (Array.isArray(allTime)) { ol.appendChild(el("li", "dim", "Turns on after the next server update.")); return; }
   const k = allTimeK, mName = d => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "long" });
+  if (k === "champs") {
+    const ch = allTime.champs || [];
+    $("alltime-note").textContent = "Every weekly league champ (best 5 days, Monday to Sunday). Most titles listed first below the list.";
+    $("alltime-sub").textContent = `${ch.length} week${ch.length === 1 ? "" : "s"}`;
+    if (!ch.length) { ol.appendChild(el("li", "dim", "No finished weeks yet. First champ is crowned Sunday night.")); return; }
+    ch.forEach(c => {
+      const li = el("li", "at-row" + (c.id === (me && me.id) ? " me" : "")), nmb = el("button", "pname tap", c.name); nmb.dataset.card = c.id;
+      const d = new Date(c.week + "T12:00:00"), lab = "Week of " + d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const left = el("span", "at-left"); left.append(el("span", "rank r1", "🏆"), nmb);
+      const right = el("span", "at-right"); right.append(el("b", null, String(c.pts)), el("small", null, lab)); li.append(left, right); ol.appendChild(li);
+    });
+    const tally = {}; ch.forEach(c => { tally[c.name] = (tally[c.name] || 0) + 1; });
+    $("alltime-note").textContent = "Weekly league champs, newest first. Most titles: " + Object.keys(tally).sort((a, b) => tally[b] - tally[a]).slice(0, 3).map(n => `${n} ×${tally[n]}`).join(", ") + ".";
+    return;
+  }
   const list = (allTime[k] || []).filter(r => k !== "all" || r.days >= 3);
   $("alltime-note").textContent = k === "month" ? `${mName(allTime.monthKey)} standings: your best 20 days count, so days off won't sink you.` + (allTime.lastMonth ? ` 🏆 ${mName(allTime.lastMonth.key)} champ: ${allTime.lastMonth.name} (${allTime.lastMonth.pts}).` : "")
     : k === "year" ? `${allTime.yearKey} standings: your best 200 days count.` : "All time ranks by average points per day played (10+ days to be ranked at the top), so newer players can compete. Tap a name for their stats.";
@@ -3306,7 +3322,7 @@ function renderAllTime() {
     const li = el("li" + "", r.id === (me && me.id) ? "me" : null);
     const nmb = el("button", "pname tap", r.name); nmb.dataset.card = r.id;
     const main = k === "all" ? r.avg.toFixed(1) + "/day" : String(r.pts);
-    const sub = `${r.days} day${r.days === 1 ? "" : "s"} · ${r.avg.toFixed(1)}/day · 👑 ${r.wins}` + (k === "all" ? ` · ${r.total} pts` : "") + (k === "all" && r.days < 10 ? " · new" : "");
+    const sub = `${r.days} day${r.days === 1 ? "" : "s"} · ${r.avg.toFixed(1)}/day · 👑 ${r.wins}` + (r.titles ? ` · 🏆 ${r.titles}` : "") + (k === "all" ? ` · ${r.total} pts` : "") + (k === "all" && r.days < 10 ? " · new" : "");
     const left = el("span", "at-left"); left.append(el("span", "rank" + (i === 0 ? " r1" : ""), i + 1), nmb);
     const right = el("span", "at-right"); right.append(el("b", null, main), el("small", null, sub));
     li.className = (li.className ? li.className + " " : "") + "at-row"; li.append(left, right); ol.appendChild(li);
