@@ -706,20 +706,31 @@ function getStats(id, dateKey) {
   };
 }
 
-// All-time puzzle leaderboard: every day's league points added up, plus days played, daily wins and per-day average.
+// Long-run puzzle standings. Like the weekly league, only your best days count, so a few days off (or joining late)
+// doesn't bury you: this month = best 20 days, this year = best 200 days. All time ranks by points per day played.
 function getAllTime(id, dateKey) {
   dateKey = cleanDate_(dateKey);
   const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
-  const days = allScores_(), tot = {};
+  const days = allScores_(), per = {};
   Object.keys(days).filter(d => d <= dateKey).forEach(d => {
     const day = days[d], pts = dayPoints_(day), win = dayWinners_(day);
-    Object.keys(day).forEach(k => {
-      if (!names[k]) return; const t = day[k], r = tot[k] || (tot[k] = { id: k, name: names[k], pts: 0, days: 0, wins: 0, fiveN: 0, fiveG: 0, perfect: 0 });
-      r.pts += pts[k] || 0; r.days++; if (win.indexOf(k) >= 0) r.wins++;
-      if (t.f && t.f.w) { r.fiveN++; r.fiveG += t.f.n; } if (t.g && t.g.w && t.g.m === 0) r.perfect++;
-    });
+    Object.keys(day).forEach(k => { if (names[k]) (per[k] || (per[k] = [])).push({ d: d, p: pts[k] || 0, w: win.indexOf(k) >= 0 }); });
   });
-  return Object.keys(tot).map(k => tot[k]).sort((a, b) => b.pts - a.pts);
+  const table = (from, to, best) => Object.keys(per).map(k => {
+    const list = per[k].filter(x => x.d >= from && x.d <= to); if (!list.length) return null;
+    const top = list.map(x => x.p).sort((a, b) => b - a).slice(0, best || list.length);
+    const total = list.reduce((a, x) => a + x.p, 0);
+    return { id: k, name: names[k], pts: top.reduce((a, b) => a + b, 0), total: total, days: list.length, wins: list.filter(x => x.w).length, avg: Math.round(10 * total / list.length) / 10 };
+  }).filter(Boolean);
+  const mStart = dateKey.slice(0, 8) + '01', yStart = dateKey.slice(0, 5) + '01-01';
+  const prevEnd = addDays_(mStart, -1), prevStart = prevEnd.slice(0, 8) + '01';
+  const byPts = a => a.sort((x, y) => y.pts - x.pts || y.wins - x.wins);
+  const last = byPts(table(prevStart, prevEnd, 20));
+  return {
+    month: byPts(table(mStart, dateKey, 20)), year: byPts(table(yStart, dateKey, 200)),
+    all: table('0000', dateKey).sort((x, y) => (y.days >= 10) - (x.days >= 10) || y.avg - x.avg),
+    monthKey: mStart, yearKey: yStart.slice(0, 4), lastMonth: last.length && last[0].pts > 0 ? { name: last[0].name, pts: last[0].pts, key: prevStart } : null
+  };
 }
 // A player's trophy case, plus your all-time record against them.
 function getPlayerCard(viewerId, targetId, dateKey) {

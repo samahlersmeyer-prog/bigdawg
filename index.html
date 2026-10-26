@@ -763,10 +763,10 @@ input { -webkit-user-select: text; user-select: text; }
         <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you. Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
       </div>
       <div class="box" id="alltime">
-        <div class="sechead"><h2>All time</h2><span id="alltime-sub"></span></div>
-        <div class="seg" id="alltime-seg"><button data-k="pts" class="on">Points</button><button data-k="avg">Per day</button><button data-k="wins">👑 Wins</button></div>
+        <div class="sechead"><h2>Standings</h2><span id="alltime-sub"></span></div>
+        <div class="seg" id="alltime-seg"><button data-k="month" class="on">Month</button><button data-k="year">Year</button><button data-k="all">All time</button></div>
         <ol class="rank-list" id="alltime-list"><li class="dim">Loading…</li></ol>
-        <p class="note" id="alltime-note">Every day's points added up since day one (no best-5 rule). Per day needs 5+ days played. Tap a name for their stats.</p>
+        <p class="note" id="alltime-note"></p>
       </div>
       <div class="box" id="awards" hidden>
         <div class="sechead"><h2 id="awards-title">Weekly awards</h2><span id="awards-sub"></span></div>
@@ -3285,25 +3285,26 @@ function scoreTab(t) {
 $("home-settings").addEventListener("click", () => { show("scores"); scoreTab("more"); });
 document.querySelectorAll("#sc-tabs button").forEach(b => b.addEventListener("click", () => { scoreTab(b.dataset.tab); if (b.dataset.tab === "arcade") refreshArcade(); if (b.dataset.tab === "week") loadAllTime(); }));
 // All-time puzzle leaderboard (Week tab): total points, points per day, or daily wins.
-let allTime = null, allTimeK = "pts";
+let allTime = null, allTimeK = "month";
 function loadAllTime() { if (!me) return; API("getAllTime", me.id, KEY).then(r => { allTime = r || []; renderAllTime(); }).catch(e => { $("alltime-list").innerHTML = ""; $("alltime-list").appendChild(el("li", "dim", /newest server|not a function/i.test(errMsg(e)) ? "Turns on after the next server update." : errMsg(e))); }); }
 function renderAllTime() {
   const ol = $("alltime-list"); if (!allTime) return; ol.innerHTML = "";
-  const k = allTimeK, avg = r => r.days ? r.pts / r.days : 0;
-  let list = allTime.slice();
-  if (k === "avg") list = list.filter(r => r.days >= 5).sort((a, b) => avg(b) - avg(a));
-  else if (k === "wins") list = list.filter(r => r.wins > 0).sort((a, b) => b.wins - a.wins || b.pts - a.pts);
-  if (!list.length) { ol.appendChild(el("li", "dim", k === "avg" ? "Nobody has 5 days in yet." : "No wins yet.")); return; }
+  if (Array.isArray(allTime)) { ol.appendChild(el("li", "dim", "Turns on after the next server update.")); return; }
+  const k = allTimeK, mName = d => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "long" });
+  const list = (allTime[k] || []).filter(r => k !== "all" || r.days >= 3);
+  $("alltime-note").textContent = k === "month" ? `${mName(allTime.monthKey)} standings: your best 20 days count, so days off won't sink you.` + (allTime.lastMonth ? ` 🏆 ${mName(allTime.lastMonth.key)} champ: ${allTime.lastMonth.name} (${allTime.lastMonth.pts}).` : "")
+    : k === "year" ? `${allTime.yearKey} standings: your best 200 days count.` : "All time ranks by average points per day played (10+ days to be ranked at the top), so newer players can compete. Tap a name for their stats.";
+  if (!list.length) { ol.appendChild(el("li", "dim", "No games yet.")); return; }
   list.slice(0, 25).forEach((r, i) => {
     const li = el("li" + "", r.id === (me && me.id) ? "me" : null);
     const nmb = el("button", "pname tap", r.name); nmb.dataset.card = r.id;
-    const main = k === "avg" ? avg(r).toFixed(1) : k === "wins" ? `👑 ${r.wins}` : String(r.pts);
-    const sub = `${r.days} day${r.days === 1 ? "" : "s"} · ${avg(r).toFixed(1)}/day · 👑 ${r.wins}` + (r.fiveN ? ` · Five avg ${(r.fiveG / r.fiveN).toFixed(1)}` : "");
+    const main = k === "all" ? r.avg.toFixed(1) + "/day" : String(r.pts);
+    const sub = `${r.days} day${r.days === 1 ? "" : "s"} · ${r.avg.toFixed(1)}/day · 👑 ${r.wins}` + (k === "all" ? ` · ${r.total} pts` : "") + (k === "all" && r.days < 10 ? " · new" : "");
     const left = el("span", "at-left"); left.append(el("span", "rank" + (i === 0 ? " r1" : ""), i + 1), nmb);
     const right = el("span", "at-right"); right.append(el("b", null, main), el("small", null, sub));
     li.className = (li.className ? li.className + " " : "") + "at-row"; li.append(left, right); ol.appendChild(li);
   });
-  $("alltime-sub").textContent = `${allTime.length} players`;
+  $("alltime-sub").textContent = k === "month" ? mName(allTime.monthKey) : k === "year" ? allTime.yearKey : `${list.length} players`;
 }
 document.querySelectorAll("#alltime-seg button").forEach(b => b.addEventListener("click", () => { allTimeK = b.dataset.k; document.querySelectorAll("#alltime-seg button").forEach(x => x.classList.toggle("on", x === b)); renderAllTime(); }));
 const AWARDS = {
