@@ -301,7 +301,7 @@ function getBoard(dateKey, viewerId) {
   const out = [];
   Object.keys(played).forEach(id => {
     const st = streak_(played[id], dateKey);
-    if (today[id] || st.s > 0) out.push({ id: id, name: names[id] || 'Player', t: today[id] || {}, s: st.s, z: st.froze });
+    if ((today[id] || st.s > 0) && inScope_(id)) out.push({ id: id, name: names[id] || 'Player', t: today[id] || {}, s: st.s, z: st.froze });
   });
   const reacts = readReacts_(dateKey);
   out.forEach(p => {
@@ -458,14 +458,14 @@ function getShadeState(id, dateKey) {
     sent[r.from] = (sent[r.from] || 0) + 1;
     if (r.response === 'L') ls[r.to] = (ls[r.to] || 0) + 1;
   });
-  const top = m => Object.keys(m).filter(k => names[k]).map(k => ({ id: k, name: names[k], n: m[k] })).sort((a, b) => b.n - a.n).slice(0, 5);
+  const top = m => Object.keys(m).filter(k => names[k] && inScope_(k)).map(k => ({ id: k, name: names[k], n: m[k] })).sort((a, b) => b.n - a.n).slice(0, 5);
   return {
     inbox: inbox, sentToday: sentToday,
     recent: rows.filter(r => r.to === id && r.date >= since).slice(-30).reverse().map(r => ({ id: r.id, from: r.from, fromName: names[r.from] || 'Someone', text: r.text, kind: r.kind, date: r.date, seen: r.seen })),
     board: { recv: top(recv), sent: top(sent), ls: top(ls), claps: top(claps) },
     settings: { spice: me.spice || 0, jokes: !!me.jokes, mute: !!me.mute },
     jokes: readJokes_(id),
-    players: players.map(p => ({ id: p.id, name: p.name, muted: !!p.mute }))
+    players: players.filter(p => p.id === id || shareCrew_(id, p.id)).map(p => ({ id: p.id, name: p.name, muted: !!p.mute }))
   };
 }
 
@@ -489,6 +489,7 @@ function sendShade(fromId, toId, dateKey, text, kind, replyTo) {
     const players = readPlayers_();
     const from = players.find(p => p.id === fromId), to = players.find(p => p.id === toId);
     if (!from || !to) throw new Error('Unknown player.');
+    if (kind === 'shade' && !shareCrew_(fromId, toId)) throw new Error(NOT_MATES_);
     const rows = readShade_();
     if (kind === 'shade') {
       if (to.mute) throw new Error(to.name + ' has shade muted.');
@@ -576,6 +577,7 @@ function react(fromId, toId, dateKey, emoji) {
   try {
     const players = readPlayers_();
     if (!players.some(p => p.id === fromId) || !players.some(p => p.id === toId)) throw new Error('Unknown player.');
+    if (!shareCrew_(fromId, toId)) throw new Error(NOT_MATES_);
     const had = readReacts_(dateKey).find(x => x.from === fromId && x.to === toId && x.e === emoji);
     const sh = reactSheet_();
     if (had) sh.deleteRow(had.row);
@@ -587,6 +589,116 @@ function react(fromId, toId, dateKey, emoji) {
   } finally { lock.releaseLock(); }
   return getBoard(dateKey, fromId);
 }
+
+
+// ---------------- Crews ----------------
+// Invite-only groups. The scoreboard, league, crowns, awards and Den/Arcade boards can be scoped to one crew
+// (or "all" for everyone). The app sends the crew it's showing with every call; it lands in CREW_.
+const CREW_HEADERS = ['crewId', 'name', 'code', 'ownerId', 'created'];
+const MEMBER_HEADERS = ['crewId', 'playerId', 'joined'];
+let CREW_ = 'all', MEMO_ = {};
+function crewsSheet_() { return tabSheet_('Crews', CREW_HEADERS, 'A:D'); }
+function membersSheet_() { return tabSheet_('CrewMembers', MEMBER_HEADERS, 'A:B'); }
+function readCrews_() {
+  if (MEMO_.crews) return MEMO_.crews;
+  const sh = crewsSheet_(), n = sh.getLastRow() - 1;
+  return MEMO_.crews = n < 1 ? [] : sh.getRange(2, 1, n, 4).getValues().map(r => ({ id: String(r[0]), name: String(r[1]), code: String(r[2]).toUpperCase(), owner: String(r[3]) })).filter(c => c.id);
+}
+function readMembers_() {
+  if (MEMO_.members) return MEMO_.members;
+  const sh = membersSheet_(), n = sh.getLastRow() - 1;
+  return MEMO_.members = n < 1 ? [] : sh.getRange(2, 1, n, 2).getValues().map((r, i) => ({ crew: String(r[0]), id: String(r[1]), row: i + 2 })).filter(m => m.crew && m.id);
+}
+function newCode_() {
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', used = {}; readCrews_().forEach(c => used[c.code] = true);
+  for (;;) { let c = ''; for (let i = 0; i < 5; i++) c += A[Math.floor(Math.random() * A.length)]; if (!used[c]) return c; }
+}
+function addCrew_(name, ownerId) {
+  const c = { id: Utilities.getUuid().slice(0, 8), name: name, code: newCode_(), owner: ownerId };
+  const sh = crewsSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 4).setNumberFormat('@');
+  sh.getRange(r, 1, 1, 5).setValues([[c.id, c.name, c.code, c.owner, new Date()]]); MEMO_.crews = null; return c;
+}
+function addMembers_(crewId, ids) {
+  const have = {}; readMembers_().filter(m => m.crew === crewId).forEach(m => have[m.id] = true);
+  const rows = ids.filter(id => !have[id]).map(id => [crewId, id, new Date()]); if (!rows.length) return;
+  const sh = membersSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, rows.length, 2).setNumberFormat('@');
+  sh.getRange(r, 1, rows.length, 3).setValues(rows); MEMO_.members = null;
+}
+// First run: everyone already playing becomes the original crew, so nothing changes for them.
+function ensureCrews_() {
+  if (readCrews_().length) return;
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    MEMO_ = {}; if (readCrews_().length) return;
+    const players = readPlayers_(); if (!players.length) return;
+    const sam = players.find(p => /^sam\b/i.test(p.name)) || players[0];
+    const c = addCrew_('Big Dawgs', sam ? sam.id : '');
+    addMembers_(c.id, players.map(p => p.id));
+  } finally { lock.releaseLock(); }
+}
+function crewIdsOf_(id) { return readMembers_().filter(m => m.id === id).map(m => m.crew); }
+function shareCrew_(a, b) { ensureCrews_(); const mine = crewIdsOf_(a); return readMembers_().some(m => m.id === b && mine.indexOf(m.crew) >= 0); }
+// Ids visible in the current scope, or null for everyone.
+function scopeSet_() {
+  if (MEMO_.scope !== undefined) return MEMO_.scope;
+  if (!CREW_ || CREW_ === 'all') return MEMO_.scope = null;
+  const s = {}; readMembers_().filter(m => m.crew === CREW_).forEach(m => s[m.id] = true);
+  return MEMO_.scope = s;
+}
+function inScope_(id) { const s = scopeSet_(); return !s || !!s[id]; }
+function scopedNames_() { const names = {}; readPlayers_().forEach(p => { if (inScope_(p.id)) names[p.id] = p.name; }); return names; }
+function scopedScores_() {
+  const days = allScores_(), s = scopeSet_(); if (!s) return days;
+  const out = {}; Object.keys(days).forEach(d => { const day = {}; Object.keys(days[d]).forEach(k => { if (s[k]) day[k] = days[d][k]; }); if (Object.keys(day).length) out[d] = day; });
+  return out;
+}
+function getCrews(id) {
+  id = cleanId_(id); ensureCrews_();
+  const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
+  const mine = crewIdsOf_(id), mem = readMembers_();
+  return readCrews_().filter(c => mine.indexOf(c.id) >= 0).map(c => {
+    const ids = mem.filter(m => m.crew === c.id).map(m => m.id).filter(k => names[k]);
+    return { id: c.id, name: c.name, code: c.code, owner: c.owner === id, n: ids.length, ids: ids, members: ids.map(k => names[k]).sort() };
+  });
+}
+function createCrew(id, name) {
+  id = cleanId_(id); name = cleanText_(name, 24).trim(); ensureCrews_();
+  if (!name) throw new Error('Give your crew a name.');
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  if (readCrews_().filter(c => c.owner === id).length >= 5) throw new Error("You've started 5 crews already.");
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  let c; try { c = addCrew_(name, id); addMembers_(c.id, [id]); } finally { lock.releaseLock(); }
+  return { crews: getCrews(id), crew: c.id };
+}
+function joinCrew(id, code) {
+  id = cleanId_(id); code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); ensureCrews_();
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  const c = readCrews_().find(x => x.code === code);
+  if (!c) throw new Error("No crew with that code. Double-check it with whoever invited you.");
+  if (crewIdsOf_(id).length >= 8) throw new Error("You're in 8 crews already. Leave one first.");
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { addMembers_(c.id, [id]); } finally { lock.releaseLock(); }
+  return { crews: getCrews(id), crew: c.id, name: c.name };
+}
+function leaveCrew(id, crewId) {
+  id = cleanId_(id); crewId = String(crewId || '');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { const m = readMembers_().find(x => x.crew === crewId && x.id === id); if (m) membersSheet_().deleteRow(m.row); MEMO_.members = null; } finally { lock.releaseLock(); }
+  return { crews: getCrews(id) };
+}
+function renameCrew(id, crewId, name) {
+  id = cleanId_(id); name = cleanText_(name, 24).trim(); if (!name) throw new Error('Give your crew a name.');
+  const sh = crewsSheet_(), c = readCrews_().findIndex(x => x.id === crewId);
+  if (c < 0 || readCrews_()[c].owner !== id) throw new Error('Only the person who started the crew can rename it.');
+  sh.getRange(c + 2, 2).setValue(name); MEMO_.crews = null;
+  return { crews: getCrews(id) };
+}
+// Which crew this request is about: a crew id, 'all', or '' for "my first crew".
+function setScope_(crew, meId) {
+  MEMO_ = {}; CREW_ = typeof crew === 'string' ? crew : 'all';
+  if (CREW_ === '') { try { ensureCrews_(); CREW_ = (meId && crewIdsOf_(cleanId_(meId))[0]) || 'all'; } catch (e) { CREW_ = 'all'; } MEMO_.scope = undefined; }
+}
+const NOT_MATES_ = "Shade, reactions and dares are just for your crew. Invite them to one first.";
 
 // ---------------- League, crowns, trophies, head-to-head ----------------
 // Every finished game as { 'yyyy-MM-dd': { playerId: result } }.
@@ -701,8 +813,8 @@ function weekAwards_(days, start, end, names) {
 // Yesterday's crown, this week's league table, and last week's champion.
 function getStats(id, dateKey) {
   id = cleanId_(id); dateKey = cleanDate_(dateKey);
-  const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
-  const days = allScores_();
+  const names = scopedNames_();
+  const days = scopedScores_();
   const ws = weekStart_(dateKey);
   const last = weekTable_(days, addDays_(ws, -7), addDays_(ws, -1), names, true);
   return {
@@ -719,8 +831,8 @@ function getStats(id, dateKey) {
 // doesn't bury you: this month = best 20 days, this year = best 200 days. All time ranks by points per day played.
 function getAllTime(id, dateKey) {
   dateKey = cleanDate_(dateKey);
-  const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
-  const days = allScores_(), per = {};
+  const names = scopedNames_();
+  const days = scopedScores_(), per = {};
   Object.keys(days).filter(d => d <= dateKey).forEach(d => {
     const day = days[d], pts = dayPoints_(day), win = dayWinners_(day);
     Object.keys(day).forEach(k => { if (names[k]) (per[k] || (per[k] = [])).push({ d: d, p: pts[k] || 0, w: win.indexOf(k) >= 0 }); });
@@ -761,8 +873,8 @@ function getAllTime(id, dateKey) {
 // A player's trophy case, plus your all-time record against them.
 function getPlayerCard(viewerId, targetId, dateKey) {
   viewerId = cleanId_(viewerId); targetId = cleanId_(targetId); dateKey = cleanDate_(dateKey);
-  const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
-  const days = allScores_();
+  const names = scopedNames_();
+  const days = scopedScores_();
   const dates = Object.keys(days).filter(d => d <= dateKey).sort();
   const b = { crowns: 0, titles: 0, genius: 0, perfectGroups: 0, quickMini: 0, quickStrands: 0, bestStreak: 0, perfectWeek: false, played: 0 };
   let run = 0, prev = null, fullRun = 0, prevFull = null, usedW = {};
@@ -799,7 +911,7 @@ function getPlayerCard(viewerId, targetId, dateKey) {
   }
   const cur = prev && (prev === dateKey || addDays_(prev, 1) === dateKey) ? run : 0;
   const stats = playerStats_(days, dates, targetId, dateKey); stats.cur = cur; stats.best = b.bestStreak;
-  return { id: targetId, name: names[targetId] || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
+  return { id: targetId, name: names[targetId] || (readPlayers_().find(p => p.id === targetId) || {}).name || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
 }
 // Wordle-style stats for one player: Five guess spread, Groups mistake spread, Strands/Mini times + last-14-day trend, last 7 days.
 function playerStats_(days, dates, id, dateKey) {
@@ -872,7 +984,7 @@ function submitArcade(id, dateKey, score, game) {
 // High scores: this week (Mon-Sun) and all time, best run per player.
 function getArcade(id, dateKey) {
   id = cleanId_(id); dateKey = cleanDate_(dateKey);
-  const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
+  const names = scopedNames_();
   const rowsAll = readArcade_().filter(r => names[r.id]);
   const ws = weekStart_(dateKey);
   const bestBy = (list, g) => {
@@ -904,6 +1016,7 @@ function sendDare(fromId, toId, dateKey, score, game) {
     const players = readPlayers_();
     const to = players.find(p => p.id === toId);
     if (!players.some(p => p.id === fromId) || !to) throw new Error('Unknown player.');
+    if (!shareCrew_(fromId, toId)) throw new Error(NOT_MATES_);
     // No point daring someone to beat a score they've already beaten.
     const theirs = readArcade_().filter(r => r.id === toId && (r.game || 'zoomies') === game && r.best > 0).reduce((m, r) => m && !arcBetter_(game, r.best, m) ? m : r.best, 0);
     if (theirs > 0 && !arcBetter_(game, score, theirs)) throw new Error(to.name + ' already has ' + theirs + ' in that game. Beat that first.');
@@ -941,7 +1054,7 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew
 };
 function doPost(e) {
   let out;
@@ -949,6 +1062,7 @@ function doPost(e) {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const fn = API_FNS[req.fn];
     if (!fn) throw new Error('Unknown call.');
+    setScope_(req.crew, req.me);
     out = { ok: true, result: fn.apply(null, Array.isArray(req.args) ? req.args : []) };
   } catch (err) {
     out = { ok: false, error: String((err && err.message) || err) };
@@ -962,7 +1076,8 @@ function bootData(id, dateKey) {
     progress: safe(() => loadProgress(id, dateKey)),
     board: safe(() => getBoard(dateKey, id)),
     shade: safe(() => getShadeState(id, dateKey)),
-    stats: safe(() => getStats(id, dateKey))
+    stats: safe(() => getStats(id, dateKey)),
+    crews: safe(() => getCrews(id)), crew: CREW_
   };
 }
 

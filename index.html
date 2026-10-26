@@ -361,6 +361,16 @@ input { -webkit-user-select: text; user-select: text; }
 .shadebtn.off { opacity: 0.4; }
 .shadebtn:active { transform: scale(0.92); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.crewbar { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; flex: none; }
+.crewbar::-webkit-scrollbar { display: none; }
+.crewbar button { flex: none; font-size: 13.5px; font-weight: 700; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); white-space: nowrap; }
+.crewbar button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.crewbar button.add { border-style: dashed; }
+.crewrow { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--raise); text-align: left; width: 100%; }
+.crewrow b { font-size: 16px; } .crewrow small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.crewrow .inrow { display: flex; gap: 6px; flex-wrap: wrap; } .crewrow .pill { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+.crewcode { font-family: ui-monospace, monospace; font-weight: 800; letter-spacing: 2px; }
+.crewform { display: flex; gap: 6px; width: 100%; } .crewform input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
 .chip { font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); }
 .chip.on { border-color: var(--ink); background: var(--ink); color: var(--bg); }
 .shade-chips { display: grid !important; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 6px; justify-content: start; overflow-x: auto; padding-bottom: 6px; mask-image: linear-gradient(90deg, #000 85%, transparent); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -787,6 +797,7 @@ input { -webkit-user-select: text; user-select: text; }
     </header>
     <div class="scroll">
       <div class="seg tabs" id="sc-tabs" role="tablist"><button data-tab="today" class="on">Today</button><button data-tab="week">Week</button><button data-tab="shade">Shade</button><button data-tab="arcade" aria-label="Arcade high scores">🕹️</button><button data-tab="more" aria-label="Invite and settings">⚙️</button></div>
+      <div class="crewbar" id="crewbar" hidden></div>
       <div class="pane" data-pane="today">
       <div class="sechead"><h2>Today</h2><span id="scores-date"></span></div>
       <p class="note" id="scores-note">Loading the scoreboard…</p>
@@ -839,6 +850,11 @@ input { -webkit-user-select: text; user-select: text; }
       </div>
       </div>
       <div class="pane" data-pane="more" hidden>
+      <div class="box">
+        <h3>Your crews</h3>
+        <p class="note" id="crew-note">Crews are invite-only groups with their own scoreboard, weekly league and champ.</p>
+        <div class="inrow"><button class="pill solid" id="crew-manage">Manage crews</button></div>
+      </div>
       <div class="box">
         <h3>Invite friends</h3>
         <p class="note">Send them this link. Everyone gets the same puzzles each day.</p>
@@ -1989,11 +2005,12 @@ if (FAST_URL && window.google && google.script && google.script.run) { const a =
 const SERVER_URL = "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec".indexOf("__") === 0 ? "" : "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec";
 const STATIC = !hasServer() && !!SERVER_URL;
 function callServer(fn, ...args) {
+  if (hasServer()) { window.__crew = crewSel; window.__me = me ? me.id : ""; }
   if (hasServer()) return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
   if (!SERVER_URL) return Promise.reject(new Error("offline"));
   const ctl = window.AbortController ? new AbortController() : null;
   const t = ctl && setTimeout(() => ctl.abort(), 25000);
-  return fetch(SERVER_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn, args }), redirect: "follow", signal: ctl && ctl.signal })
+  return fetch(SERVER_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn, args, crew: crewSel, me: me ? me.id : "" }), redirect: "follow", signal: ctl && ctl.signal })
     .then(r => r.json())
     .then(j => { if (t) clearTimeout(t); if (!j || !j.ok) throw new Error((j && j.error) || "offline"); return j.result; })
     .catch(e => { if (t) clearTimeout(t); throw (e && e.name === "AbortError") ? new Error("offline") : e; });
@@ -2005,6 +2022,7 @@ function primeBoot() {
   const p = callServer("bootData", me.id, KEY);
   const pick = k => p.then(r => { if (!r || !(k in r) || (r[k] === null && k !== "progress")) throw new Error("miss"); return r[k]; });
   PRIME = { loadProgress: pick("progress"), getBoard: pick("board"), getShadeState: pick("shade"), getStats: pick("stats") };
+  p.then(r => { if (r && r.crews) setCrews(r.crews, r.crew); }).catch(() => {});
   Object.values(PRIME).forEach(x => x.catch(() => {}));
 }
 const API = (fn, ...args) => {
@@ -2024,6 +2042,10 @@ function forgetUrl() { try { if (hasServer() && google.script.history) google.sc
 
 const skey = () => "bdd2:" + KEY + ":" + (me ? me.id : "anon");
 let S = null, me = null;
+// Crews: invite-only groups. crewSel is the crew the scoreboard is showing ("all" = everyone, "" = my first crew).
+let crews = store.get("bdd:crews") || [], crewSel = store.get("bdd:crewSel");
+if (typeof crewSel !== "string") crewSel = "";
+try { const inv = new URLSearchParams(location.search).get("crew"); if (inv) store.set("bdd:pendcrew", inv.toUpperCase()); } catch (e) {}
 // Tags saved progress with today's puzzle set, so progress from a swapped-out puzzle is never reused.
 const PID = [ANSWER, PUZ[0][0], CW.a[0], SP.t].join("|");
 const freshState = () => ({
@@ -2801,6 +2823,65 @@ async function copy(text, ta, okMsg = "Copied") {
   catch (e) { if (ta) { ta.value = text; ta.hidden = false; ta.focus(); ta.select(); } toast("Select the text and copy it", 2000); }
 }
 
+
+// ================= CREWS =================
+function isMate(id) { return !!me && (id === me.id || crews.some(c => (c.ids || []).includes(id))); }
+function crewName(c) { const x = crews.find(k => k.id === c); return x ? x.name : "Everyone"; }
+function setCrews(list, cur) {
+  crews = list || []; store.set("bdd:crews", crews);
+  if (crewSel === "" || (crewSel !== "all" && !crews.some(c => c.id === crewSel))) { crewSel = cur && cur !== "all" && crews.some(c => c.id === cur) ? cur : crews[0] ? crews[0].id : "all"; store.set("bdd:crewSel", crewSel); }
+  renderCrewBar();
+}
+function renderCrewBar() {
+  const bar = $("crewbar"); if (!bar) return; bar.innerHTML = ""; bar.hidden = !me;
+  const chip = (id, label) => { const b = el("button", crewSel === id ? "on" : "", label); b.addEventListener("click", () => switchCrew(id)); bar.appendChild(b); };
+  crews.forEach(c => chip(c.id, c.name)); chip("all", "🌎 Everyone");
+  const add = el("button", "add", crews.length ? "＋" : "＋ Join a crew"); add.setAttribute("aria-label", "Manage crews"); add.addEventListener("click", openCrews); bar.appendChild(add);
+  if ($("invite-link") && APP_URL) $("invite-link").textContent = inviteUrl();
+  const n = $("crew-note"); if (n) n.textContent = crews.length ? `You're in ${crews.map(c => c.name).join(", ")}. Each crew has its own scoreboard, weekly league and champ.` : "You're not in a crew yet. Start one or join with a code to get your own scoreboard, league and champ.";
+}
+function switchCrew(id) {
+  if (id === crewSel) return; crewSel = id; store.set("bdd:crewSel", id);
+  board = null; stats = null; statsAt = 0; allTime = null; arcade = null; PRIME = null;
+  renderCrewBar(); if (active === "scores") renderScores();
+  refreshBoard(); refreshStats(); refreshArcade(); if (document.querySelector('#sc-tabs [data-tab="week"].on')) loadAllTime();
+}
+function crewLink(c) { const base = APP_URL || (location.origin + location.pathname); return base + (base.includes("?") ? "&" : "?") + "crew=" + c.code; }
+function crewCall(fn, ...args) {
+  return API(fn, me.id, ...args).then(r => { setCrews(r.crews); if (r.crew) switchCrew(r.crew); return r; });
+}
+function openCrews() {
+  if (!me) return;
+  const nodes = [el("h2", null, "Crews"), el("p", "sub", "Invite-only groups. Each crew gets its own scoreboard, weekly league, crown and champ. Everyone still sees the same puzzles.")];
+  crews.forEach(c => {
+    const row = el("div", "crewrow");
+    const hd = el("b", null, c.name + (crewSel === c.id ? "  ✓" : ""));
+    const code = el("span", "crewcode", c.code);
+    const sm = el("small"); sm.append(`${c.n} member${c.n === 1 ? "" : "s"}: ${c.members.join(", ")}. Code `, code);
+    const btns = el("div", "inrow");
+    const inv = el("button", "pill solid", "Copy invite link"); inv.addEventListener("click", () => copy(`Join my crew "${c.name}" on Big Dawg Daily: ${crewLink(c)}`, null, "Invite copied. Text it to your people."));
+    const view = el("button", "pill", "Show scoreboard"); view.addEventListener("click", () => { closeModal(); switchCrew(c.id); show("scores"); });
+    const leave = el("button", "pill", "Leave"); leave.addEventListener("click", () => { if (leave.dataset.sure) { crewCall("leaveCrew", c.id).then(() => { if (crewSel === c.id) switchCrew(crews[0] ? crews[0].id : "all"); openCrews(); }).catch(e => toast(errMsg(e), 2400)); } else { leave.dataset.sure = 1; leave.textContent = "Tap again to leave"; } });
+    btns.append(inv, view, leave); row.append(hd, sm, btns); nodes.push(row);
+  });
+  const jf = el("div", "crewform"), ji = el("input"); ji.placeholder = "Crew code"; ji.maxLength = 8; ji.autocapitalize = "characters";
+  const jb = el("button", "pill solid", "Join"); jb.addEventListener("click", () => { if (!ji.value.trim()) return; crewCall("joinCrew", ji.value.trim()).then(r => { toast(`You're in ${r.name} 🐶`, 2200); openCrews(); }).catch(e => toast(errMsg(e), 2600)); });
+  jf.append(ji, jb);
+  const cf = el("div", "crewform"), ci = el("input"); ci.placeholder = "New crew name"; ci.maxLength = 24;
+  const cb = el("button", "pill", "Start"); cb.addEventListener("click", () => { if (!ci.value.trim()) return; crewCall("createCrew", ci.value.trim()).then(() => { toast("Crew started. Copy the invite link and send it.", 2600); openCrews(); }).catch(e => toast(errMsg(e), 2600)); });
+  cf.append(ci, cb);
+  nodes.push(el("h3", null, "Join a crew"), jf, el("h3", null, "Start a crew"), cf);
+  openModal(nodes);
+}
+function joinPending() {
+  const code = store.get("bdd:pendcrew"); if (!code || !me) return;
+  store.del("bdd:pendcrew");
+  API("joinCrew", me.id, code).then(r => { setCrews(r.crews); switchCrew(r.crew); toast(`You joined ${r.name}! 🐶`, 2600); }).catch(e => toast(errMsg(e), 2600));
+}
+document.addEventListener("click", e => { if (e.target.closest("#crew-manage")) openCrews(); });
+renderCrewBar();
+if (me) API("getCrews", me.id).then(l => setCrews(l)).catch(() => {});
+
 // ================= SCOREBOARD =================
 let board = null, postState = "init", writeChain = Promise.resolve(), synced = false;
 function postStatus() {
@@ -2824,7 +2905,7 @@ function pushResult() {
 function refreshBoard() {
   if (!me) return Promise.resolve();
   return API("getBoard", KEY, me.id).then(b => {
-    board = b; store.set("bdd:board", { k: KEY, b });
+    board = b; store.set("bdd:board", { k: KEY, b, c: crewSel });
     if (!synced) {
       synced = true;
       const mine = (b.players.find(p => p.id === me.id) || {}).t || {};
@@ -2913,7 +2994,9 @@ $("nick-save").addEventListener("click", () => {
   API("register", me.id, v).then(r => { me = r; store.set("bdd:me", me); toast("Name saved"); renderScores(); }).catch(e => toast(errMsg(e), 2600));
 });
 $("invite-link").textContent = APP_URL || "Your app link";
-$("invite-copy").addEventListener("click", () => copy("Join me on Big Dawg Daily: four quick puzzles a day, with a scoreboard. " + APP_URL, $("copy-fallback"), "Invite link copied"));
+// The invite link brings friends into the crew you're looking at (or just the app when you're on Everyone).
+function inviteUrl() { const c = crews.find(x => x.id === crewSel); return c ? crewLink(c) : APP_URL; }
+$("invite-copy").addEventListener("click", () => { const c = crews.find(x => x.id === crewSel); copy(`Join me${c ? ` in ${c.name}` : ""} on Big Dawg Daily: four quick puzzles a day, with a scoreboard. ` + inviteUrl(), $("copy-fallback"), "Invite link copied"); });
 $("share-all").addEventListener("click", () => copy(shareText(), $("copy-fallback")));
 $("switch-player").addEventListener("click", () => {
   store.del("bdd:me"); me = null; forgetUrl(); shadeLoaded = false;
@@ -3399,7 +3482,7 @@ let stats = null, statsAt = 0;
 function refreshStats() {
   if (!me) return Promise.resolve();
   statsAt = Date.now();
-  return API("getStats", me.id, KEY).then(st => { stats = st; store.set("bdd:stats", { k: KEY, s: st }); renderLeague(); if (active === "scores") renderScores(); if (active === "home") renderHome(); }).catch(() => { statsAt = 0; });
+  return API("getStats", me.id, KEY).then(st => { stats = st; store.set("bdd:stats", { k: KEY, s: st, c: crewSel }); renderLeague(); if (active === "scores") renderScores(); if (active === "home") renderHome(); }).catch(() => { statsAt = 0; });
 }
 // Short headline for the Scoreboard card: Monday-Tuesday it's last week's champ, otherwise yesterday's crown.
 function bannerText() {
@@ -3651,7 +3734,7 @@ function reactBar(x) {
   const bar = el("div", "reacts");
   const used = Object.keys(r).filter(e => r[e] && isDawg(e));
   const chip = (tag, e, n) => { const c = el(tag, tag === "button" && rm.includes(e) ? "on" : ""); c.appendChild(emo(e, 18)); if (n) c.appendChild(document.createTextNode(String(n))); return c; };
-  if (x.id === me.id) {
+  if (x.id === me.id || !isMate(x.id)) {
     REACTS.concat(used).filter(e => r[e]).forEach(e => bar.appendChild(chip("span", e, r[e])));
     return bar;
   }
@@ -3903,7 +3986,7 @@ function zOver() {
 }
 function openDarePicker(game, score) {
   const others = (shade.players || []).filter(x => me && x.id !== me.id);
-  if (!others.length) { toast("Nobody to dare yet. Invite some friends.", 2200); return; }
+  if (!others.length) { toast("Nobody in your crews to dare yet. Invite some friends.", 2400); return; }
   const list = el("div", "pickgrid");
   const q = el("input"); q.placeholder = "Search names"; q.setAttribute("aria-label", "Search names");
   const draw = () => {
@@ -4632,8 +4715,9 @@ async function afterIdentity() {
     const ok = local && local.v === 2 && local.pid === PID;
     const st = ok ? local : freshState(), fresh = freshState(); GAMES.forEach(g => { if (!st[g]) st[g] = fresh[g]; });
     S = st; store.set(skey(), S);
-    const cb = store.get("bdd:board"); if (cb && cb.k === KEY && !board) board = cb.b;
-    const cs = store.get("bdd:stats"); if (cs && cs.k === KEY && !stats) stats = cs.s;
+    const cb = store.get("bdd:board"); if (cb && cb.k === KEY && cb.c === crewSel && !board) board = cb.b;
+    const cs = store.get("bdd:stats"); if (cs && cs.k === KEY && cs.c === crewSel && !stats) stats = cs.s;
+    joinPending();
     if (!started) start(); else { renderBoard(); colorKeyboard(); renderGroups(); stPath = []; show(active); }
     splashMode("none");
     refreshBoard();
