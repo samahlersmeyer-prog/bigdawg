@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="6a5a9e0298";</script>
+<script>window.GAMES_V="3f2113bde7";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3846,7 +3846,7 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   darts: [500, 900, 1300], bowl: [100, 150, 200], punch: [500, 3000, 6000], volley: [1000, 2000, 3000], swim: [1500, 3000, 4000], shred: [1000, 2500, 4500],
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
-  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200], crazy: [150, 250, 330],
+  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200], crazy: [150, 250, 330], rummy: [80, 220, 320],
   };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
@@ -4097,7 +4097,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -4660,6 +4660,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_pupman.js", "key": "pupman", "name": "Pup-Man", "icon": ":dawgW:", "blurb": "Gobble kibble. Dodge the mailmen.", "how": "Swipe (or tap a side of the dog) to steer through the maze and gobble every kibble. Turns are saved until the next opening. Big bones in the corners scare the chasers, so chomp them for 200, 400, 800, 1600. 3 lives.", "max": 999999},
 {"file": "g_putt.js", "key": "putt", "name": "Putt Pup", "icon": "⛳", "blurb": "9 holes of backyard mini golf.", "how": "9 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.", "max": 450},
 {"file": "g_putt.js", "key": "putt18", "name": "Putt Pup 18", "icon": "⛳", "blurb": "The full 18. Back nine included.", "how": "18 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole. The back nine adds a loop-de-loop, deck tunnels, a sprinkler, a seesaw, lawnmowers, an island green and the doghouse.", "max": 900},
+{"file": "g_rummy.js", "key": "rummy", "name": "Rummy Dawgs", "icon": "🀄", "blurb": "Number-tile rummy vs Rex and Duke.", "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Win: 200 + the tiles left in the pups' racks. Lose: 100 minus what's left in your rack.", "cat": "den", "max": 800},
 {"file": "g_sgroups.js", "key": "sgroups", "name": "Sports Groups", "icon": "🏟️", "blurb": "Daily: find four groups of four, sports edition.", "how": "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 600, minus 100 per mistake, plus up to 300 for speed. Missing it is 100 per group found.", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_shred.js", "key": "shred", "name": "Shred Dawg", "icon": "⛷️", "blurb": "Ski the endless mountain. Outrun the snow-cat.", "how": "Hold anywhere and the dog turns to face your finger: straight down is fastest, sideways nearly stops you. Let go to keep your heading. Tap to hop over rocks, stumps, moguls, pups and small trees. Hit a ramp for big air and tap in the air to flip (+40 style), but finish the flip before you land. Ski between two flags for +10. Crashing just costs time. Past 2000 m the giant snow-cat chases you and it keeps getting faster. Score = meters + style.", "cat": "sports", "max": 99999},
 {"file": "g_smash.js", "key": "smash", "name": "Squirrel Smash", "icon": "🐿️", "blurb": "Whack-a-mole. Bop squirrels, not pups.", "how": "Squirrels pop out of the holes. Tap them fast. Golden ones are worth extra. Don't bop the pups. 30 seconds on the clock.", "max": 9999},
