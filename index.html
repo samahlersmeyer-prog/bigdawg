@@ -375,6 +375,17 @@ input { -webkit-user-select: text; user-select: text; }
 .rank-list .rk { width: 20px; height: 20px; border-radius: 50%; background: var(--raise); display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none; }
 .rank-list .nm { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-list .ct { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ct-btn { color: var(--muted); font-variant-numeric: tabular-nums; font: inherit; background: var(--raise); border: 0; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.ct-btn::after { content: " ▾"; font-size: 10px; } .ct-btn.open::after { content: " ▴"; }
+.rank-list li.wk-li { display: block; }
+.wk-math { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 2px 0 4px; font-variant-numeric: tabular-nums; }
+.wk-math th { font-size: 10.5px; color: var(--muted); font-weight: 700; text-align: center; padding: 3px 2px; text-transform: uppercase; letter-spacing: .03em; }
+.wk-math td { text-align: center; padding: 4px 2px; border-top: 1px solid var(--line); }
+.wk-math td:first-child, .wk-math th:first-child { text-align: left; }
+.wk-math tr.in td { font-weight: 700; } .wk-math tr.in td:last-child { color: #2e9e4f; }
+.wk-math tr.out td { color: var(--muted); } .wk-math tr.out td:last-child { text-decoration: line-through; }
+.wk-math tr.na td { color: var(--muted); opacity: .6; }
+.wk-sum { font-size: 12.5px; margin: 2px 0 8px; } .wk-sum b { color: #2e9e4f; }
 .lbl2 { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; }
 .seg button { padding: 10px 4px; font-weight: 700; font-size: 14px; }
@@ -781,7 +792,7 @@ input { -webkit-user-select: text; user-select: text; }
         <div class="sechead"><h2>This week</h2><span id="league-range"></span></div>
         <ol class="rank-list" id="league-list"></ol>
         <p class="note" id="league-champ"></p>
-        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you. Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
+        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you (tap anyone's points to see which days counted). Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
       </div>
       <div class="box" id="alltime">
         <div class="sechead"><h2>Standings</h2><span id="alltime-sub"></span></div>
@@ -3389,6 +3400,32 @@ function bannerText() {
   if (stats.crown.length) return `👑 ${stats.crown.map(c => c.name).join(" & ")}`;
   return stats.week.length ? `📈 ${stats.week[0].name} leads` : "";
 }
+// "The math" behind a weekly score: every day Mon-Sun with points per game; the best 5 days (bold, green) count.
+function weekMath(by, start) {
+  const box = el("div", "wk-wrap"), tb = el("table", "wk-math"), hd = el("tr");
+  ["Day", "Five", "Groups", "Mini", "Strands", "Pts"].forEach(h => hd.appendChild(el("th", null, h))); tb.appendChild(hd);
+  const map = {}; (by || []).forEach(x => map[x.d] = x);
+  for (let i = 0; i < 7; i++) {
+    const p = start.split("-").map(Number), dt = new Date(p[0], p[1] - 1, p[2] + i), d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    if (d > KEY) break;
+    const x = map[d], tr = el("tr", x ? (x.k ? "in" : "out") : "na");
+    tr.appendChild(el("td", null, dt.toLocaleDateString(undefined, { weekday: "short" })));
+    if (x) [x.f, x.g, x.c, x.s, x.p].forEach(v => tr.appendChild(el("td", null, String(v))));
+    else { const td = el("td", null, "didn't play"); td.colSpan = 5; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+  const used = (by || []).filter(x => x.k).sort((a, b) => b.p - a.p), cut = (by || []).filter(x => !x.k);
+  const sum = el("p", "wk-sum"); sum.innerHTML = `Best ${used.length} day${used.length === 1 ? "" : "s"}: ${used.map(x => x.p).join(" + ") || "0"} = <b>${used.reduce((a, x) => a + x.p, 0)}</b>` + (cut.length ? ` · ${cut.length} lower day${cut.length > 1 ? "s" : ""} dropped` : "");
+  box.append(tb, sum); return box;
+}
+// A points button that opens the math right under its row.
+const wkOpen = new Set();
+function wkToggle(btn, li, key, by, start, tag) {
+  btn.classList.add("ct-btn");
+  const open = () => { const d = el(tag || "li", "wk-li"); d.appendChild(weekMath(by, start)); li.after(d); btn.classList.add("open"); return d; };
+  let det = wkOpen.has(key) ? open() : null;
+  btn.addEventListener("click", e => { e.stopPropagation(); if (det) { det.remove(); det = null; btn.classList.remove("open"); wkOpen.delete(key); } else { det = open(); wkOpen.add(key); } });
+}
 function renderLeague() {
   const box = $("league"); if (!stats) { box.hidden = true; return; }
   box.hidden = false;
@@ -3400,10 +3437,17 @@ function renderLeague() {
     const rk = 1 + stats.week.filter(y => y.pts > x.pts).length; // ties share a spot
     const li = el("li", (rk === 1 && x.pts > 0 ? "lead" : "") + (me && x.id === me.id ? " league-me" : ""));
     const nm = el("button", "nm", x.name); nm.dataset.card = x.id; nm.style.textAlign = "left";
-    li.append(el("span", "rk", rk), nm, el("span", "ct", `${x.pts} pts`)); ol.appendChild(li);
+    const ct = el(x.by ? "button" : "span", "ct", `${x.pts} pts`); li.append(el("span", "rk", rk), nm, ct); ol.appendChild(li);
+    if (x.by) wkToggle(ct, li, "w:" + x.id, x.by, stats.weekStart);
   });
   renderAwards();
-  $("league-champ").textContent = stats.lastChamp ? `🏆 Last week's champ: ${stats.lastChamp.name} with ${stats.lastChamp.pts} pts.` : "Weekly champ is crowned every Sunday night.";
+  const lc = $("league-champ"); lc.innerHTML = "";
+  if (!stats.lastChamp) lc.textContent = "Weekly champ is crowned every Sunday night.";
+  else {
+    lc.append(`🏆 Last week's champ: ${stats.lastChamp.name} with `);
+    const pb = el(stats.lastChamp.by ? "button" : "span", null, `${stats.lastChamp.pts} pts`); lc.append(pb);
+    if (stats.lastChamp.by) { const p = stats.weekStart.split("-").map(Number), w = new Date(p[0], p[1] - 1, p[2] - 7), ws = `${w.getFullYear()}-${String(w.getMonth() + 1).padStart(2, "0")}-${String(w.getDate()).padStart(2, "0")}`; wkToggle(pb, lc, "lc", stats.lastChamp.by, ws, "div"); }
+  }
 }
 function scoreTab(t) {
   document.querySelectorAll("#sc-tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
@@ -3428,7 +3472,8 @@ function renderAllTime() {
       const li = el("li", "at-row" + (c.id === (me && me.id) ? " me" : "")), nmb = el("button", "pname tap", c.name); nmb.dataset.card = c.id;
       const d = new Date(c.week + "T12:00:00"), lab = "Week of " + d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
       const left = el("span", "at-left"); left.append(el("span", "rank r1", "🏆"), nmb);
-      const right = el("span", "at-right"); right.append(el("b", null, String(c.pts)), el("small", null, lab)); li.append(left, right); ol.appendChild(li);
+      const right = el("span", "at-right"), pb = el(c.by ? "button" : "b", null, String(c.pts)); right.append(pb, el("small", null, lab)); li.append(left, right); ol.appendChild(li);
+      if (c.by) { pb.style.fontWeight = "800"; wkToggle(pb, li, "c:" + c.week, c.by, c.week); }
     });
     const tally = {}; ch.forEach(c => { tally[c.name] = (tally[c.name] || 0) + 1; });
     $("alltime-note").textContent = "Weekly league champs, newest first. Most titles: " + Object.keys(tally).sort((a, b) => tally[b] - tally[a]).slice(0, 3).map(n => `${n} ×${tally[n]}`).join(", ") + ".";

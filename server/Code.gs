@@ -606,13 +606,19 @@ function allScores_() {
 // Points for one day. Five: 5 for 1 or 2 guesses, then 4, 3, 2, 1. Groups: 5 minus mistakes.
 // Mini and Strands: 5 for the fastest, then 4, 3, 2, and 1 for everyone else who finished.
 function dayPoints_(day) {
+  const parts = dayParts_(day), pts = {};
+  Object.keys(parts).forEach(id => { const x = parts[id]; pts[id] = x.f + x.g + x.c + x.s; });
+  return pts;
+}
+// The same points split by game: { id: { f, g, c, s } } (Five, Groups, Mini, Strands).
+function dayParts_(day) {
   const pts = {};
   Object.keys(day).forEach(id => {
-    const t = day[id]; pts[id] = 0;
-    if (t.f && t.f.w) pts[id] += Math.min(5, 7 - t.f.n); // 1 or 2 guesses = 5, so a lucky first guess isn't a jackpot
-    if (t.g && t.g.w) pts[id] += 5 - t.g.m;
+    const t = day[id]; pts[id] = { f: 0, g: 0, c: 0, s: 0 };
+    if (t.f && t.f.w) pts[id].f = Math.min(5, 7 - t.f.n); // 1 or 2 guesses = 5, so a lucky first guess isn't a jackpot
+    if (t.g && t.g.w) pts[id].g = 5 - t.g.m;
   });
-  const ranked = (key, score) => Object.keys(day).filter(id => day[id][key]).sort((a, b) => score(day[a][key]) - score(day[b][key])).forEach((id, i) => pts[id] += Math.max(1, 6 - i)); // timed games: 6 for fastest
+  const ranked = (key, score) => Object.keys(day).filter(id => day[id][key]).sort((a, b) => score(day[a][key]) - score(day[b][key])).forEach((id, i) => pts[id][key] = Math.max(1, 6 - i)); // timed games: 6 for fastest
   ranked('c', c => c.t + (c.k ? 30 : 0));
   ranked('s', x => x.t + 30 * x.h);
   return pts;
@@ -630,16 +636,19 @@ function weekStart_(dateKey) {
 }
 // Weekly total counts each player's best 5 days, so missing a day or two doesn't sink your week.
 const WEEK_BEST = 5;
-function weekTable_(days, start, end, names) {
+// detail=true adds `by`: every day played with its points per game and whether it was one of the best 5 that counted.
+function weekTable_(days, start, end, names, detail) {
   const per = {};
   for (let d = start, i = 0; d <= end && i < 400; d = addDays_(d, 1), i++) {
     if (!days[d]) continue;
-    const p = dayPoints_(days[d]);
-    Object.keys(p).forEach(k => (per[k] = per[k] || []).push(p[k]));
+    const p = dayParts_(days[d]);
+    Object.keys(p).forEach(k => { const x = p[k]; (per[k] = per[k] || []).push({ d: d, p: x.f + x.g + x.c + x.s, f: x.f, g: x.g, c: x.c, s: x.s }); });
   }
   return Object.keys(per).filter(k => names[k]).map(k => {
-    const top = per[k].sort((a, b) => b - a).slice(0, WEEK_BEST);
-    return { id: k, name: names[k], pts: top.reduce((a, b) => a + b, 0), days: per[k].length };
+    const top = per[k].slice().sort((a, b) => b.p - a.p || (a.d < b.d ? -1 : 1)).slice(0, WEEK_BEST);
+    const row = { id: k, name: names[k], pts: top.reduce((a, b) => a + b.p, 0), days: per[k].length };
+    if (detail) { top.forEach(x => x.k = 1); row.by = per[k]; }
+    return row;
   }).sort((a, b) => b.pts - a.pts);
 }
 
@@ -695,10 +704,10 @@ function getStats(id, dateKey) {
   const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
   const days = allScores_();
   const ws = weekStart_(dateKey);
-  const last = weekTable_(days, addDays_(ws, -7), addDays_(ws, -1), names);
+  const last = weekTable_(days, addDays_(ws, -7), addDays_(ws, -1), names, true);
   return {
     crown: dayWinners_(days[addDays_(dateKey, -1)]).filter(k => names[k]).map(k => ({ id: k, name: names[k] })),
-    week: weekTable_(days, ws, dateKey, names),
+    week: weekTable_(days, ws, dateKey, names, true),
     weekStart: ws,
     lastChamp: last.length && last[0].pts > 0 ? last[0] : null,
     awards: weekAwards_(days, ws, dateKey, names),
@@ -719,7 +728,7 @@ function getAllTime(id, dateKey) {
   // Weekly champions: winner of every finished Mon-Sun league week.
   const champs = [], thisWeek = weekStart_(dateKey), seenW = {};
   Object.keys(days).filter(d => d <= dateKey).forEach(d => { const w = weekStart_(d); if (w < thisWeek) seenW[w] = true; });
-  Object.keys(seenW).sort().forEach(w => { const t = weekTable_(days, w, addDays_(w, 6), names); if (t.length && t[0].pts > 0) champs.push({ week: w, id: t[0].id, name: t[0].name, pts: t[0].pts }); });
+  Object.keys(seenW).sort().forEach(w => { const t = weekTable_(days, w, addDays_(w, 6), names, true); if (t.length && t[0].pts > 0) champs.push({ week: w, id: t[0].id, name: t[0].name, pts: t[0].pts, by: t[0].by }); });
   const titles = (k, from, to) => champs.filter(c => c.id === k && c.week >= from.slice(0, 10) && addDays_(c.week, 6) <= to).length;
   const table = (from, to, best) => Object.keys(per).map(k => {
     const list = per[k].filter(x => x.d >= from && x.d <= to); if (!list.length) return null;
