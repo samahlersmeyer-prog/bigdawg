@@ -2885,7 +2885,19 @@ function openCrews() {
       const rn = el("button", "pill", "Rename"); rn.addEventListener("click", () => { const v = prompt("New crew name", c.name); if (v && v.trim()) API("renameCrew", me.id, c.id, v.trim()).then(r => { setCrews(r.crews); openCrews(); }).catch(e => toast(errMsg(e), 2400)); });
       const nc = el("button", "pill", "New code"); nc.addEventListener("click", () => { if (!nc.dataset.sure) { nc.dataset.sure = 1; nc.textContent = "Old links stop working. Tap again"; return; } API("newCrewCode", me.id, c.id).then(r => { setCrews(r.crews); toast("New code made. Old invite links no longer work.", 2400); openCrews(); }).catch(e => toast(errMsg(e), 2400)); });
       tools.append(rn, nc);
-      mg.append(el("small", null, "Tap a name, then tap again to remove them. Removed people can rejoin with the code, so tap New code if you need to lock it."), list, tools);
+      const af = el("div", "crewform"), ai = el("input"), ares = el("div", "chips"); ai.placeholder = "Add someone: type a name";
+      ai.addEventListener("input", () => {
+        const q = ai.value.trim().toLowerCase(); ares.innerHTML = ""; if (!q) return;
+        (window.__allPlayers ? Promise.resolve(window.__allPlayers) : API("listPlayers").then(l => window.__allPlayers = l)).then(list => {
+          if (ai.value.trim().toLowerCase() !== q) return; ares.innerHTML = "";
+          list.filter(x => !(c.ids || []).includes(x.id) && x.name.toLowerCase().includes(q)).slice(0, 8).forEach(x => {
+            const ch = el("button", "chip", "+ " + x.name); ch.addEventListener("click", () => { ch.replaceWith(addToCrewBtn(c.id, c.name, x.id, x.name, () => setTimeout(openCrews, 900))); }); ares.appendChild(ch);
+          });
+          if (!ares.children.length) ares.appendChild(el("small", null, "No one by that name outside the crew."));
+        }).catch(() => {});
+      });
+      af.appendChild(ai);
+      mg.append(el("small", null, "Add someone who already plays:"), af, ares, el("small", null, "Tap a name, then tap again to remove them. Removed people can rejoin with the code, so tap New code if you need to lock it."), list, tools);
       row.appendChild(mg);
     }
     nodes.push(row);
@@ -3189,7 +3201,7 @@ let shade = { inbox: [], sentToday: {}, firedBack: [], board: null, settings: { 
 let shadeLoaded = false;
 function refreshShade() {
   if (!me) return Promise.resolve();
-  return API("getShadeState", me.id, KEY).then(st => { shade = st; shadeLoaded = true; renderShadeBits(); maybeServe(); if ((st.recent || []).some(x => (x.kind === "joinok" || x.kind === "join") && !x.seen)) API("getCrews", me.id).then(l => setCrews(l)).catch(() => {}); }).catch(() => {});
+  return API("getShadeState", me.id, KEY).then(st => { shade = st; shadeLoaded = true; renderShadeBits(); maybeServe(); if ((st.recent || []).some(x => (x.kind === "joinok" || x.kind === "join" || x.kind === "added") && !x.seen)) API("getCrews", me.id).then(l => setCrews(l)).catch(() => {}); }).catch(() => {});
 }
 function playerInfo(id) {
   const p = (shade.players || []).find(x => x.id === id) || {};
@@ -3259,11 +3271,12 @@ function renderBell() {
   const n = ((shade.recent || []).filter(x => !x.seen).length) || 0;
   $("bell-n").hidden = !n; $("bell-n").textContent = n > 9 ? "9+" : String(n);
 }
-const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁", join: "🙋", joinok: "🎉" };
+const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁", join: "🙋", joinok: "🎉", added: "🎉" };
 function noteText(x) {
   if (x.kind === "dare") { const d = parseDare(x.text); return `${x.fromName} dared you to beat ${fmtG(d.game, d.target)} in ${ARC[d.game] ? ARC[d.game].name : "the arcade"}`; }
   if (x.kind === "dareres") { const d = parseDare(x.text), [sc, tg] = d.rest.split("/").map(Number), nm = ARC[d.game] ? ARC[d.game].name : "the arcade"; return betterG(d.game, sc, tg) ? `${x.fromName} beat your ${fmtG(d.game, tg)} in ${nm} with ${fmtG(d.game, sc)}` : `${x.fromName} took your ${nm} dare and fell short (${fmtG(d.game, sc)})`; }
   if (x.kind === "join") return `${x.fromName} wants into ${x.crew || "your crew"}`;
+  if (x.kind === "added") return `${x.fromName} added you to ${x.crew || "a crew"} 🐶`;
   if (x.kind === "joinok") return `You're in ${x.crew || "the crew"}! ${x.fromName} let you in.`;
   if (x.kind === "clap") return `${x.fromName} clapped back`;
   if (x.kind === "fire") return `${x.fromName} fired back: “${x.text}”`;
@@ -3730,8 +3743,14 @@ function joinButtons(reqId, who, crew) {
   yes.addEventListener("click", e => { e.stopPropagation(); go(true); }); no.addEventListener("click", e => { e.stopPropagation(); go(false); });
   row.append(yes, no); return row;
 }
+function addToCrewBtn(crewId, crewName, id, name, after) {
+  const b = el("button", "pill solid", `➕ Add ${name} to ${crewName}`);
+  b.addEventListener("click", e => { e.stopPropagation(); b.disabled = true; API("addToCrew", me.id, crewId, id, KEY).then(r => { setCrews(r.crews); b.textContent = `✓ ${name} is in ${crewName}`; b.className = "pill"; toast(`${name} added to ${crewName} 🐶`, 2000); if (crewSel === crewId) { switchCrew("all"); switchCrew(crewId); } if (after) after(); }).catch(err => { b.disabled = false; toast(errMsg(err), 2400); }); });
+  return b;
+}
 function askButtons(c) {
   const box = el("div", "col");
+  (c.canAdd || []).forEach(k => box.appendChild(addToCrewBtn(k.id, k.name, c.id, c.name)));
   (c.canAsk || []).forEach(k => {
     const b = el("button", k.asked ? "pill" : "pill solid", k.asked ? `Asked to join ${k.name} ✓` : `🙋 Ask to join ${k.name}`); b.disabled = !!k.asked;
     b.addEventListener("click", () => { b.disabled = true; API("requestJoin", me.id, k.id, KEY).then(() => { b.textContent = `Asked to join ${k.name} ✓`; b.className = "pill"; toast("Request sent. The crew owner decides.", 2200); }).catch(e => { b.disabled = false; toast(errMsg(e), 2400); }); });
@@ -3755,7 +3774,7 @@ function openCard(id) {
       d.append(el("b", null, icon), txt); grid.appendChild(d);
     });
     body.appendChild(grid);
-    if (c.canAsk && c.canAsk.length) body.appendChild(askButtons(c));
+    if ((c.canAsk && c.canAsk.length) || (c.canAdd && c.canAdd.length)) body.appendChild(askButtons(c));
     if (c.stats) body.appendChild(statsBlock(c.stats, c.mine, isMe ? null : c.name));
     if (c.h2h) {
       const h = c.h2h, tot = [0, 1, 2].map(i => h.five[i] + h.groups[i] + h.mini[i] + h.strands[i]);

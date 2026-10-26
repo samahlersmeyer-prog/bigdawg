@@ -8,7 +8,7 @@ const JOKE_HEADERS = ['id', 'playerId', 'text', 'created'];
 const PROGRESS_HEADERS = ['date', 'playerId', 'state', 'updated'];
 const REACT_HEADERS = ['date', 'fromId', 'toId', 'emoji', 'created'];
 const ARCADE_HEADERS = ['date', 'playerId', 'game', 'best', 'plays', 'updated'];
-const DARE_KINDS = ['dare', 'dareres', 'join', 'joinok']; // Zoomies dares ride along in the Shade tab but never count as shade
+const DARE_KINDS = ['dare', 'dareres', 'join', 'joinok', 'added']; // Zoomies dares ride along in the Shade tab but never count as shade
 const DAWGS = [':dawgW:', ':dawgL:', ':dawgcope:', ':dawgsweat:', ':dawgpog:', ':dawgpain:', ':dawgclown:', ':dawgsus:', ':dawgskull:']; // Big Dawg emote pack
 const EMOJIS = ['😂', '🔥', '💀', '👏', '🤡'].concat(DAWGS);
 const CLAPS = ['👏', '🫃', '🤡', '🖕'].concat(DAWGS); // clap-back answers to shade
@@ -751,6 +751,24 @@ function answerJoin(id, reqId, yes, dateKey) {
   } finally { lock.releaseLock(); }
   return { crews: getCrews(id), shade: getShadeState(id, dateKey) };
 }
+// Crew owner only: add someone straight in. They get a notification and can Leave if they want.
+function addToCrew(id, crewId, targetId, dateKey) {
+  id = cleanId_(id); targetId = cleanId_(targetId); crewId = String(crewId || ''); dateKey = cleanDate_(dateKey);
+  const c = readCrews_().find(x => x.id === crewId);
+  if (!c || c.owner !== id) throw new Error('Only the person who started the crew can add people.');
+  const who = readPlayers_().find(p => p.id === targetId); if (!who) throw new Error('Unknown player.');
+  if (crewIdsOf_(targetId).indexOf(crewId) >= 0) throw new Error(who.name + ' is already in ' + c.name + '.');
+  if (crewIdsOf_(targetId).length >= 8) throw new Error(who.name + " is in 8 crews already.");
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    addMembers_(c.id, [targetId]);
+    const sh = shadeSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 7).setNumberFormat('@');
+    sh.getRange(r, 1, 1, SHADE_HEADERS.length).setValues([[Utilities.getUuid().slice(0, 8), dateKey, id, targetId, c.id, 'added', '', new Date(), '', '']]);
+    // an open "ask to join" from them is now answered
+    readShade_().filter(x => x.kind === 'join' && x.from === targetId && x.text === crewId && x.response !== 'yes' && x.response !== 'no').forEach(x => sh.getRange(x.row, 9, 1, 2).setValues([[new Date(), 'yes']]));
+  } finally { lock.releaseLock(); }
+  return { crews: getCrews(id), name: who.name };
+}
 const NOT_MATES_ = "Shade, reactions and dares are just for your crew. Invite them to one first.";
 
 // ---------------- League, crowns, trophies, head-to-head ----------------
@@ -966,7 +984,8 @@ function getPlayerCard(viewerId, targetId, dateKey) {
   const stats = playerStats_(days, dates, targetId, dateKey); stats.cur = cur; stats.best = b.bestStreak;
   const mineC = crewIdsOf_(viewerId), asked = readShade_().filter(r => r.kind === 'join' && r.from === viewerId && r.date >= addDays_(dateKey, -6)).map(r => r.text);
   const canAsk = viewerId === targetId ? [] : readCrews_().filter(c => crewIdsOf_(targetId).indexOf(c.id) >= 0 && mineC.indexOf(c.id) < 0).map(c => ({ id: c.id, name: c.name, asked: asked.indexOf(c.id) >= 0 }));
-  return { canAsk: canAsk, id: targetId, name: names[targetId] || (readPlayers_().find(p => p.id === targetId) || {}).name || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
+  const canAdd = viewerId === targetId ? [] : readCrews_().filter(c => c.owner === viewerId && crewIdsOf_(targetId).indexOf(c.id) < 0).map(c => ({ id: c.id, name: c.name }));
+  return { canAdd: canAdd, canAsk: canAsk, id: targetId, name: names[targetId] || (readPlayers_().find(p => p.id === targetId) || {}).name || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
 }
 // Wordle-style stats for one player: Five guess spread, Groups mistake spread, Strands/Mini times + last-14-day trend, last 7 days.
 function playerStats_(days, dates, id, dateKey) {
@@ -1109,7 +1128,7 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew
 };
 function doPost(e) {
   let out;
