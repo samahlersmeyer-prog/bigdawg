@@ -6,6 +6,7 @@
   const TINT = ["#f4a6c0", "#9fd3f5", "#b7e19a", "#f7cf7a", "#c9b3f2", "#f5b089", "#8fe0cf", "#e9e27a"];
   const dayN = () => { const [y, m, d] = KEY.split("-").map(Number); return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2026, 9, 26)) / 864e5); };
   const pz = d => { const i = ((dayN() % PUZ.length) + PUZ.length) % PUZ.length; return PUZ[i][d]; };
+  const dayIdx = () => { const [y, m, d] = KEY.split("-").map(Number); return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2026, 9, 26)) / 864e5); };
   const rk = d => "bdd:den:pips:" + KEY + ":" + d + ":" + (me ? me.id : "");
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   const SPOT = { 1: [[1, 1]], 2: [[0, 0], [2, 2]], 3: [[0, 0], [1, 1], [2, 2]], 4: [[0, 0], [2, 0], [0, 2], [2, 2]], 5: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]], 6: [[0, 0], [0, 1], [0, 2], [2, 0], [2, 1], [2, 2]] };
@@ -27,14 +28,22 @@
   }
   const DEL = (p, o) => [1, p.w, -1, -p.w][o];
   defGame({
-    key: "pips", name: "Dawg Pips", icon: "🎲", max: 3000, cat: "den",
+    key: "pips", name: "Dawg Pips", icon: "🎲", max: 3000, cat: "den", puzzle: true,
     blurb: "Daily: place the dominoes to match every rule.",
     how: "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).",
-    reset(G) { G.s = { phase: "pick", btns: [], sel: -1, o: 0, msg: "", msgT: 0, endT: 0 }; },
+    reset(G) { this.reset0(G); const cur = typeof store !== "undefined" && me ? store.get(this.curKey()) : null; if (cur !== null && cur !== undefined && !(this.rec(cur) || {}).done && this.rec(cur)) this.open(G, cur); },
+    reset0(G) { G.s = { phase: "pick", btns: [], sel: -1, o: 0, msg: "", msgT: 0, endT: 0 }; },
     rec(d) { return store.get(rk(d)); },
+    curKey() { return rk("cur"); },
+    info(d) {
+      const r = this.rec(d) || {}, t = Math.floor(r.el || 0), mm = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, nm = DIFF[d][0][0] + DIFF[d][0].slice(1).toLowerCase();
+      const done = [0, 1, 2].filter(k => (this.rec(k) || {}).done).length;
+      return { score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Pips #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
+    },
     open(G, d) {
       const s = G.s, r = this.rec(d);
-      if (r && r.done) { s.msg = `${DIFF[d][0]} done today: ${r.score}`; s.msgT = 1.8; return; }
+      if (r && r.done) return G.results(this.info(d));
+      try { store.set(this.curKey(), d); } catch (e) {}
       const p = pz(d); const reg = {}; p.regions.forEach((x, i) => x.c.forEach(c => reg[c] = i));
       Object.assign(s, { phase: "play", d, p, reg, cellSet: new Set(p.cells), pl: r && r.pl ? r.pl.slice() : p.dom.map(() => null), el: r ? r.el : 0, sel: -1, o: 0, bad: null });
       G.sfx("pop");
@@ -57,34 +66,33 @@
     check(G) {
       const s = G.s, v = this.vals(s), bad = s.p.regions.map((r, i) => regionOk(r, v) === false ? i : -1).filter(i => i >= 0);
       if (bad.length) { s.bad = bad; s.msg = "So close! A rule is broken."; s.msgT = 2; G.buzz(); return this.persist(G); }
-      const sc = Math.max(Math.round(DIFF[s.d][1] * 0.2), DIFF[s.d][1] - Math.floor(s.el)); s.final = sc; s.phase = "won"; s.endT = 2.6;
+      const sc = Math.max(Math.round(DIFF[s.d][1] * 0.2), DIFF[s.d][1] - Math.floor(s.el)); s.final = sc; s.phase = "won"; s.endT = 1.3;
       this.persist(G, { done: true, score: sc }); G.sfx("win");
     },
     update(G, dt) {
       const s = G.s; if (s.msgT > 0) s.msgT -= dt;
       if (s.phase === "play") { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
-      if (s.phase === "won") { s.endT -= dt; if (s.endT <= 0) { s.phase = "end"; G.over(s.final, `${DIFF[s.d][0]} solved! 🐶`); } }
+      if (s.phase === "won") { s.endT -= dt; if (s.endT <= 0) { s.phase = "pick"; s.sel = -1; try { store.set(this.curKey(), null); } catch (e) {} G.post(s.final, this.info(s.d)); } }
     },
     draw(G, c) {
       const s = G.s, dk = G.dark(), fg = dk ? "#fff" : "#111";
       c.fillStyle = dk ? "#121213" : "#ffffff"; c.fillRect(0, 0, G.W, G.H); s.btns = [];
       if (s.phase === "pick") {
-        G.hud(c, "PIPS", "TODAY'S PUZZLES", "");
-        G.img(c, ":dawgW:", G.W / 2, 100, 70);
-        const bw = Math.min(300, G.W - 40);
+        c.fillStyle = fg; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `700 26px ${G.TITLE}`; c.fillText("Today's puzzles", G.W / 2, 44);
+        c.font = `400 14px ${G.UI}`; c.fillStyle = dk ? "#aaa" : "#6b6b6b"; c.fillText("Same for everyone. One go at each.", G.W / 2, 72);
+        const bw = Math.min(340, G.W - 32);
         DIFF.forEach(([nm], d) => {
-          const r = this.rec(d), y = 160 + d * 86, x = G.W / 2 - bw / 2;
-          c.fillStyle = r && r.done ? (dk ? "#2e4a2e" : "#dff0d8") : (dk ? "#2a2a2e" : "#f1f1ec"); rr(c, x, y, bw, 70, 14); c.fill();
-          c.strokeStyle = dk ? "#555" : "#ccc"; c.lineWidth = 2; c.stroke();
-          G.text(c, nm, x + 20, y + 26, 14, fg, "left");
-          c.font = "500 13px system-ui, sans-serif"; c.fillStyle = dk ? "#bbb" : "#555"; c.textAlign = "left";
-          c.fillText(r && r.done ? `✓ Solved · ${r.score} pts` : r ? `In progress · ${Math.floor(r.el / 60)}:${String(Math.floor(r.el % 60)).padStart(2, "0")}` : `${pz(d).dom.length} dominoes · up to ${DIFF[d][1]} pts`, x + 20, y + 50);
-          G.emoji(c, r && r.done ? "✅" : "▶️", x + bw - 30, y + 35, 24);
-          s.btns.push({ x, y, w: bw, h: 70, d });
+          const r = this.rec(d), y = 100 + d * 92, x = G.W / 2 - bw / 2, label = nm[0] + nm.slice(1).toLowerCase();
+          c.fillStyle = [dk ? "#22382a" : "#e3f1e0", dk ? "#3a3420" : "#fbefc9", dk ? "#3d2629" : "#f6dcdc"][d]; rr(c, x, y, bw, 78, 14); c.fill();
+          c.textAlign = "left"; c.fillStyle = fg; c.font = `700 22px ${G.TITLE}`; c.fillText(label, x + 18, y + 28);
+          c.font = `400 14px ${G.UI}`; c.fillStyle = dk ? "#ccc" : "#444";
+          c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? `In progress · ${Math.floor(r.el / 60)}:${String(Math.floor(r.el % 60)).padStart(2, "0")}` : `${pz(d).dom.length} dominoes · up to ${DIFF[d][1]} pts`, x + 18, y + 54);
+          G.pill(c, x + bw - 100, y + 19, 86, 40, r && r.done ? "Results" : r ? "Resume" : "Play", !(r && r.done));
+          s.btns.push({ x, y, w: bw, h: 78, d });
         });
       } else {
         const p = s.p, v = this.vals(s);
-        G.hud(c, DIFF[s.d][0], `${Math.floor(s.el / 60)}:${String(Math.floor(s.el % 60)).padStart(2, "0")}`, `${s.pl.filter(Boolean).length}/${p.dom.length}`);
+        G.pbar(c, DIFF[s.d][0][0] + DIFF[s.d][0].slice(1).toLowerCase(), `${Math.floor(s.el / 60)}:${String(Math.floor(s.el % 60)).padStart(2, "0")}`, `${s.pl.filter(Boolean).length}/${p.dom.length}`);
         const cs = Math.floor(Math.min(64, (G.W - 28) / p.w, (G.H * 0.46) / p.h)), bwid = cs * p.w, ox = (G.W - bwid) / 2, oy = 54;
         const cx = k => ox + (k % p.w) * cs, cy = k => oy + Math.floor(k / p.w) * cs;
         // regions
@@ -117,14 +125,10 @@
             s.btns.push({ x: x - slot / 2, y: y - ts, w: slot, h: ts * 2, i });
           }
           const by = Math.min(G.H - 56, top + rows * ts * 2.1 + 16), bw = (G.W - 32) / 3;
-          [["◀ MENU", "menu"], ["⟳ ROTATE", "rot"], ["CLEAR", "clr"]].forEach(([t, k], i) => {
-            const x = 8 + i * (bw + 8), on = k === "rot" && s.sel >= 0; c.fillStyle = on ? (dk ? "#ffd23f" : "#111") : "transparent"; c.strokeStyle = dk ? "#ddd" : "#333"; c.lineWidth = 2; rr(c, x, by, bw, 44, 22); c.fill(); c.stroke();
-            G.text(c, t, x + bw / 2, by + 22, 9, on ? (dk ? "#111" : "#fff") : fg); s.btns.push({ x, y: by, w: bw, h: 44, k });
-          });
-          G.hint(c, "TAP A DOMINO, THEN THE BOARD", 4, Math.min(G.H - 18, by + 70));
-        } else G.banner(c, `SOLVED! ${s.final}`, "#ffd23f", oy + cs * p.h + 60, 20);
+          [["All puzzles", "menu"], ["⟳ Rotate", "rot"], ["Clear", "clr"]].forEach(([t, k], i) => { const x = 8 + i * (bw + 8), on = k === "notes" ? s.notes : k === "rot" && s.sel >= 0; s.btns.push(Object.assign(G.pill(c, x, by, bw, 46, t, on), { k })); });
+        } else { c.fillStyle = fg; c.font = `700 24px ${G.TITLE}`; c.textAlign = "center"; c.fillText(`Solved! ${s.final} pts`, G.W / 2, oy + cs * p.h + 60); }
       }
-      if (s.msgT > 0 && s.msg) { c.save(); c.globalAlpha = Math.min(1, s.msgT * 2); c.font = "700 14px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; const w = c.measureText(s.msg).width + 26;
+      if (s.msgT > 0 && s.msg) { c.save(); c.globalAlpha = Math.min(1, s.msgT * 2); c.font = `600 14px ${G.UI}`; c.textAlign = "center"; c.textBaseline = "middle"; const w = c.measureText(s.msg).width + 26;
         c.fillStyle = dk ? "#fff" : "#111"; rr(c, G.W / 2 - w / 2, 40, w, 32, 8); c.fill(); c.fillStyle = dk ? "#111" : "#fff"; c.fillText(s.msg, G.W / 2, 56); c.restore(); }
     },
     tap(G, x, y) {

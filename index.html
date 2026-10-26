@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="489721df2e";</script>
+<script>window.GAMES_V="d517a1b760";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,6 +88,13 @@ input { -webkit-user-select: text; user-select: text; }
 .cards { display: flex; flex-direction: column; gap: 9px; }
 .gcard { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 14px; padding: 11px 16px; border-radius: 14px; text-align: left; color: var(--ink); }
 .gcard:active { transform: scale(0.985); }
+.c-den0 { background: #f3e1c7; } .c-den1 { background: #fbe8a6; } .c-den2 { background: #f6d6dc; } .c-den3 { background: #d9e6f5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .c-den0 { background: #4a3a26; } :root:not([data-theme="light"]) .c-den1 { background: #4a4220; } :root:not([data-theme="light"]) .c-den2 { background: #4a2b33; } :root:not([data-theme="light"]) .c-den3 { background: #24364d; } }
+:root[data-theme="dark"] .c-den0 { background: #4a3a26; } :root[data-theme="dark"] .c-den1 { background: #4a4220; } :root[data-theme="dark"] .c-den2 { background: #4a2b33; } :root[data-theme="dark"] .c-den3 { background: #24364d; }
+.gcard .gicon.den { background: var(--bg); border-radius: 12px; display: grid; place-items: center; width: 52px; height: 52px; }
+.pboard { width: 100%; text-align: left; }
+.pboard li.me .nm { text-decoration: underline; }
+.pshare { font-size: 22px; line-height: 1.15; letter-spacing: 2px; white-space: pre; text-align: center; }
 .c-strands { background: var(--card-strands); } .c-five { background: var(--card-five); } .c-groups { background: var(--card-groups); } .c-mini { background: var(--card-mini); } .c-scores { background: var(--card-scores); } .c-arcade { background: var(--card-arcade); }
 .c-arcade { grid-template-columns: 38px 1fr auto; padding: 7px 16px; gap: 12px; }
 .c-arcade .gicon { width: 38px; height: 38px; } .c-arcade .gtext b { font-size: 19px; }
@@ -628,8 +635,10 @@ input { -webkit-user-select: text; user-select: text; }
       <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
     <div class="arc-body">
-      <div class="arc-marquee den"><b>THE DEN</b><span>Daily brain games and cards. Separate from the main four.</span></div>
+      <p class="hello">New puzzles every day at midnight. Separate from the main four, with their own leaderboards.</p>
+      <div class="cards" id="den-puz"></div>
       <div id="den-dares" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="arcade-lbl">Cards</div>
       <div class="arc-list" id="den-list"></div>
     </div>
   </section>
@@ -653,7 +662,7 @@ input { -webkit-user-select: text; user-select: text; }
     <header class="bar">
       <div class="bar-l"><button class="icon" id="g-back" data-go="arcade" aria-label="Back to the game list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
       <h1 id="g-title">Arcade</h1>
-      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+      <div class="bar-r"><button class="icon" id="g-help" hidden aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
     </header>
     <div class="zwrap swipe" id="gwrap">
       <canvas id="gc" aria-label="Arcade game"></canvas>
@@ -3708,7 +3717,7 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
   harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200],
-  sgroups: [400, 650, 800], hive: [40, 100, 180], sudoku: [800, 1500, 2200], pips: [700, 1400, 2300] };
+  };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
 // Game of the Day (from the server): today's game, its daily board, and yesterday's champ.
@@ -3969,6 +3978,48 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? `🎯 ${n} dare${n > 1 ? "s" : ""}` : `${total} games`;
   });
 }
+// ---- The Den's daily puzzles: home-style cards with today's status, and a NYT-style results card ----
+const DEN_PUZ = ["sgroups", "hive", "pips", "sudoku"];
+function denRec(k, d) { return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null; }
+function denStatus(k) {
+  if (k === "sgroups") { const r = denRec(k); return r && r.done ? ["Done", true, r.score ? `Solved · ${r.score} pts` : "Done for today"] : r && r.order ? ["Continue", false, "In progress"] : ["Play", false, null]; }
+  if (k === "hive") { const r = denRec(k); return r && r.found && r.found.length ? ["Continue", false, `${r.score} pts · ${r.found.length} words`] : ["Play", false, null]; }
+  const n = [0, 1, 2].filter(d => { const r = denRec(k, d); return r && r.done; }).length;
+  return n === 3 ? ["Done", true, "All 3 solved"] : n ? ["Continue", false, `${n} of 3 solved`] : ["Play", false, null];
+}
+function renderDenPuz() {
+  const box = $("den-puz"); if (!box) return; box.innerHTML = "";
+  DEN_PUZ.filter(k => ARC[k]).forEach((k, i) => {
+    const [st, done, line] = denStatus(k), td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
+    const b = el("button", "gcard c-den" + i); b.dataset.play = k;
+    const ic = el("span", "gicon den"); ic.appendChild(emo(ARC[k].icon, 36));
+    const tx = el("span", "gtext"); tx.append(el("b", null, ARC[k].name), el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: /, ""), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
+    b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st)); box.appendChild(b);
+  });
+}
+function puzzleResults(game, info) {
+  const nodes = [el("h2", null, info.title || ARC[game].name)];
+  if (info.sub) nodes.push(el("p", "sub", info.sub));
+  if (info.grid) nodes.push(el("div", "preview pshare", info.grid));
+  nodes.push(el("h3", null, "Today's leaderboard"));
+  const ol = el("ol", "rank-list pboard"); nodes.push(ol);
+  const fill = () => {
+    ol.innerHTML = ""; let list = ((arcade && arcade.games && arcade.games[game] && arcade.games[game].today) || []).slice();
+    if (me && info.score > 0) { const m = list.find(x => x.id === me.id); if (!m) list.push({ id: me.id, name: me.name, n: info.score }); else if (info.score > m.n) m.n = info.score; }
+    list.sort((a, b) => b.n - a.n);
+    if (!list.length) ol.appendChild(el("li", "dim", "Nobody's on the board yet today."));
+    list.slice(0, 10).forEach((x, i) => { const li = el("li", me && x.id === me.id ? "me" : ""); const nm = el("button", "nm", x.name); nm.dataset.card = x.id; nm.style.textAlign = "left"; li.append(el("span", "rk", i + 1), nm, el("span", "ct", `${x.n} pts`)); ol.appendChild(li); });
+  };
+  fill();
+  const back = el("button", "pill solid", "Back to The Den"); back.addEventListener("click", () => { closeModal(); show("den"); });
+  nodes.push(back);
+  if (info.share) {
+    const share = el("button", "pill", "Copy results"), ta = el("textarea", "copybox"); ta.rows = 5; ta.readOnly = true; ta.hidden = true;
+    share.addEventListener("click", () => copy(info.share + (APP_URL ? "\n" + APP_URL : ""), ta)); nodes.push(share, ta);
+  }
+  openModal(nodes); return fill;
+}
+$("g-help").addEventListener("click", () => { if (!G.def) return; openModal([el("h2", null, "How to play " + G.def.name), el("p", "sub", G.def.how)]); });
 function renderArcHub(cat) {
   ownLocal();
   cat = cat || "arcade";
@@ -3988,7 +4039,8 @@ function renderArcHub(cat) {
     box.prepend(card);
   }
   const list = $(cat === "sports" ? "sp-list" : cat === "den" ? "den-list" : "arc-list"); list.innerHTML = "";
-  const all = arcOrder().filter(k => arcCat(k) === cat);
+  let all = arcOrder().filter(k => arcCat(k) === cat);
+  if (cat === "den") { renderDenPuz(); all = all.filter(k => !ARC[k].puzzle); }
   const recent = (store.get("bdd:recent") || []).filter(k => all.includes(k)).slice(0, 3);
   const cell = k => {
     const r = el("button", "arc-cell"); r.dataset.play = k;
@@ -4000,7 +4052,7 @@ function renderArcHub(cat) {
     if (n) r.appendChild(el("span", "badge", `🎯${n}`)); else if (sv) r.appendChild(el("span", "badge go", "▶"));
     return r;
   };
-  if (recent.length >= 2) { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); list.appendChild(el("div", "arc-sec", "All games")); }
+  if (recent.length >= 2 && cat !== "den") { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); list.appendChild(el("div", "arc-sec", "All games")); }
   all.forEach(k => list.appendChild(cell(k)));
   if (!arcade) refreshArcade();
 }
@@ -4335,6 +4387,36 @@ G.banner = (c, msg, color, y, size) => {
   c.save(); const sz = size || Math.max(18, Math.min(30, G.W / 13));
   G.text(c, msg, G.W / 2 + 2, (y || G.H * 0.42) + 3, sz, "rgba(0,0,0,0.55)"); G.text(c, msg, G.W / 2, y || G.H * 0.42, sz, color || "#ffd23f"); c.restore();
 };
+// ---- Puzzle mode (The Den's daily puzzles: `puzzle: true`) ----
+// These look and behave like the main four: no start screen, no replays, no dares or medals. The game posts its
+// score once with G.post(score, info) and shows a results card; G.results(info) re-opens it without posting.
+// info = { title, sub, share, score }.  G.pbar / G.pill draw the clean NYT-style top bar and buttons.
+G.UI = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+G.TITLE = '"Zilla Slab", Rockwell, Georgia, serif';
+G.pbar = (c, left, center, right) => {
+  const dk = G.dark(), h = 40; c.save(); c.fillStyle = dk ? "#121213" : "#fff"; c.fillRect(0, 0, G.W, h);
+  c.fillStyle = dk ? "#2c2c2e" : "#e3e3e3"; c.fillRect(0, h - 1, G.W, 1);
+  c.fillStyle = dk ? "#fff" : "#121213"; c.textBaseline = "middle"; c.font = `600 15px ${G.UI}`;
+  if (left) { c.textAlign = "left"; c.fillText(left, 14, h / 2); }
+  if (center) { c.textAlign = "center"; c.font = `700 15px ${G.UI}`; c.fillText(center, G.W / 2, h / 2); c.font = `600 15px ${G.UI}`; }
+  if (right) { c.textAlign = "right"; c.fillText(right, G.W - 14, h / 2); }
+  c.restore(); return h;
+};
+G.pill = (c, x, y, w, h, label, solid, off) => {
+  const dk = G.dark(), ink = dk ? "#fff" : "#121213", bg = dk ? "#121213" : "#fff";
+  c.save(); if (off) c.globalAlpha = 0.35; c.beginPath(); if (c.roundRect) c.roundRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5, h / 2); else c.rect(x, y, w, h);
+  c.fillStyle = solid ? ink : bg; c.fill(); c.strokeStyle = ink; c.lineWidth = 1.5; c.stroke();
+  c.fillStyle = solid ? bg : ink; c.font = `600 ${Math.min(15, h * 0.36)}px ${G.UI}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(label, x + w / 2, y + h / 2 + 1);
+  c.restore(); return { x, y, w, h };
+};
+G.post = (score, info) => {
+  score = Math.max(0, Math.floor(score || 0)); info = Object.assign({ score }, info || {});
+  let refresh = null; try { setBest(G.key, score); } catch (e) {}
+  refresh = puzzleResults(G.key, info);
+  if (score > 0 && me) { const pr = postArcade(G.key, score, KEY); if (pr && pr.then) pr.then(() => refresh && refresh()); }
+};
+G.results = info => puzzleResults(G.key, info || {});
+G.postQuiet = score => { score = Math.max(0, Math.floor(score || 0)); try { setBest(G.key, score); } catch (e) {} if (score > 0 && me) postArcade(G.key, score, KEY); };
 // Save & continue: a game with save(G) -> {label, ...} (or null when it's not a good moment) and load(G, snap)
 // gets a checkpoint per player, written about once a second and when the app is hidden. Cleared when the run ends.
 const gSaveKey = k => "bdd:gsave:" + k + ":" + (me ? me.id : "");
@@ -4355,6 +4437,7 @@ function gSize() {
 function gPaint() { const c = $("gc").getContext("2d"); c.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); c.save(); try { G.def.draw(G, c); } finally { c.restore(); } }
 function gIdle() {
   cancelAnimationFrame(G.raf); G.state = "idle"; gSize(); G.s = {}; G.t = 0;
+  if (G.def.puzzle) { $("gpanel").hidden = true; return gGo(); } // puzzles open straight to today's board
   G.def.reset(G); gPaint();
   arcStart(G.key, $("gpanel"), gGo);
 }
@@ -4375,7 +4458,7 @@ function gLoop() {
   });
 }
 function gShown() { requestAnimationFrame(gIdle); if (!arcade) refreshArcade(); }
-function gHidden() { gCheckpoint(); if (G.state === "play") G.state = "idle"; cancelAnimationFrame(G.raf); }
+function gHidden() { try { if (G.state === "play" && G.def && G.def.leave) G.def.leave(G); } catch (e) {} gCheckpoint(); if (G.state === "play") G.state = "idle"; cancelAnimationFrame(G.raf); }
 // Open any arcade game by key (the three original games keep their own screens).
 function playGame(key) {
   try { store.set("bdd:recent", [key].concat((store.get("bdd:recent") || []).filter(k => k !== key)).slice(0, 6)); } catch (e) {}
@@ -4384,6 +4467,7 @@ function playGame(key) {
   if (!d.update) { toast("Loading " + d.name + "…", 1500); loadGame(key).then(() => playGame(key)).catch(() => toast("Couldn't load the game. Check your connection.", 2400)); return; }
   if (G.state === "play") gHidden();
   G.key = key; G.def = d; $("g-title").textContent = d.name; $("g-back").dataset.go = d.cat || "arcade";
+  $("v-game").classList.toggle("puzzle", !!d.puzzle); if ($("g-help")) $("g-help").hidden = !d.puzzle;
   if (active === "game") gShown(); else show("game");
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-play]"); if (b) playGame(b.dataset.play); });
@@ -4430,13 +4514,13 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_golf.js", "key": "golf", "name": "Dawg Golf", "icon": "🏌️", "blurb": "Front nine, par 36. Three-tap swing. Mind the wind.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.", "cat": "sports", "max": 72, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 36 ? "E" : (n > 36 ? "+" : "") + (n - 36)) + ")" : "—"},
 {"file": "g_golf.js", "key": "golf18", "name": "Dawg Golf 18", "icon": "🏌️", "blurb": "The full 18, par 74. Back nine plays longer and windier.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 74 over 18 holes: fewest strokes wins.", "cat": "sports", "max": 144, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 74 ? "E" : (n > 74 ? "+" : "") + (n - 74)) + ")" : "—"},
 {"file": "g_harvest.js", "key": "harvest", "name": "Harvest Dawg", "icon": "🚜", "blurb": "Drive a giant combine. Clear the crops.", "how": "Hold your thumb down and drag: the combine drives toward your finger and its giant header cuts everything it rolls over. Clear 90% of the field before the clock runs out to move on (plus bonus time). Rocks stop you dead and cost 3 seconds. Don't run over the cows. Wheat, then corn, then sunflowers: worth more each field.", "max": 99999},
-{"file": "g_hive.js", "key": "hive", "name": "Dawg Hive", "icon": "🐝", "blurb": "Daily: make words from 7 letters.", "how": "A new hive every day. Make words of 4+ letters using the 7 letters; every word must use the center letter, and letters can repeat. 4-letter words = 1 point, longer words = 1 per letter, and a word using all 7 letters (a pangram) gets +7. Tap DONE FOR NOW to post your score; come back any time today to find more.", "cat": "den", "max": 999},
+{"file": "g_hive.js", "key": "hive", "name": "Dawg Hive", "icon": "🐝", "blurb": "Daily: make words from 7 letters.", "how": "Make words of 4 or more letters using the 7 letters. Every word must use the center letter, and letters can be used more than once. 4-letter words are worth 1 point; longer words are worth 1 point per letter. A word that uses all 7 letters is a pangram and earns 7 extra points. Climb the ranks from Pup to Big Dawg. Come back any time today; your score posts to the leaderboard as you go.", "cat": "den", "max": 999, "puzzle": true},
 {"file": "g_hoops.js", "key": "hoops", "name": "Dawg Hoops", "icon": "🏀", "blurb": "60 seconds. Flick it in.", "how": "Flick up from the ball toward the hoop to shoot. Faster flick = more power, aim with the angle. 2 points a bucket, 3 in the last 15 seconds, +1 for a swish, and 3 in a row doubles your points. Past 20 points the hoop starts moving!", "cat": "sports", "max": 9999},
 {"file": "g_hop.js", "key": "hop", "name": "Hydrant Hop", "icon": "🧯", "blurb": "Run, jump the hydrants, grab the bones.", "how": "The pup runs on his own. Tap anywhere to jump, tap again in the air to double jump. Hop hydrants, puddles, mailboxes and the mailman. Stay LOW under pigeons and frisbees. Bones are +10. One bonk and it's over.", "max": 99999},
 {"file": "g_jump.js", "key": "jump", "name": "Pup Jump", "icon": "🐶", "blurb": "Bounce up forever. Don't look down.", "how": "The pup bounces by itself. Hold the left or right side of the screen (or drag) to steer. Fly off one edge to come out the other. Bones launch you sky high, boxes break after one bounce. Land on cats and squirrels to bop them (+50), but don't bump into them. Don't fall!", "max": 999999},
 {"file": "g_kickret.js", "key": "kickret", "name": "Dawg Return", "icon": "🏈", "blurb": "Return the kick. Juke the cats. Score.", "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.", "cat": "sports", "max": 9999},
 {"file": "g_party.js", "key": "party", "name": "Dawg Party", "icon": "🎉", "blurb": "5 random party minigames. One total score.", "how": "Five quick minigames, picked at random every run: Dawg Says, Floor Is Lava, Don't Wake Big Dawg, Face Lift, Tug of Woof and Treat Rain. Each one tells you what to do at the start. Your score is the total of all five.", "max": 1500},
-{"file": "g_pips.js", "key": "pips", "name": "Dawg Pips", "icon": "🎲", "blurb": "Daily: place the dominoes to match every rule.", "how": "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).", "cat": "den", "max": 3000},
+{"file": "g_pips.js", "key": "pips", "name": "Dawg Pips", "icon": "🎲", "blurb": "Daily: place the dominoes to match every rule.", "how": "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).", "cat": "den", "max": 3000, "puzzle": true},
 {"file": "g_pks.js", "key": "pks", "name": "Pup Kicks", "icon": "⚽", "blurb": "Penalty kicks. Beat the cat keeper.", "how": "Flick up from the ball toward the goal. Aim left or right, flick longer to shoot higher (too long sails over). Bend your flick to curl it. Top corners are worth +50. The cat keeper learns your favorite side, so mix it up. 3 misses and you're out.", "cat": "sports", "max": 9999},
 {"file": "g_pool.js", "key": "pool", "name": "Dawg Pool", "icon": "🎱", "blurb": "8-ball vs the pool shark cat.", "how": "One rack of 8-ball vs the pool shark cat. Drag anywhere to swing the cue (or tap a spot to aim at it). Pull the POWER slider down and let go to shoot. Sink your group (solids or stripes), then the 8. Scratch or miss = ball in hand: drag the cue ball. Early 8 loses the rack. Scoring: 50 per ball, +75 for each extra ball in one shot, a growing bonus for sinking shot after shot (RUN x3...), 300 for the rack, 500 for the win, and up to 600 more for winning in fewer shots.", "cat": "sports", "max": 9999},
 {"file": "g_pop.js", "key": "pop", "name": "Pup Pop", "icon": "🎈", "blurb": "Fling darts, pop balloons.", "how": "Drag back anywhere and let go to fling a dart, like a slingshot. Darts arc and pop every balloon they fly through. Pop the target number before you run out of darts. 💣 balloons blow up their neighbors, 🎁 gives a bonus dart.", "max": 99999},
@@ -4444,10 +4528,10 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_pupman.js", "key": "pupman", "name": "Pup-Man", "icon": ":dawgW:", "blurb": "Gobble kibble. Dodge the mailmen.", "how": "Swipe (or tap a side of the dog) to steer through the maze and gobble every kibble. Turns are saved until the next opening. Big bones in the corners scare the chasers, so chomp them for 200, 400, 800, 1600. 3 lives.", "max": 999999},
 {"file": "g_putt.js", "key": "putt", "name": "Putt Pup", "icon": "⛳", "blurb": "9 holes of backyard mini golf.", "how": "9 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.", "max": 450},
 {"file": "g_putt.js", "key": "putt18", "name": "Putt Pup 18", "icon": "⛳", "blurb": "The full 18. Back nine included.", "how": "18 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole. The back nine adds a loop-de-loop, deck tunnels, a sprinkler, a seesaw, lawnmowers, an island green and the doghouse.", "max": 900},
-{"file": "g_sgroups.js", "key": "sgroups", "name": "Sports Groups", "icon": "🏟️", "blurb": "Daily: find 4 groups of 4 sports things.", "how": "A new puzzle every day. Tap 4 tiles that share a sports connection, then SUBMIT. Four mistakes and you're out. One try per day. Score: solve it = 600, minus 100 per mistake, plus a speed bonus (up to 300). Miss it = 100 per group found.", "cat": "den", "max": 1000},
+{"file": "g_sgroups.js", "key": "sgroups", "name": "Sports Groups", "icon": "🏟️", "blurb": "Daily: find four groups of four, sports edition.", "how": "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 600, minus 100 per mistake, plus up to 300 for speed. Missing it is 100 per group found.", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_shred.js", "key": "shred", "name": "Shred Dawg", "icon": "⛷️", "blurb": "Ski the endless mountain. Outrun the snow-cat.", "how": "Hold anywhere and the dog turns to face your finger: straight down is fastest, sideways nearly stops you. Let go to keep your heading. Tap to hop over rocks, stumps, moguls, pups and small trees. Hit a ramp for big air and tap in the air to flip (+40 style), but finish the flip before you land. Ski between two flags for +10. Crashing just costs time. Past 2000 m the giant snow-cat chases you and it keeps getting faster. Score = meters + style.", "cat": "sports", "max": 99999},
 {"file": "g_smash.js", "key": "smash", "name": "Squirrel Smash", "icon": "🐿️", "blurb": "Whack-a-mole. Bop squirrels, not pups.", "how": "Squirrels pop out of the holes. Tap them fast. Golden ones are worth extra. Don't bop the pups. 30 seconds on the clock.", "max": 9999},
-{"file": "g_sudoku.js", "key": "sudoku", "name": "Dawg Sudoku", "icon": "🔢", "blurb": "Daily: Easy, Medium and Hard sudoku.", "how": "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number is a mistake (+30 seconds). One try at each per day; your progress is saved if you leave. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%). Your best of the three counts.", "cat": "den", "max": 3000},
+{"file": "g_sudoku.js", "key": "sudoku", "name": "Dawg Sudoku", "icon": "🔢", "blurb": "Daily: Easy, Medium and Hard sudoku.", "how": "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number is a mistake (+30 seconds). One try at each per day; your progress is saved if you leave. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%). Your best of the three counts.", "cat": "den", "max": 3000, "puzzle": true},
 {"file": "g_swim.js", "key": "swim", "name": "Doggy Paddle", "icon": "🏊", "blurb": "Race the pool. Tap left, right, left, right.", "how": "Tap the LEFT and RIGHT halves of the screen one after the other. Same side twice or mashing = SLIP. Tap when the shrinking ring hits your pup for a PERFECT stroke. Every 6 strokes tap the blue BREATH button or you slow down. At the far wall, SWIPE DOWN for a flip turn. 50m per heat: Heat 1, Semifinal, Final. Top 2 advance. 1000/600/300/100 per heat + time bonus. Keys: ← → strokes, space = breath, ↓ = turn.", "cat": "sports", "max": 9999},
 {"file": "g_td.js", "key": "td", "name": "Yard Defense", "icon": "🏰", "blurb": "Tower defense. Post pups, guard the yard.", "how": "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to see its range and UPGRADE it (up to ★3) or SELL it back for 75% of what you spent. Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.", "max": 99999},
 {"file": "g_tennis.js", "key": "tennis", "name": "Dawg Open", "icon": "🎾", "blurb": "Tennis vs the cat. Time your swings.", "how": "Your dawg runs to the ball by himself. Tap to swing as the ball reaches the ring: early = cross-court, late = down the line, right on time = a deep rocket. Swipe left/right to aim, swipe up to lob. Serve: tap to toss, tap again at the top. Real tennis scoring, first to 4 games takes the set.", "cat": "sports", "max": 9999},
@@ -4456,7 +4540,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_volley.js", "key": "volley", "name": "Beach Dawgs", "icon": "🏐", "blurb": "2-on-2 beach volleyball. Bump, set, SPIKE.", "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.", "cat": "sports", "max": 9999}]);
 
 // Register the newer games with the shared arcade lists.
-Object.values(GAMEDEFS).forEach(d => { ARC[d.key] = { name: d.name, icon: d.icon, how: d.how, cat: d.cat || "arcade" }; ARC_BLURB[d.key] = d.blurb; if (aBest[d.key] == null) aBest[d.key] = 0; });
+Object.values(GAMEDEFS).forEach(d => { ARC[d.key] = { name: d.name, icon: d.icon, how: d.how, cat: d.cat || "arcade", puzzle: !!d.puzzle, blurb: d.blurb || "" }; ARC_BLURB[d.key] = d.blurb; if (aBest[d.key] == null) aBest[d.key] = 0; });
 renderArcSub(); renderArcade();
 
 // ================= IDENTITY & BOOT =================
