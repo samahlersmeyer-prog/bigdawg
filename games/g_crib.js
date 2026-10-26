@@ -28,7 +28,7 @@
     return out;
   }
   defGame({
-    key: "crib", name: "Dawg Cribbage", icon: "🎯", max: 500,
+    key: "crib", name: "Dawg Cribbage", icon: "🎯", max: 500, cat: "den",
     blurb: "Cribbage vs Old Tom the cat. First to 121.",
     how: "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).",
     // Save & continue at the start of each deal.

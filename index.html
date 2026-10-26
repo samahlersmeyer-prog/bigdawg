@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="20a21dcef9";</script>
+<script>window.GAMES_V="0b8ca417c4";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,6 +123,16 @@ input { -webkit-user-select: text; user-select: text; }
 .sports-btn .ab-icon { background: #1f6b3a; } .sports-btn .ab-text b, .sports-btn .ab-go { color: #f4f1e6; }
 .sports-btn:active { box-shadow: 0 2px 0 #f4f1e6; }
 .arc-marquee.sports { background: #0f3d22; box-shadow: 0 3px 0 #f4f1e6; } .arc-marquee.sports b { color: #f4f1e6; }
+.hub3 { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; position: relative; }
+.hub3::before { content: ""; position: absolute; left: 16px; right: 16px; top: -9px; border-top: 1px dashed var(--line); }
+.hub-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px 10px; border-radius: 16px; background: #1b1440; color: #fff; border: 2px solid #121212; box-shadow: 0 4px 0 #ffd23f; min-width: 0; }
+.hub-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #ffd23f; }
+.hub-btn b { font-family: 'Press Start 2P', var(--title); font-size: 11px; color: #ffd23f; line-height: 1.4; text-align: center; }
+.hub-btn small { font-size: 11px; opacity: 0.85; text-align: center; line-height: 1.2; }
+.hb-sports { background: #0f3d22; box-shadow: 0 4px 0 #f4f1e6; } .hb-sports b { color: #f4f1e6; } .hb-sports .ab-icon { background: #1f6b3a; } .hb-sports:active { box-shadow: 0 2px 0 #f4f1e6; }
+.hb-den { background: #4a2a14; box-shadow: 0 4px 0 #e8c38a; } .hb-den b { color: #ffe2b0; } .hb-den .ab-icon { background: #6b3f1f; } .hb-den:active { box-shadow: 0 2px 0 #e8c38a; }
+.arc-marquee.den { background: #4a2a14; box-shadow: 0 3px 0 #e8c38a; } .arc-marquee.den b { color: #ffe2b0; }
+.arc-cell .today { font-size: 10.5px; color: var(--ink); font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ab-icon { width: 46px; height: 46px; border-radius: 10px; background: #2b1b58; display: grid; place-items: center; }
 .ab-text b { display: block; font-family: 'Press Start 2P', var(--title); font-size: 13px; letter-spacing: 0.02em; color: #ffd23f; line-height: 1.5; }
 .ab-text small { font-size: 13px; opacity: 0.85; }
@@ -168,7 +178,7 @@ input { -webkit-user-select: text; user-select: text; }
 .arc-row b { font-family: var(--title); font-size: 19px; display: block; line-height: 1.15; }
 .arc-row small { display: block; font-size: 12.5px; color: var(--muted); }
 .arc-row .best { font-size: 12px; font-weight: 700; color: var(--ink); }
-.hof-seg { grid-template-columns: repeat(3, 1fr) !important; }
+.hof-seg { grid-template-columns: repeat(4, 1fr) !important; } .hof-seg button { font-size: 13px; padding-left: 2px; padding-right: 2px; }
 .hof { display: flex; flex-direction: column; gap: 6px; }
 .hof-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--raise); text-align: left; width: 100%; color: var(--ink); }
 .hof-row .gicon { width: 36px; height: 36px; font-size: 22px; }
@@ -530,16 +540,11 @@ input { -webkit-user-select: text; user-select: text; }
           <span class="gtext"><b>Scoreboard</b><span class="gsub" id="sub-scores">See how everyone did today</span></span>
           <span class="gstat done" id="st-scores">View</span>
         </button>
-        <button class="arcade-btn" data-go="arcade">
-          <span class="ab-icon" id="ab-icon"></span>
-          <span class="ab-text"><b>Big Dawg Arcade</b><small id="sub-arcade">10 games · just for fun</small></span>
-          <span class="ab-go">▶</span>
-        </button>
-        <button class="arcade-btn sports-btn" data-go="sports">
-          <span class="ab-icon" id="sb-icon"></span>
-          <span class="ab-text"><b>Big Dawg Sports</b><small id="sub-sports">9 games · just for fun</small></span>
-          <span class="ab-go">▶</span>
-        </button>
+        <div class="hub3">
+          <button class="hub-btn hb-arcade" data-go="arcade"><span class="ab-icon" id="ab-icon"></span><b>Arcade</b><small id="sub-arcade">just for fun</small></button>
+          <button class="hub-btn hb-sports" data-go="sports"><span class="ab-icon" id="sb-icon"></span><b>Sports</b><small id="sub-sports">just for fun</small></button>
+          <button class="hub-btn hb-den" data-go="den"><span class="ab-icon" id="db-icon"></span><b>The Den</b><small id="sub-den">puzzles &amp; cards</small></button>
+        </div>
       </div>
       <div class="tip" id="install-tip" hidden>
         <span><b>Make it an app:</b> in Safari, tap Share, then Add to Home Screen. It opens full screen and remembers you.</span>
@@ -601,6 +606,20 @@ input { -webkit-user-select: text; user-select: text; }
       <div class="arc-marquee"><b>BIG DAWG ARCADE</b><span>Just for fun. Not on the daily scoreboard.</span></div>
       <div id="arc-dares" style="display:flex;flex-direction:column;gap:8px"></div>
       <div class="arc-list" id="arc-list"></div>
+    </div>
+  </section>
+
+  <!-- THE DEN MENU -->
+  <section class="view" id="v-den" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>The Den</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="arc-body">
+      <div class="arc-marquee den"><b>THE DEN</b><span>Daily brain games and cards. Separate from the main four.</span></div>
+      <div id="den-dares" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="arc-list" id="den-list"></div>
     </div>
   </section>
 
@@ -795,7 +814,7 @@ input { -webkit-user-select: text; user-select: text; }
       <div class="pane" data-pane="arcade" hidden>
       <div class="box">
         <div class="sechead"><h2>Hall of Fame</h2><span>All-time bests · tap a game</span></div>
-        <div class="seg hof-seg" id="hof-seg"><button data-cat="arcade" class="on">🕹️ Arcade</button><button data-cat="sports">🏆 Sports</button><button data-cat="mine">⭐ Mine</button></div>
+        <div class="seg hof-seg" id="hof-seg"><button data-cat="arcade" class="on">🕹️ Arcade</button><button data-cat="sports">🏆 Sports</button><button data-cat="den">🧩 Den</button><button data-cat="mine">⭐ Mine</button></div>
         <div class="hof" id="hof"></div>
       </div>
       </div>
@@ -2042,7 +2061,7 @@ $("modal-close").addEventListener("click", closeModal);
 $("modal").addEventListener("click", e => { if (e.target === $("modal")) closeModal(); });
 
 // ---------- navigation ----------
-const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies", "snake", "fetch", "arcade", "sports", "game"];
+const VIEWS = ["home", "five", "groups", "strands", "mini", "scores", "zoomies", "snake", "fetch", "arcade", "sports", "den", "game"];
 let active = "home", lastGame = "home";
 function show(name) {
   if (name === "back") name = lastGame;
@@ -2061,6 +2080,7 @@ function show(name) {
   if (name === "game") gShown(); else if (typeof gHidden === "function") gHidden();
   if (name === "arcade") renderArcHub("arcade");
   if (name === "sports") renderArcHub("sports");
+  if (name === "den") renderArcHub("den");
   syncTimer();
   try { sessionStorage.setItem("bdd:view", name); } catch (e) {}
   setTimeout(maybeServe, 350);
@@ -3642,7 +3662,8 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   darts: [500, 900, 1300], bowl: [100, 150, 200], punch: [500, 3000, 6000], volley: [1000, 2000, 3000], swim: [1500, 3000, 4000], shred: [1000, 2500, 4500],
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
-  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200] };
+  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200],
+  sgroups: [400, 650, 800], hive: [40, 100, 180], sudoku: [800, 1500, 2200] };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
 // Game of the Day (from the server): today's game, its daily board, and yesterday's champ.
@@ -3854,10 +3875,10 @@ function zHidden() { if (Z.state === "play" || Z.state === "dying") { Z.state = 
 $("zwrap").addEventListener("pointerdown", e => { if (e.target.closest("button") || e.target.closest(".zpanel")) return; e.preventDefault(); zFlap(); });
 document.addEventListener("keydown", e => { if (active === "zoomies" && (e.code === "Space" || e.key === "ArrowUp") && Z.state !== "over") { e.preventDefault(); zFlap(); } });
 window.addEventListener("resize", () => { if (active === "zoomies" && Z.state === "idle") zIdle(); });
-document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || (ARC[arcTab] && arcCat(arcTab) === "sports" && active !== "arcade") ? "sports" : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
+document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || active === "den" ? active : active === "game" && ARC[arcTab] ? arcCat(arcTab) : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports") renderArcHub(active); }).catch(() => {});
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => {});
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
@@ -3892,28 +3913,28 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["party", "euchre", "crib", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["sgroups", "hive", "sudoku", "euchre", "crib", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
 function renderArcSub() {
   ownLocal();
-  ["arcade", "sports"].forEach(cat => {
+  ["arcade", "sports", "den"].forEach(cat => {
     const n = aDares.filter(d => ARC[d.game] && arcCat(d.game) === cat).length, total = arcOrder().filter(k => arcCat(k) === cat).length;
-    $("sub-" + cat).textContent = n ? `🎯 ${n} dare${n > 1 ? "s" : ""} waiting for you` : `${total} games · just for fun`;
+    if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? `🎯 ${n} dare${n > 1 ? "s" : ""}` : `${total} games`;
   });
 }
 function renderArcHub(cat) {
   ownLocal();
   cat = cat || "arcade";
-  const box = $(cat === "sports" ? "sp-dares" : "arc-dares"); box.innerHTML = "";
+  const box = $(cat === "sports" ? "sp-dares" : cat === "den" ? "den-dares" : "arc-dares"); box.innerHTML = "";
   aDares.filter(d => ARC[d.game] && arcCat(d.game) === cat).slice(-5).reverse().forEach(d => {
     const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${d.target} in ${ARC[d.game].name}`));
     const b = el("button", "pill", "Take it"); b.addEventListener("click", () => { aDare = d; playGame(d.game); });
     row.append(b); box.appendChild(row);
   });
   // Compact 3-across grid: icon, name, your best. Badges: 🎯 dares waiting, ▶ a saved game to continue.
-  const gd = gotd();
+  const gd = cat === "den" ? null : gotd();
   if (gd) {
     const card = el("button", "gotd"); card.dataset.play = gd.game;
     const lead = gd.board[0];
@@ -3921,7 +3942,7 @@ function renderArcHub(cat) {
     if (gd.y && gd.y.win && ARC[gd.y.game]) card.append(el("small", null, `🏆 Yesterday: ${gd.y.win.name} won ${ARC[gd.y.game].name}`));
     box.prepend(card);
   }
-  const list = $(cat === "sports" ? "sp-list" : "arc-list"); list.innerHTML = "";
+  const list = $(cat === "sports" ? "sp-list" : cat === "den" ? "den-list" : "arc-list"); list.innerHTML = "";
   const all = arcOrder().filter(k => arcCat(k) === cat);
   const recent = (store.get("bdd:recent") || []).filter(k => all.includes(k)).slice(0, 3);
   const cell = k => {
@@ -3929,6 +3950,7 @@ function renderArcHub(cat) {
     const ic = el("span", "gicon"); ic.appendChild(emo(ARC[k].icon, 28));
     r.append(ic, el("b", null, ARC[k].name), el("small", null, aBest[k] ? "Best " + fmtG(k, aBest[k]) + (medalOf(k, aBest[k]) ? " " + MEDAL_ICON[medalOf(k, aBest[k])] : "") : "\u00a0"));
     if (gd && gd.game === k) r.classList.add("isgotd");
+    const td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today; if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", `👑 ${td[0].name}`));
     const n = aDares.filter(d => d.game === k).length, sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
     if (n) r.appendChild(el("span", "badge", `🎯${n}`)); else if (sv) r.appendChild(el("span", "badge go", "▶"));
     return r;
@@ -3937,7 +3959,7 @@ function renderArcHub(cat) {
   all.forEach(k => list.appendChild(cell(k)));
   if (!arcade) refreshArcade();
 }
-$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30));
+$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
 
 // ================= ARCADE: LONG DAWG (snake) =================
 const SN = { state: "idle", W: 0, H: 0, dpr: 1, cols: 15, rows: 20, cell: 20, ox: 0, oy: 0, body: [], dir: [1, 0], q: [], bone: null, score: 0, acc: 0, last: 0, raf: 0 };
@@ -4316,7 +4338,7 @@ function playGame(key) {
   let d = GAMEDEFS[key]; if (!d) return;
   if (!d.update) { toast("Loading " + d.name + "…", 1500); loadGame(key).then(() => playGame(key)).catch(() => toast("Couldn't load the game. Check your connection.", 2400)); return; }
   if (G.state === "play") gHidden();
-  G.key = key; G.def = d; $("g-title").textContent = d.name; $("g-back").dataset.go = d.cat === "sports" ? "sports" : "arcade";
+  G.key = key; G.def = d; $("g-title").textContent = d.name; $("g-back").dataset.go = d.cat || "arcade";
   if (active === "game") gShown(); else show("game");
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-play]"); if (b) playGame(b.dataset.play); });
@@ -4348,7 +4370,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_archery.js", "key": "archery", "name": "Bow Wow", "icon": "🏹", "blurb": "Archery. 10 arrows, mind the wind.", "how": "Put your thumb down and drag to move the crosshair onto the target, then let go to shoot. The wind pushes your arrow (watch the flag), and if you hold too long your aim starts to wobble. 10 arrows, bullseye is 10. Perfect is 100.", "cat": "sports", "max": 100},
 {"file": "g_blocks.js", "key": "blocks", "name": "Block Dawg", "icon": "🧱", "blurb": "Stack the blocks. Clear the lines.", "how": "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!", "max": 9999999},
 {"file": "g_bowl.js", "key": "bowl", "name": "Bowl-a-Dawg", "icon": "🎳", "blurb": "10 frames. Swipe to roll. Curve it.", "how": "Swipe up from the bottom to roll. Where you start = where you stand, the swipe's direction = your aim, bend the swipe to hook it, flick faster for more speed. Hit the pocket (just beside the head pin) for strikes. 10 frames, real scoring, 300 is perfect.", "cat": "sports", "max": 300},
-{"file": "g_crib.js", "key": "crib", "name": "Dawg Cribbage", "icon": "🎯", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "max": 500},
+{"file": "g_crib.js", "key": "crib", "name": "Dawg Cribbage", "icon": "🎯", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "cat": "den", "max": 500},
 {"file": "g_cross.js", "key": "cross", "name": "Dawg Crossing", "icon": "🚗", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
 {"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.", "max": 999999},
@@ -4358,11 +4380,12 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_drive.js", "key": "drive", "name": "Road Dawg", "icon": "🚙", "blurb": "Floor it. Weave through traffic.", "how": "Drag or hold anywhere: the car steers toward your finger. Quick tap = TURBO (3 s cooldown). Dodge traffic and oil slicks, stay off the grass, grab ⛽ before the tank runs dry. 🦴 = +50. 3 bonks and you're done.", "max": 99999},
 {"file": "g_duck.js", "key": "duck", "name": "Duck Dawg", "icon": "🦆", "blurb": "Tap the ducks before they fly off.", "how": "Ducks flap up out of the grass. Tap them to pop them with the tennis-ball launcher. 3 shots per release, 10 ducks a round (2 at a time from round 3). Hit at least 6 of 10 to pass (it goes up later). 500+ points a duck, more each round, 10/10 = perfect bonus.", "cat": "sports", "max": 99999},
 {"file": "g_dvz.js", "key": "dvz", "name": "Dawgs vs Zombies", "icon": "🧟", "blurb": "Lane defense. Hold the yard.", "how": "Zombies shuffle in from the right. Tap a defender you've placed to UPGRADE it (★2 from wave 2, ★3 from wave 4) or DIG it up for half your bones back. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.", "max": 99999},
-{"file": "g_euchre.js", "key": "euchre", "name": "Dawg Euchre", "icon": "🃏", "blurb": "You + Biscuit vs the cats. First to 10.", "how": "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.", "max": 300},
+{"file": "g_euchre.js", "key": "euchre", "name": "Dawg Euchre", "icon": "🃏", "blurb": "You + Biscuit vs the cats. First to 10.", "how": "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.", "cat": "den", "max": 300},
 {"file": "g_fg.js", "key": "fg", "name": "Kick Dawg", "icon": "🏈", "blurb": "Field goals. Read the wind. Split the uprights.", "how": "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter. WIND (top left, and the flags on the posts) bends the ball, so aim into it. Every make scores its yards and moves you back 5. 3 misses and you're done.", "cat": "sports", "max": 9999},
 {"file": "g_golf.js", "key": "golf", "name": "Dawg Golf", "icon": "🏌️", "blurb": "Front nine, par 36. Three-tap swing. Mind the wind.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.", "cat": "sports", "max": 72, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 36 ? "E" : (n > 36 ? "+" : "") + (n - 36)) + ")" : "—"},
 {"file": "g_golf.js", "key": "golf18", "name": "Dawg Golf 18", "icon": "🏌️", "blurb": "The full 18, par 74. Back nine plays longer and windier.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 74 over 18 holes: fewest strokes wins.", "cat": "sports", "max": 144, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 74 ? "E" : (n > 74 ? "+" : "") + (n - 74)) + ")" : "—"},
 {"file": "g_harvest.js", "key": "harvest", "name": "Harvest Dawg", "icon": "🚜", "blurb": "Drive a giant combine. Clear the crops.", "how": "Hold your thumb down and drag: the combine drives toward your finger and its giant header cuts everything it rolls over. Clear 90% of the field before the clock runs out to move on (plus bonus time). Rocks stop you dead and cost 3 seconds. Don't run over the cows. Wheat, then corn, then sunflowers: worth more each field.", "max": 99999},
+{"file": "g_hive.js", "key": "hive", "name": "Dawg Hive", "icon": "🐝", "blurb": "Daily: make words from 7 letters.", "how": "A new hive every day. Make words of 4+ letters using the 7 letters; every word must use the center letter, and letters can repeat. 4-letter words = 1 point, longer words = 1 per letter, and a word using all 7 letters (a pangram) gets +7. Tap DONE FOR NOW to post your score; come back any time today to find more.", "cat": "den", "max": 999},
 {"file": "g_hoops.js", "key": "hoops", "name": "Dawg Hoops", "icon": "🏀", "blurb": "60 seconds. Flick it in.", "how": "Flick up from the ball toward the hoop to shoot. Faster flick = more power, aim with the angle. 2 points a bucket, 3 in the last 15 seconds, +1 for a swish, and 3 in a row doubles your points. Past 20 points the hoop starts moving!", "cat": "sports", "max": 9999},
 {"file": "g_hop.js", "key": "hop", "name": "Hydrant Hop", "icon": "🧯", "blurb": "Run, jump the hydrants, grab the bones.", "how": "The pup runs on his own. Tap anywhere to jump, tap again in the air to double jump. Hop hydrants, puddles, mailboxes and the mailman. Stay LOW under pigeons and frisbees. Bones are +10. One bonk and it's over.", "max": 99999},
 {"file": "g_jump.js", "key": "jump", "name": "Pup Jump", "icon": "🐶", "blurb": "Bounce up forever. Don't look down.", "how": "The pup bounces by itself. Hold the left or right side of the screen (or drag) to steer. Fly off one edge to come out the other. Bones launch you sky high, boxes break after one bounce. Land on cats and squirrels to bop them (+50), but don't bump into them. Don't fall!", "max": 999999},
@@ -4375,8 +4398,10 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_pupman.js", "key": "pupman", "name": "Pup-Man", "icon": ":dawgW:", "blurb": "Gobble kibble. Dodge the mailmen.", "how": "Swipe (or tap a side of the dog) to steer through the maze and gobble every kibble. Turns are saved until the next opening. Big bones in the corners scare the chasers, so chomp them for 200, 400, 800, 1600. 3 lives.", "max": 999999},
 {"file": "g_putt.js", "key": "putt", "name": "Putt Pup", "icon": "⛳", "blurb": "9 holes of backyard mini golf.", "how": "9 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.", "max": 450},
 {"file": "g_putt.js", "key": "putt18", "name": "Putt Pup 18", "icon": "⛳", "blurb": "The full 18. Back nine included.", "how": "18 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole. The back nine adds a loop-de-loop, deck tunnels, a sprinkler, a seesaw, lawnmowers, an island green and the doghouse.", "max": 900},
+{"file": "g_sgroups.js", "key": "sgroups", "name": "Sports Groups", "icon": "🏟️", "blurb": "Daily: find 4 groups of 4 sports things.", "how": "A new puzzle every day. Tap 4 tiles that share a sports connection, then SUBMIT. Four mistakes and you're out. One try per day. Score: solve it = 600, minus 100 per mistake, plus a speed bonus (up to 300). Miss it = 100 per group found.", "cat": "den", "max": 1000},
 {"file": "g_shred.js", "key": "shred", "name": "Shred Dawg", "icon": "⛷️", "blurb": "Ski the endless mountain. Outrun the snow-cat.", "how": "Hold anywhere and the dog turns to face your finger: straight down is fastest, sideways nearly stops you. Let go to keep your heading. Tap to hop over rocks, stumps, moguls, pups and small trees. Hit a ramp for big air and tap in the air to flip (+40 style), but finish the flip before you land. Ski between two flags for +10. Crashing just costs time. Past 2000 m the giant snow-cat chases you and it keeps getting faster. Score = meters + style.", "cat": "sports", "max": 99999},
 {"file": "g_smash.js", "key": "smash", "name": "Squirrel Smash", "icon": "🐿️", "blurb": "Whack-a-mole. Bop squirrels, not pups.", "how": "Squirrels pop out of the holes. Tap them fast. Golden ones are worth extra. Don't bop the pups. 30 seconds on the clock.", "max": 9999},
+{"file": "g_sudoku.js", "key": "sudoku", "name": "Dawg Sudoku", "icon": "🔢", "blurb": "Daily: Easy, Medium and Hard sudoku.", "how": "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number is a mistake (+30 seconds). One try at each per day; your progress is saved if you leave. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%). Your best of the three counts.", "cat": "den", "max": 3000},
 {"file": "g_swim.js", "key": "swim", "name": "Doggy Paddle", "icon": "🏊", "blurb": "Race the pool. Tap left, right, left, right.", "how": "Tap the LEFT and RIGHT halves of the screen one after the other. Same side twice or mashing = SLIP. Tap when the shrinking ring hits your pup for a PERFECT stroke. Every 6 strokes tap the blue BREATH button or you slow down. At the far wall, SWIPE DOWN for a flip turn. 50m per heat: Heat 1, Semifinal, Final. Top 2 advance. 1000/600/300/100 per heat + time bonus. Keys: ← → strokes, space = breath, ↓ = turn.", "cat": "sports", "max": 9999},
 {"file": "g_td.js", "key": "td", "name": "Yard Defense", "icon": "🏰", "blurb": "Tower defense. Post pups, guard the yard.", "how": "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to see its range and UPGRADE it (up to ★3) or SELL it back for 75% of what you spent. Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.", "max": 99999},
 {"file": "g_tennis.js", "key": "tennis", "name": "Dawg Open", "icon": "🎾", "blurb": "Tennis vs the cat. Time your swings.", "how": "Your dawg runs to the ball by himself. Tap to swing as the ball reaches the ring: early = cross-court, late = down the line, right on time = a deep rocket. Swipe left/right to aim, swipe up to lob. Serve: tap to toss, tap again at the top. Real tennis scoring, first to 4 games takes the set.", "cat": "sports", "max": 9999},
@@ -4531,7 +4556,7 @@ if ("serviceWorker" in navigator) addEventListener("load", () => {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!had) { had = true; return; } // first install, nothing to refresh
     if (done) return; done = true;
-    const idle = () => { try { return ["home", "scores", "arcade", "sports"].includes(active) || !document.getElementById("splash").hidden; } catch (e) { return true; } };
+    const idle = () => { try { return ["home", "scores", "arcade", "sports", "den"].includes(active) || !document.getElementById("splash").hidden; } catch (e) { return true; } };
     if (idle()) location.reload();
     else { try { toast("New version ready. It loads next time you open the app.", 3000); } catch (e) {} }
   });

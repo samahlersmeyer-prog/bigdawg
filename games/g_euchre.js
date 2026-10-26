@@ -16,7 +16,7 @@
   function sortHand(h, tr) { const order = tr == null ? [0, 1, 3, 2] : [tr, (tr + 1) % 4, (tr + 3) % 4, (tr + 2) % 4]; h.sort((a, b) => { const sa = order.indexOf(tr == null ? a.s : es(a, tr)), sb = order.indexOf(tr == null ? b.s : es(b, tr)); return sa - sb || (tr == null ? b.r - a.r : pow(b, tr, es(b, tr)) - pow(a, tr, es(a, tr))); }); }
 
   defGame({
-    key: "euchre", name: "Dawg Euchre", icon: "🃏", max: 300,
+    key: "euchre", name: "Dawg Euchre", icon: "🃏", max: 300, cat: "den",
     blurb: "You + Biscuit vs the cats. First to 10.",
     how: "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.",
     // Save & continue between hands.

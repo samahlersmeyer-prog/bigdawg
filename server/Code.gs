@@ -818,8 +818,10 @@ const ZOOMIES_MAX = 999;
 const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, putt: 450, hop: 99999, blocks: 9999999, cross: 99999, jump: 999999, smash: 9999,
   duck: 99999, derby: 99999, dawgball: 999, kickret: 9999, hoops: 9999, pks: 9999, golf: 72, darts: 9999, bowl: 300,
   punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
-  td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500 };
-const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib'].indexOf(g) < 0); // long or retired games sit out
+  td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
+  sgroups: 1000, hive: 999, sudoku: 3000 };
+const DEN_DAILY = { sgroups: true, hive: true, sudoku: true }; // daily Den puzzles get a today-only board too
+const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'sgroups', 'hive', 'sudoku'].indexOf(g) < 0); // long or retired games sit out
 const ARCADE_LOW = { golf: true, golf18: true }; // lower score wins (strokes)
 const arcBetter_ = (g, a, b) => ARCADE_LOW[g] ? (a > 0 && (!(b > 0) || a < b)) : a > b; // game -> highest believable score
 // A missing game means an old app version (Zoomies only). An unknown game is refused, so a score can never
@@ -873,7 +875,7 @@ function getArcade(id, dateKey) {
     const rows = rowsAll.filter(r => (r.game || 'zoomies') === g);
     const all = bestBy(rows, g), week = bestBy(rows.filter(r => r.date >= ws && r.date <= dateKey), g);
     const mine = all.find(x => x.id === id);
-    games[g] = { week: week.slice(0, 10), all: all.slice(0, 10), myBest: mine ? mine.n : 0 };
+    games[g] = { week: week.slice(0, 10), all: all.slice(0, 10), myBest: mine ? mine.n : 0, today: DEN_DAILY[g] ? bestBy(rows.filter(r => r.date === dateKey), g).slice(0, 5) : undefined };
   });
   // Game of the Day: one arcade/sports game a day gets its own leaderboard that resets at midnight.
   const pick = dk => { let h = 7; for (let i = 0; i < dk.length; i++) h = (h * 31 + dk.charCodeAt(i)) >>> 0; return GOTD_POOL[h % GOTD_POOL.length]; };
