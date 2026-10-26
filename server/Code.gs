@@ -658,7 +658,7 @@ function getCrews(id) {
   const mine = crewIdsOf_(id), mem = readMembers_();
   return readCrews_().filter(c => mine.indexOf(c.id) >= 0).map(c => {
     const ids = mem.filter(m => m.crew === c.id).map(m => m.id).filter(k => names[k]);
-    return { id: c.id, name: c.name, code: c.code, owner: c.owner === id, n: ids.length, ids: ids, members: ids.map(k => names[k]).sort() };
+    return { id: c.id, name: c.name, code: c.code, owner: c.owner === id, n: ids.length, ids: ids, members: ids.map(k => names[k]).sort(), people: ids.map(k => ({ id: k, name: names[k] })).sort((a, b) => a.name.localeCompare(b.name)) };
   });
 }
 function createCrew(id, name) {
@@ -697,6 +697,24 @@ function renameCrew(id, crewId, name) {
 function setScope_(crew, meId) {
   MEMO_ = {}; CREW_ = typeof crew === 'string' ? crew : 'all';
   if (CREW_ === '') { try { ensureCrews_(); CREW_ = (meId && crewIdsOf_(cleanId_(meId))[0]) || 'all'; } catch (e) { CREW_ = 'all'; } MEMO_.scope = undefined; }
+}
+// Crew owner only: take someone out of the crew. They can still rejoin with the code, so change the code too if needed.
+function removeFromCrew(id, crewId, targetId) {
+  id = cleanId_(id); targetId = cleanId_(targetId); crewId = String(crewId || '');
+  const c = readCrews_().find(x => x.id === crewId);
+  if (!c || c.owner !== id) throw new Error('Only the person who started the crew can remove people.');
+  if (targetId === id) throw new Error("That's you. Use Leave instead.");
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { const m = readMembers_().find(x => x.crew === crewId && x.id === targetId); if (m) membersSheet_().deleteRow(m.row); MEMO_.members = null; } finally { lock.releaseLock(); }
+  return { crews: getCrews(id) };
+}
+// Crew owner only: a fresh invite code, so old links stop working.
+function newCrewCode(id, crewId) {
+  id = cleanId_(id); crewId = String(crewId || '');
+  const i = readCrews_().findIndex(x => x.id === crewId);
+  if (i < 0 || readCrews_()[i].owner !== id) throw new Error('Only the person who started the crew can change its code.');
+  crewsSheet_().getRange(i + 2, 3).setValue(newCode_()); MEMO_.crews = null;
+  return { crews: getCrews(id) };
 }
 const NOT_MATES_ = "Shade, reactions and dares are just for your crew. Invite them to one first.";
 
@@ -1054,7 +1072,7 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode
 };
 function doPost(e) {
   let out;

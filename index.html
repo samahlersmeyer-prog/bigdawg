@@ -369,6 +369,9 @@ input { -webkit-user-select: text; user-select: text; }
 .crewrow { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--raise); text-align: left; width: 100%; }
 .crewrow b { font-size: 16px; } .crewrow small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .crewrow .inrow { display: flex; gap: 6px; flex-wrap: wrap; } .crewrow .pill { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+.crewown summary { font-size: 13.5px; font-weight: 700; cursor: pointer; padding: 4px 0; }
+.crewown { display: flex; flex-direction: column; gap: 8px; } .crewown[open] > * + * { margin-top: 8px; }
+.crewown .chip.warn { background: #e53935; color: #fff; border-color: #e53935; }
 .crewcode { font-family: ui-monospace, monospace; font-weight: 800; letter-spacing: 2px; }
 .crewform { display: flex; gap: 6px; width: 100%; } .crewform input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
 .chip { font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); }
@@ -2862,7 +2865,27 @@ function openCrews() {
     const inv = el("button", "pill solid", "Copy invite link"); inv.addEventListener("click", () => copy(`Join my crew "${c.name}" on Big Dawg Daily: ${crewLink(c)}`, null, "Invite copied. Text it to your people."));
     const view = el("button", "pill", "Show scoreboard"); view.addEventListener("click", () => { closeModal(); switchCrew(c.id); show("scores"); });
     const leave = el("button", "pill", "Leave"); leave.addEventListener("click", () => { if (leave.dataset.sure) { crewCall("leaveCrew", c.id).then(() => { if (crewSel === c.id) switchCrew(crews[0] ? crews[0].id : "all"); openCrews(); }).catch(e => toast(errMsg(e), 2400)); } else { leave.dataset.sure = 1; leave.textContent = "Tap again to leave"; } });
-    btns.append(inv, view, leave); row.append(hd, sm, btns); nodes.push(row);
+    btns.append(inv, view, leave); row.append(hd, sm, btns);
+    if (c.owner && c.people) {
+      // Owner tools: remove people, rename, fresh code.
+      const mg = el("details", "crewown"); mg.append(el("summary", null, "👑 You own this crew: manage members"));
+      const list = el("div", "chips");
+      c.people.filter(x => x.id !== me.id).forEach(x => {
+        const ch = el("button", "chip", x.name + "  ✕");
+        ch.addEventListener("click", () => {
+          if (!ch.dataset.sure) { ch.dataset.sure = 1; ch.textContent = `Remove ${x.name}?`; ch.classList.add("warn"); return; }
+          ch.disabled = true; API("removeFromCrew", me.id, c.id, x.id).then(r => { setCrews(r.crews); toast(`${x.name} is out of ${c.name}.`, 2000); ch.remove(); if (crewSel === c.id) switchCrew("all"), switchCrew(c.id); }).catch(e => { ch.disabled = false; toast(errMsg(e), 2400); });
+        });
+        list.appendChild(ch);
+      });
+      const tools = el("div", "inrow");
+      const rn = el("button", "pill", "Rename"); rn.addEventListener("click", () => { const v = prompt("New crew name", c.name); if (v && v.trim()) API("renameCrew", me.id, c.id, v.trim()).then(r => { setCrews(r.crews); openCrews(); }).catch(e => toast(errMsg(e), 2400)); });
+      const nc = el("button", "pill", "New code"); nc.addEventListener("click", () => { if (!nc.dataset.sure) { nc.dataset.sure = 1; nc.textContent = "Old links stop working. Tap again"; return; } API("newCrewCode", me.id, c.id).then(r => { setCrews(r.crews); toast("New code made. Old invite links no longer work.", 2400); openCrews(); }).catch(e => toast(errMsg(e), 2400)); });
+      tools.append(rn, nc);
+      mg.append(el("small", null, "Tap a name, then tap again to remove them. Removed people can rejoin with the code, so tap New code if you need to lock it."), list, tools);
+      row.appendChild(mg);
+    }
+    nodes.push(row);
   });
   const jf = el("div", "crewform"), ji = el("input"); ji.placeholder = "Crew code"; ji.maxLength = 8; ji.autocapitalize = "characters";
   const jb = el("button", "pill solid", "Join"); jb.addEventListener("click", () => { if (!ji.value.trim()) return; crewCall("joinCrew", ji.value.trim()).then(r => { toast(`You're in ${r.name} 🐶`, 2200); openCrews(); }).catch(e => toast(errMsg(e), 2600)); });
