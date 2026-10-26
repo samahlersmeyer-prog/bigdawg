@@ -42,9 +42,10 @@
     },
     open(G, d) {
       const s = G.s, r = this.rec(d);
+      const p = pz(d); const reg = {}; p.regions.forEach((x, i) => x.c.forEach(c => reg[c] = i));
+      if (r && r.done && r.pl) { Object.assign(s, { phase: "review", d, p, reg, cellSet: new Set(p.cells), pl: r.pl.slice(), el: r.el || 0, final: r.score, sel: -1, rsel: -1, bad: null }); return; }
       if (r && r.done) return G.results(this.info(d));
       try { store.set(this.curKey(), d); } catch (e) {}
-      const p = pz(d); const reg = {}; p.regions.forEach((x, i) => x.c.forEach(c => reg[c] = i));
       Object.assign(s, { phase: "play", d, p, reg, cellSet: new Set(p.cells), pl: r && r.pl ? r.pl.slice() : p.dom.map(() => null), el: r ? r.el : 0, sel: -1, o: 0, bad: null });
       G.sfx("pop");
     },
@@ -72,7 +73,7 @@
     update(G, dt) {
       const s = G.s; if (s.msgT > 0) s.msgT -= dt;
       if (s.phase === "play") { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
-      if (s.phase === "won") { s.endT -= dt; if (s.endT <= 0) { s.phase = "pick"; s.sel = -1; try { store.set(this.curKey(), null); } catch (e) {} G.post(s.final, this.info(s.d)); } }
+      if (s.phase === "won") { s.endT -= dt; if (s.endT <= 0) { s.phase = "review"; s.rsel = -1; s.sel = -1; try { store.set(this.curKey(), null); } catch (e) {} G.post(s.final, this.info(s.d)); } }
     },
     draw(G, c) {
       const s = G.s, dk = G.dark(), fg = dk ? "#fff" : "#111";
@@ -87,7 +88,7 @@
           c.textAlign = "left"; c.fillStyle = fg; c.font = `700 22px ${G.TITLE}`; c.fillText(label, x + 18, y + 28);
           c.font = `400 14px ${G.UI}`; c.fillStyle = dk ? "#ccc" : "#444";
           c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? `In progress · ${Math.floor(r.el / 60)}:${String(Math.floor(r.el % 60)).padStart(2, "0")}` : `${pz(d).dom.length} dominoes · up to ${DIFF[d][1]} pts`, x + 18, y + 54);
-          G.pill(c, x + bw - 100, y + 19, 86, 40, r && r.done ? "Results" : r ? "Resume" : "Play", !(r && r.done));
+          G.pill(c, x + bw - 100, y + 19, 86, 40, r && r.done ? "Review" : r ? "Resume" : "Play", !(r && r.done));
           s.btns.push({ x, y, w: bw, h: 78, d });
         });
       } else {
@@ -115,7 +116,47 @@
           c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillStyle = ok === false ? "#e53935" : ok ? "#2e9e4f" : (dk ? "#fff" : "#1d1d1f"); c.fillRect(-bz / 2, -bz / 2, bz, bz); c.restore();
           c.fillStyle = ok === null ? (dk ? "#111" : "#fff") : "#fff"; c.font = `800 ${Math.round(bz * (t.length > 2 ? 0.42 : 0.55))}px system-ui, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(t, x, y + 1);
         });
-        if (s.phase === "play") {
+        if (s.phase === "review" || s.phase === "won") {
+          // outline every region on top of the dominoes so you can see what goes with what
+          p.regions.forEach((r, ri) => {
+            const on = s.rsel === ri, blank = r.t === "b";
+            c.strokeStyle = on ? "#ffb300" : blank ? (dk ? "#666" : "#aaa") : TINT[ri % TINT.length]; c.lineWidth = on ? 5 : 3; if (blank && !on) c.setLineDash([5, 4]);
+            c.beginPath();
+            r.c.forEach(k => { const x0 = cx(k) + 2, y0 = cy(k) + 2, x1 = cx(k) + cs - 2, y1 = cy(k) + cs - 2, has = q => r.c.includes(q);
+              if (!has(k - p.w)) { c.moveTo(x0, y0); c.lineTo(x1, y0); }
+              if (!has(k + p.w)) { c.moveTo(x0, y1); c.lineTo(x1, y1); }
+              if (k % p.w === 0 || !has(k - 1)) { c.moveTo(x0, y0); c.lineTo(x0, y1); }
+              if (k % p.w === p.w - 1 || !has(k + 1)) { c.moveTo(x1, y0); c.lineTo(x1, y1); } });
+            c.stroke(); c.setLineDash([]);
+          });
+          p.regions.forEach((r, ri) => { const t = label(r); if (!t) return; const k = Math.max(...r.c), x = cx(k) + cs - 6, y = cy(k) + cs - 6, bz = Math.max(22, cs * 0.42);
+            c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillStyle = s.rsel === ri ? "#ffb300" : "#2e9e4f"; c.fillRect(-bz / 2, -bz / 2, bz, bz); c.restore();
+            c.fillStyle = "#fff"; c.font = `800 ${Math.round(bz * (t.length > 2 ? 0.42 : 0.55))}px system-ui, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(t, x, y + 1); });
+          // explanation
+          const ey = oy + cs * p.h + 24, ew = G.W - 32;
+          c.fillStyle = dk ? "#1f1f22" : "#f3f3f0"; rr(c, 16, ey, ew, 118, 12); c.fill();
+          c.textAlign = "left"; c.textBaseline = "middle";
+          if (s.rsel >= 0) {
+            const r = p.regions[s.rsel], vs = r.c.map(k => v[k]), sum = vs.reduce((a, b) => a + b, 0);
+            const [head, line] = r.t === "b" ? ["No rule here", "Grey squares can hold anything. They're just filler."]
+              : r.t === "s" ? (vs.length === 1 ? [`${r.n}: this square must show ${r.n}`, `It has ${vs[0]} pip${vs[0] === 1 ? "" : "s"}. ✓`] : [`${r.n}: these ${vs.length} squares add up to ${r.n}`, `${vs.join(" + ")} = ${sum} ✓`])
+              : r.t === "=" ? ["=: every square shows the same number", `${vs.join(" = ")} ✓`]
+              : r.t === "!" ? ["≠: every square is a different number", `${vs.join(", ")}: no repeats ✓`]
+              : r.t === "<" ? [`<${r.n}: the total is under ${r.n}`, `${vs.join(" + ")} = ${sum}, less than ${r.n} ✓`]
+              : [`>${r.n}: the total is over ${r.n}`, `${vs.join(" + ")} = ${sum}, more than ${r.n} ✓`];
+            c.fillStyle = fg; c.font = `700 16px ${G.UI}`; c.fillText(head, 30, ey + 34, ew - 28);
+            c.fillStyle = dk ? "#8fd19e" : "#2e7d32"; c.font = `700 20px ${G.UI}`; c.fillText(line, 30, ey + 76, ew - 28);
+          } else {
+            c.fillStyle = fg; c.font = `700 15px ${G.UI}`; c.fillText("Tap any outlined area to see why it works", 30, ey + 24, ew - 28);
+            c.font = `400 13.5px ${G.UI}`; c.fillStyle = dk ? "#ccc" : "#444";
+            ["Number: the pips in that area add up to it", "=  all the same   ·   ≠  all different", "<  total under   ·   >  total over   ·   grey = no rule"].forEach((l, i) => c.fillText(l, 30, ey + 52 + i * 22, ew - 28));
+          }
+          if (s.phase === "review") {
+            const by = Math.min(G.H - 56, ey + 134), bw = (G.W - 40) / 2;
+            s.btns.push(Object.assign(G.pill(c, 16, by, bw, 46, "All puzzles"), { k: "menu" }));
+            s.btns.push(Object.assign(G.pill(c, 24 + bw, by, bw, 46, `Results · ${s.final} pts`, true), { k: "res" }));
+          }
+        } else if (s.phase === "play") {
           // tray
           const top = oy + cs * p.h + 22, n = p.dom.length, per = Math.min(n, G.W < 360 ? 4 : 5), ts = Math.min(26, (G.W - 20) / per / 2.3), slot = ts * 2.3, rows = Math.ceil(n / per);
           for (let i = 0; i < n; i++) {
@@ -126,7 +167,7 @@
           }
           const by = Math.min(G.H - 56, top + rows * ts * 2.1 + 16), bw = (G.W - 32) / 3;
           [["All puzzles", "menu"], ["⟳ Rotate", "rot"], ["Clear", "clr"]].forEach(([t, k], i) => { const x = 8 + i * (bw + 8), on = k === "notes" ? s.notes : k === "rot" && s.sel >= 0; s.btns.push(Object.assign(G.pill(c, x, by, bw, 46, t, on), { k })); });
-        } else { c.fillStyle = fg; c.font = `700 24px ${G.TITLE}`; c.textAlign = "center"; c.fillText(`Solved! ${s.final} pts`, G.W / 2, oy + cs * p.h + 60); }
+        }
       }
       if (s.msgT > 0 && s.msg) { c.save(); c.globalAlpha = Math.min(1, s.msgT * 2); c.font = `600 14px ${G.UI}`; c.textAlign = "center"; c.textBaseline = "middle"; const w = c.measureText(s.msg).width + 26;
         c.fillStyle = dk ? "#fff" : "#111"; rr(c, G.W / 2 - w / 2, 40, w, 32, 8); c.fill(); c.fillStyle = dk ? "#111" : "#fff"; c.fillText(s.msg, G.W / 2, 56); c.restore(); }
@@ -134,6 +175,12 @@
     tap(G, x, y) {
       const s = G.s, b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return;
       if (b.d !== undefined) return this.open(G, b.d);
+      if (s.phase === "review") {
+        if (b.board) { const [ox, oy, cs] = b.board, k = Math.floor((y - oy) / cs) * s.p.w + Math.floor((x - ox) / cs); s.rsel = s.reg[k] !== undefined ? (s.rsel === s.reg[k] ? -1 : s.reg[k]) : -1; return; }
+        if (b.k === "res") return G.results(this.info(s.d));
+        if (b.k === "menu") { s.phase = "pick"; s.rsel = -1; }
+        return;
+      }
       if (s.phase !== "play") return;
       if (b.board) { const [ox, oy, cs] = b.board, col = Math.floor((x - ox) / cs), row = Math.floor((y - oy) / cs), k = row * s.p.w + col; if (s.cellSet.has(k)) this.place(G, k); return; }
       if (b.i !== undefined) { if (s.sel === b.i) s.o = (s.o + 1) % 4; else { s.sel = b.i; s.o = 0; } G.sfx("pop"); return; }
