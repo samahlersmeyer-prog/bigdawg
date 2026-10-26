@@ -8,7 +8,7 @@ const JOKE_HEADERS = ['id', 'playerId', 'text', 'created'];
 const PROGRESS_HEADERS = ['date', 'playerId', 'state', 'updated'];
 const REACT_HEADERS = ['date', 'fromId', 'toId', 'emoji', 'created'];
 const ARCADE_HEADERS = ['date', 'playerId', 'game', 'best', 'plays', 'updated'];
-const DARE_KINDS = ['dare', 'dareres']; // Zoomies dares ride along in the Shade tab but never count as shade
+const DARE_KINDS = ['dare', 'dareres', 'join', 'joinok']; // Zoomies dares ride along in the Shade tab but never count as shade
 const DAWGS = [':dawgW:', ':dawgL:', ':dawgcope:', ':dawgsweat:', ':dawgpog:', ':dawgpain:', ':dawgclown:', ':dawgsus:', ':dawgskull:']; // Big Dawg emote pack
 const EMOJIS = ['😂', '🔥', '💀', '👏', '🤡'].concat(DAWGS);
 const CLAPS = ['👏', '🫃', '🤡', '🖕'].concat(DAWGS); // clap-back answers to shade
@@ -447,7 +447,8 @@ function getShadeState(id, dateKey) {
   const names = {}; players.forEach(p => names[p.id] = p.name);
   const rows = readShade_();
   const since = addDays_(dateKey, -6);
-  const inbox = rows.filter(r => r.to === id && !r.seen).map(r => ({ id: r.id, from: r.from, fromName: names[r.from] || 'Someone', text: r.text, kind: r.kind }));
+  const crewNm = {}; readCrews_().forEach(c => crewNm[c.id] = c.name);
+  const inbox = rows.filter(r => r.to === id && !r.seen).map(r => ({ id: r.id, from: r.from, fromName: names[r.from] || 'Someone', text: r.text, kind: r.kind, crew: crewNm[r.text] || '' }));
   const sentToday = {};
   rows.filter(r => r.from === id && r.date === dateKey && r.kind === 'shade').forEach(r => sentToday[r.to] = (sentToday[r.to] || 0) + 1);
   const recv = {}, sent = {}, ls = {}, claps = {};
@@ -461,7 +462,7 @@ function getShadeState(id, dateKey) {
   const top = m => Object.keys(m).filter(k => names[k] && inScope_(k)).map(k => ({ id: k, name: names[k], n: m[k] })).sort((a, b) => b.n - a.n).slice(0, 5);
   return {
     inbox: inbox, sentToday: sentToday,
-    recent: rows.filter(r => r.to === id && r.date >= since).slice(-30).reverse().map(r => ({ id: r.id, from: r.from, fromName: names[r.from] || 'Someone', text: r.text, kind: r.kind, date: r.date, seen: r.seen })),
+    recent: rows.filter(r => r.to === id && r.date >= since).slice(-30).reverse().map(r => ({ id: r.id, from: r.from, fromName: names[r.from] || 'Someone', text: r.text, kind: r.kind, date: r.date, seen: r.seen, crew: crewNm[r.text] || '', response: r.response })),
     board: { recv: top(recv), sent: top(sent), ls: top(ls), claps: top(claps) },
     settings: { spice: me.spice || 0, jokes: !!me.jokes, mute: !!me.mute },
     jokes: readJokes_(id),
@@ -656,9 +657,11 @@ function getCrews(id) {
   id = cleanId_(id); ensureCrews_();
   const names = {}; readPlayers_().forEach(p => names[p.id] = p.name);
   const mine = crewIdsOf_(id), mem = readMembers_();
+  const reqs = readShade_().filter(r => r.kind === 'join' && r.to === id && r.response !== 'yes' && r.response !== 'no');
   return readCrews_().filter(c => mine.indexOf(c.id) >= 0).map(c => {
     const ids = mem.filter(m => m.crew === c.id).map(m => m.id).filter(k => names[k]);
-    return { id: c.id, name: c.name, code: c.code, owner: c.owner === id, n: ids.length, ids: ids, members: ids.map(k => names[k]).sort(), people: ids.map(k => ({ id: k, name: names[k] })).sort((a, b) => a.name.localeCompare(b.name)) };
+    const rq = c.owner === id ? reqs.filter(r => r.text === c.id && ids.indexOf(r.from) < 0).map(r => ({ id: r.id, from: r.from, name: names[r.from] || 'Someone' })) : [];
+    return { reqs: rq, id: c.id, name: c.name, code: c.code, owner: c.owner === id, n: ids.length, ids: ids, members: ids.map(k => names[k]).sort(), people: ids.map(k => ({ id: k, name: names[k] })).sort((a, b) => a.name.localeCompare(b.name)) };
   });
 }
 function createCrew(id, name) {
@@ -715,6 +718,38 @@ function newCrewCode(id, crewId) {
   if (i < 0 || readCrews_()[i].owner !== id) throw new Error('Only the person who started the crew can change its code.');
   crewsSheet_().getRange(i + 2, 3).setValue(newCode_()); MEMO_.crews = null;
   return { crews: getCrews(id) };
+}
+// Ask to join a crew you've seen on the Everyone board. The owner gets a notification and decides.
+function requestJoin(id, crewId, dateKey) {
+  id = cleanId_(id); crewId = String(crewId || ''); dateKey = cleanDate_(dateKey);
+  const c = readCrews_().find(x => x.id === crewId); if (!c) throw new Error('That crew is gone.');
+  if (crewIdsOf_(id).indexOf(crewId) >= 0) throw new Error("You're already in " + c.name + '.');
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    if (readShade_().some(r => r.kind === 'join' && r.from === id && r.text === crewId && r.date >= addDays_(dateKey, -6))) throw new Error('You already asked this week. Hang tight.');
+    const sh = shadeSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 7).setNumberFormat('@');
+    sh.getRange(r, 1, 1, SHADE_HEADERS.length).setValues([[Utilities.getUuid().slice(0, 8), dateKey, id, c.owner, crewId, 'join', '', new Date(), '', '']]);
+  } finally { lock.releaseLock(); }
+  return true;
+}
+// Owner answers a request: yes adds them (and tells them); no just closes it quietly.
+function answerJoin(id, reqId, yes, dateKey) {
+  id = cleanId_(id); reqId = String(reqId || ''); dateKey = cleanDate_(dateKey);
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  let name = '';
+  try {
+    const row = readShade_().find(r => r.id === reqId && r.kind === 'join' && r.to === id); if (!row) throw new Error('That request is gone.');
+    const c = readCrews_().find(x => x.id === row.text); if (!c || c.owner !== id) throw new Error('Only the crew owner can answer that.');
+    name = c.name;
+    shadeSheet_().getRange(row.row, 9, 1, 2).setValues([[new Date(), yes ? 'yes' : 'no']]);
+    if (yes) {
+      addMembers_(c.id, [row.from]);
+      const sh = shadeSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 7).setNumberFormat('@');
+      sh.getRange(r, 1, 1, SHADE_HEADERS.length).setValues([[Utilities.getUuid().slice(0, 8), dateKey, id, row.from, c.id, 'joinok', reqId, new Date(), '', '']]);
+    }
+  } finally { lock.releaseLock(); }
+  return { crews: getCrews(id), shade: getShadeState(id, dateKey) };
 }
 const NOT_MATES_ = "Shade, reactions and dares are just for your crew. Invite them to one first.";
 
@@ -929,7 +964,9 @@ function getPlayerCard(viewerId, targetId, dateKey) {
   }
   const cur = prev && (prev === dateKey || addDays_(prev, 1) === dateKey) ? run : 0;
   const stats = playerStats_(days, dates, targetId, dateKey); stats.cur = cur; stats.best = b.bestStreak;
-  return { id: targetId, name: names[targetId] || (readPlayers_().find(p => p.id === targetId) || {}).name || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
+  const mineC = crewIdsOf_(viewerId), asked = readShade_().filter(r => r.kind === 'join' && r.from === viewerId && r.date >= addDays_(dateKey, -6)).map(r => r.text);
+  const canAsk = viewerId === targetId ? [] : readCrews_().filter(c => crewIdsOf_(targetId).indexOf(c.id) >= 0 && mineC.indexOf(c.id) < 0).map(c => ({ id: c.id, name: c.name, asked: asked.indexOf(c.id) >= 0 }));
+  return { canAsk: canAsk, id: targetId, name: names[targetId] || (readPlayers_().find(p => p.id === targetId) || {}).name || 'Player', badges: b, h2h: h2h, stats: stats, mine: viewerId !== targetId ? playerStats_(days, dates, viewerId, dateKey) : null };
 }
 // Wordle-style stats for one player: Five guess spread, Groups mistake spread, Strands/Mini times + last-14-day trend, last 7 days.
 function playerStats_(days, dates, id, dateKey) {
@@ -1072,7 +1109,7 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin
 };
 function doPost(e) {
   let out;

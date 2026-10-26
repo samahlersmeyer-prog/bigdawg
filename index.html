@@ -372,6 +372,7 @@ input { -webkit-user-select: text; user-select: text; }
 .crewown summary { font-size: 13.5px; font-weight: 700; cursor: pointer; padding: 4px 0; }
 .crewown { display: flex; flex-direction: column; gap: 8px; } .crewown[open] > * + * { margin-top: 8px; }
 .crewown .chip.warn { background: #e53935; color: #fff; border-color: #e53935; }
+.crewreq { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
 .crewcode { font-family: ui-monospace, monospace; font-weight: 800; letter-spacing: 2px; }
 .crewform { display: flex; gap: 6px; width: 100%; } .crewform input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
 .chip { font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); }
@@ -2839,7 +2840,8 @@ function renderCrewBar() {
   const bar = $("crewbar"); if (!bar) return; bar.innerHTML = ""; bar.hidden = !me;
   const chip = (id, label) => { const b = el("button", crewSel === id ? "on" : "", label); b.addEventListener("click", () => switchCrew(id)); bar.appendChild(b); };
   crews.forEach(c => chip(c.id, c.name)); chip("all", "🌎 Everyone");
-  const add = el("button", "add", crews.length ? "＋" : "＋ Join a crew"); add.setAttribute("aria-label", "Manage crews"); add.addEventListener("click", openCrews); bar.appendChild(add);
+  const nreq = crews.reduce((a, c) => a + ((c.reqs || []).length), 0);
+  const add = el("button", "add", nreq ? `🙋 ${nreq}` : crews.length ? "＋" : "＋ Join a crew"); add.setAttribute("aria-label", "Manage crews"); add.addEventListener("click", openCrews); bar.appendChild(add);
   if ($("invite-link") && APP_URL) $("invite-link").textContent = inviteUrl();
   const n = $("crew-note"); if (n) n.textContent = crews.length ? `You're in ${crews.map(c => c.name).join(", ")}. Each crew has its own scoreboard, weekly league and champ.` : "You're not in a crew yet. Start one or join with a code to get your own scoreboard, league and champ.";
 }
@@ -2866,6 +2868,7 @@ function openCrews() {
     const view = el("button", "pill", "Show scoreboard"); view.addEventListener("click", () => { closeModal(); switchCrew(c.id); show("scores"); });
     const leave = el("button", "pill", "Leave"); leave.addEventListener("click", () => { if (leave.dataset.sure) { crewCall("leaveCrew", c.id).then(() => { if (crewSel === c.id) switchCrew(crews[0] ? crews[0].id : "all"); openCrews(); }).catch(e => toast(errMsg(e), 2400)); } else { leave.dataset.sure = 1; leave.textContent = "Tap again to leave"; } });
     btns.append(inv, view, leave); row.append(hd, sm, btns);
+    (c.reqs || []).forEach(q => { const rq = el("div", "crewreq"); rq.append(el("small", null, `🙋 ${q.name} wants in`), joinButtons(q.id, q.name, c.name)); row.appendChild(rq); });
     if (c.owner && c.people) {
       // Owner tools: remove people, rename, fresh code.
       const mg = el("details", "crewown"); mg.append(el("summary", null, "👑 You own this crew: manage members"));
@@ -3186,7 +3189,7 @@ let shade = { inbox: [], sentToday: {}, firedBack: [], board: null, settings: { 
 let shadeLoaded = false;
 function refreshShade() {
   if (!me) return Promise.resolve();
-  return API("getShadeState", me.id, KEY).then(st => { shade = st; shadeLoaded = true; renderShadeBits(); maybeServe(); }).catch(() => {});
+  return API("getShadeState", me.id, KEY).then(st => { shade = st; shadeLoaded = true; renderShadeBits(); maybeServe(); if ((st.recent || []).some(x => (x.kind === "joinok" || x.kind === "join") && !x.seen)) API("getCrews", me.id).then(l => setCrews(l)).catch(() => {}); }).catch(() => {});
 }
 function playerInfo(id) {
   const p = (shade.players || []).find(x => x.id === id) || {};
@@ -3256,10 +3259,12 @@ function renderBell() {
   const n = ((shade.recent || []).filter(x => !x.seen).length) || 0;
   $("bell-n").hidden = !n; $("bell-n").textContent = n > 9 ? "9+" : String(n);
 }
-const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁" };
+const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁", join: "🙋", joinok: "🎉" };
 function noteText(x) {
   if (x.kind === "dare") { const d = parseDare(x.text); return `${x.fromName} dared you to beat ${fmtG(d.game, d.target)} in ${ARC[d.game] ? ARC[d.game].name : "the arcade"}`; }
   if (x.kind === "dareres") { const d = parseDare(x.text), [sc, tg] = d.rest.split("/").map(Number), nm = ARC[d.game] ? ARC[d.game].name : "the arcade"; return betterG(d.game, sc, tg) ? `${x.fromName} beat your ${fmtG(d.game, tg)} in ${nm} with ${fmtG(d.game, sc)}` : `${x.fromName} took your ${nm} dare and fell short (${fmtG(d.game, sc)})`; }
+  if (x.kind === "join") return `${x.fromName} wants into ${x.crew || "your crew"}`;
+  if (x.kind === "joinok") return `You're in ${x.crew || "the crew"}! ${x.fromName} let you in.`;
   if (x.kind === "clap") return `${x.fromName} clapped back`;
   if (x.kind === "fire") return `${x.fromName} fired back: “${x.text}”`;
   return `${x.fromName} threw shade: “${x.text}”`;
@@ -3271,7 +3276,9 @@ function openBell() {
     const r = el("div", "note-row" + (x.seen ? "" : " new")), ic = el("span", "ni");
     if (x.kind === "clap" && isDawg(x.text)) ic.appendChild(emo(x.text, 22)); else ic.textContent = x.kind === "clap" ? x.text : NOTE_ICON[x.kind] || "🎯";
     const tx = el("div"); tx.append(document.createTextNode(noteText(x)), el("small", null, x.date === KEY ? "Today" : x.date));
-    r.append(ic, tx); list.appendChild(r);
+    r.append(ic, tx);
+    if (x.kind === "join" && x.response !== "yes" && x.response !== "no") tx.appendChild(joinButtons(x.id, x.fromName, x.crew));
+    list.appendChild(r);
   });
   const set = el("div", "col");
   [["shade", "Pop up when someone throws shade"], ["dares", "Pop up for dares and when someone beats your score"]].forEach(([k, label]) => {
@@ -3716,6 +3723,22 @@ function statsBlock(s, mine, name) {
   box.appendChild(form);
   return box;
 }
+// Crew join requests: the owner answers from the bell or the Crews screen.
+function joinButtons(reqId, who, crew) {
+  const row = el("div", "inrow"), yes = el("button", "pill solid", "Let them in"), no = el("button", "pill", "No thanks");
+  const go = ok => { yes.disabled = no.disabled = true; API("answerJoin", me.id, reqId, ok, KEY).then(r => { setCrews(r.crews); shade = r.shade; renderBell(); row.replaceWith(el("small", null, ok ? `✓ ${who} is in ${crew || "the crew"}` : "Request closed")); if (ok) toast(`${who} joined ${crew || "the crew"} 🐶`, 2000); }).catch(e => { yes.disabled = no.disabled = false; toast(errMsg(e), 2400); }); };
+  yes.addEventListener("click", e => { e.stopPropagation(); go(true); }); no.addEventListener("click", e => { e.stopPropagation(); go(false); });
+  row.append(yes, no); return row;
+}
+function askButtons(c) {
+  const box = el("div", "col");
+  (c.canAsk || []).forEach(k => {
+    const b = el("button", k.asked ? "pill" : "pill solid", k.asked ? `Asked to join ${k.name} ✓` : `🙋 Ask to join ${k.name}`); b.disabled = !!k.asked;
+    b.addEventListener("click", () => { b.disabled = true; API("requestJoin", me.id, k.id, KEY).then(() => { b.textContent = `Asked to join ${k.name} ✓`; b.className = "pill"; toast("Request sent. The crew owner decides.", 2200); }).catch(e => { b.disabled = false; toast(errMsg(e), 2400); }); });
+    box.appendChild(b);
+  });
+  return box;
+}
 function openCard(id) {
   if (!me) return;
   const p = playerInfo(id), isMe = id === me.id;
@@ -3732,6 +3755,7 @@ function openCard(id) {
       d.append(el("b", null, icon), txt); grid.appendChild(d);
     });
     body.appendChild(grid);
+    if (c.canAsk && c.canAsk.length) body.appendChild(askButtons(c));
     if (c.stats) body.appendChild(statsBlock(c.stats, c.mine, isMe ? null : c.name));
     if (c.h2h) {
       const h = c.h2h, tot = [0, 1, 2].map(i => h.five[i] + h.groups[i] + h.mini[i] + h.strands[i]);
