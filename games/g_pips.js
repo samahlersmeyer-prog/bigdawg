@@ -38,7 +38,9 @@
     info(d) {
       const r = this.rec(d) || {}, t = Math.floor(r.el || 0), mm = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, nm = DIFF[d][0][0] + DIFF[d][0].slice(1).toLowerCase();
       const done = [0, 1, 2].filter(k => (this.rec(k) || {}).done).length;
-      return { score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Pips #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
+      const nx = [d + 1, d + 2, d - 1, d - 2].map(k => (k + 3) % 3).find(k => k !== d && !(this.rec(k) || {}).done);
+      const next = nx === undefined ? null : { label: `Play ${DIFF[nx][0][0] + DIFF[nx][0].slice(1).toLowerCase()} →`, go: () => this.open(G, nx) };
+      return { next, score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Pips #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
     },
     open(G, d) {
       const s = G.s, r = this.rec(d);
@@ -153,8 +155,9 @@
           }
           if (s.phase === "review") {
             const by = Math.min(G.H - 56, ey + 134), bw = (G.W - 40) / 2;
-            s.btns.push(Object.assign(G.pill(c, 16, by, bw, 46, "All puzzles"), { k: "menu" }));
-            s.btns.push(Object.assign(G.pill(c, 24 + bw, by, bw, 46, `Results · ${s.final} pts`, true), { k: "res" }));
+            const nx = this.info(s.d).next;
+            s.btns.push(Object.assign(G.pill(c, 16, by, bw, 46, `Results · ${s.final} pts`), { k: "res" }));
+            s.btns.push(Object.assign(G.pill(c, 24 + bw, by, bw, 46, nx ? nx.label : "All puzzles", true), { k: nx ? "next" : "menu" }));
           }
         } else if (s.phase === "play") {
           // tray
@@ -178,6 +181,7 @@
       if (s.phase === "review") {
         if (b.board) { const [ox, oy, cs] = b.board, k = Math.floor((y - oy) / cs) * s.p.w + Math.floor((x - ox) / cs); s.rsel = s.reg[k] !== undefined ? (s.rsel === s.reg[k] ? -1 : s.reg[k]) : -1; return; }
         if (b.k === "res") return G.results(this.info(s.d));
+        if (b.k === "next") { const nx = this.info(s.d).next; if (nx) nx.go(); return; }
         if (b.k === "menu") { s.phase = "pick"; s.rsel = -1; }
         return;
       }

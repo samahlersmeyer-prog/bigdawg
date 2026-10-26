@@ -44,7 +44,9 @@
     info(d) {
       const r = this.rec(d) || {}, t = Math.floor(r.el || 0), mm = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, nm = DIFF[d][0][0] + DIFF[d][0].slice(1).toLowerCase();
       const done = [0, 1, 2].filter(k => (this.rec(k) || {}).done).length;
-      return { score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Sudoku #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
+      const nx = [d + 1, d + 2, d - 1, d - 2].map(k => (k + 3) % 3).find(k => k !== d && !(this.rec(k) || {}).done);
+      const next = nx === undefined ? null : { label: `Play ${DIFF[nx][0][0] + DIFF[nx][0].slice(1).toLowerCase()} →`, go: () => this.open(G, nx) };
+      return { next, score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Sudoku #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
     },
     open(G, d) {
       const s = G.s, r = this.rec(d);

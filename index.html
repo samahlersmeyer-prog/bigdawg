@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="500c1cd346";</script>
+<script>window.GAMES_V="6a5a9e0298";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4141,7 +4141,8 @@ function puzzleResults(game, info) {
     list.slice(0, 10).forEach((x, i) => { const li = el("li", me && x.id === me.id ? "me" : ""); const nm = el("button", "nm", x.name); nm.dataset.card = x.id; nm.style.textAlign = "left"; li.append(el("span", "rk", i + 1), nm, el("span", "ct", `${x.n} pts`)); ol.appendChild(li); });
   };
   fill();
-  const back = el("button", "pill solid", "Back to The Den"); back.addEventListener("click", () => { closeModal(); show("den"); });
+  if (info.next) { const nb = el("button", "pill solid", info.next.label); nb.addEventListener("click", () => { closeModal(); info.next.go(); }); nodes.push(nb); }
+  const back = el("button", info.next ? "pill" : "pill solid", "Back to The Den"); back.addEventListener("click", () => { closeModal(); show("den"); });
   nodes.push(back);
   if (info.share) {
     const share = el("button", "pill", "Copy results"), ta = el("textarea", "copybox"); ta.rows = 5; ta.readOnly = true; ta.hidden = true;
