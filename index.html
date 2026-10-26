@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="d517a1b760";</script>
+<script>window.GAMES_V="243068c648";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3846,7 +3846,7 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   darts: [500, 900, 1300], bowl: [100, 150, 200], punch: [500, 3000, 6000], volley: [1000, 2000, 3000], swim: [1500, 3000, 4000], shred: [1000, 2500, 4500],
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
-  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200],
+  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200], crazy: [150, 250, 330],
   };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
@@ -4097,7 +4097,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -4629,6 +4629,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_archery.js", "key": "archery", "name": "Bow Wow", "icon": "🏹", "blurb": "Archery. 10 arrows, mind the wind.", "how": "Put your thumb down and drag to move the crosshair onto the target, then let go to shoot. The wind pushes your arrow (watch the flag), and if you hold too long your aim starts to wobble. 10 arrows, bullseye is 10. Perfect is 100.", "cat": "sports", "max": 100},
 {"file": "g_blocks.js", "key": "blocks", "name": "Block Dawg", "icon": "🧱", "blurb": "Stack the blocks. Clear the lines.", "how": "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!", "max": 9999999},
 {"file": "g_bowl.js", "key": "bowl", "name": "Bowl-a-Dawg", "icon": "🎳", "blurb": "10 frames. Swipe to roll. Curve it.", "how": "Swipe up from the bottom to roll. Where you start = where you stand, the swipe's direction = your aim, bend the swipe to hook it, flick faster for more speed. Hit the pocket (just beside the head pin) for strikes. 10 frames, real scoring, 300 is perfect.", "cat": "sports", "max": 300},
+{"file": "g_crazy.js", "key": "crazy", "name": "Crazy Dawgs", "icon": "🎴", "blurb": "The color-matching card game vs 3 pups.", "how": "You vs Rex, Biscuit and Duke. Match the top card by color or by number/symbol. Skip ⊘ skips the next player, Reverse ⇄ flips direction, +2 makes the next player draw 2 and lose their turn, Wild lets you pick the color, Wild +4 picks the color and makes the next player draw 4. Can't play? Tap the deck to draw one (play it if it fits). Down to 2 cards? Tap BARK! before you play, or get caught and draw 2. Win a hand to score the cards left in everyone's hands (numbers = face value, action cards 20, wilds 50). First to 200 wins. Score: your points, +100 for winning the match.", "cat": "den", "max": 2000},
 {"file": "g_crib.js", "key": "crib", "name": "Dawg Cribbage", "icon": "🎯", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "cat": "den", "max": 500},
 {"file": "g_cross.js", "key": "cross", "name": "Dawg Crossing", "icon": "🚗", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
