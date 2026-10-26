@@ -828,9 +828,9 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   duck: 99999, derby: 99999, dawgball: 999, kickret: 9999, hoops: 9999, pks: 9999, golf: 72, darts: 9999, bowl: 300,
   punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
-  sgroups: 1000, hive: 999, sudoku: 3000 };
-const DEN_DAILY = { sgroups: true, hive: true, sudoku: true }; // daily Den puzzles get a today-only board too
-const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'sgroups', 'hive', 'sudoku'].indexOf(g) < 0); // long or retired games sit out
+  sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000 };
+const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true }; // daily Den puzzles get a today-only board too
+const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'sgroups', 'hive', 'sudoku', 'pips'].indexOf(g) < 0); // long or retired games sit out
 const ARCADE_LOW = { golf: true, golf18: true }; // lower score wins (strokes)
 const arcBetter_ = (g, a, b) => ARCADE_LOW[g] ? (a > 0 && (!(b > 0) || a < b)) : a > b; // game -> highest believable score
 // A missing game means an old app version (Zoomies only). An unknown game is refused, so a score can never
