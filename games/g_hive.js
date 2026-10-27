@@ -28,6 +28,23 @@
     },
     info(G) { const s = G.s, r = RANKS[this.rank(s)][1]; return { score: s.score, title: r + "!", sub: `${s.score} pts · ${s.found.length} word${s.found.length === 1 ? "" : "s"}${s.found.some(w => new Set(w).size === 7) ? " · pangram ✓" : ""}. Keep going any time today.`, share: `Dawg Hive #${dayN() + 1}: ${r} · ${s.score} pts` }; },
     leave(G) { this.post(G, false); },
+    // Yesterday's answers: every word, with the ones you found checked and pangrams in gold.
+    yesterday() {
+      const n = dayN() - 1, [L, c] = PUZ[((n % PUZ.length) + PUZ.length) % PUZ.length], [y, m, d] = KEY.split("-").map(Number), yd = new Date(y, m - 1, d - 1);
+      const yk = `${yd.getFullYear()}-${String(yd.getMonth() + 1).padStart(2, "0")}-${String(yd.getDate()).padStart(2, "0")}`;
+      const rec = store.get("bdd:den:hive:" + yk + ":" + (me ? me.id : "")), found = new Set(rec && rec.found || []);
+      const words = c.split(" ").sort(), got = words.filter(w => found.has(w)).length, extra = [...found].filter(w => !words.includes(w));
+      const max = words.reduce((a, w) => a + pts(w), 0);
+      const letters = el("p", "sub"); letters.innerHTML = `<b style="color:#d4a800">${L[0].toUpperCase()}</b> ${L.slice(1).toUpperCase().split("").join(" ")}`;
+      const list = el("div"); list.style.cssText = "columns:2;column-gap:18px;text-align:left;font-size:15px;line-height:1.75;width:100%";
+      words.forEach(w => { const pg = new Set(w).size === 7, row = el("div", null, (found.has(w) ? "✓ " : "") + w[0].toUpperCase() + w.slice(1));
+        row.style.cssText = `break-inside:avoid;${pg ? "color:#d4a800;font-weight:700;" : ""}${found.has(w) ? "" : "opacity:.55;"}`; list.appendChild(row); });
+      const nodes = [el("h2", null, "Yesterday's answers"), letters,
+        el("p", "sub", rec ? `You found ${got} of ${words.length} words${extra.length ? ` (+${extra.length} bonus)` : ""} · ${rec.score || 0} of ${max} pts` : `${words.length} words · ${max} pts. You didn't play yesterday.`), list];
+      if (extra.length) nodes.push(el("p", "sub", "Your bonus words: " + extra.sort().join(", ")));
+      nodes.push(el("p", "sub", "✓ = you found it · gold = pangram"));
+      openModal(nodes);
+    },
     say(G, m, bad) { const s = G.s; s.msg = m; s.msgT = 1.4; if (bad) { s.shake = 0.35; G.buzz(); } },
     enter(G) {
       const s = G.s, w = s.cur; if (!w) return; s.cur = "";
@@ -59,9 +76,9 @@
       c.strokeStyle = dk ? "#3a3a3c" : "#dcdcdc"; c.lineWidth = 1; rr(c, 12, 50, G.W - 24, 40, 8); c.stroke();
       c.textAlign = "left"; c.fillStyle = ink; c.font = `400 14px ${G.UI}`;
       const words = s.found.slice().reverse(); let line = s.found.length ? "" : "Your words…", i = 0;
-      for (; i < words.length; i++) { const nx = (line ? line + "  " : "") + words[i][0].toUpperCase() + words[i].slice(1); if (c.measureText(nx).width > G.W - 120) break; line = nx; }
+      for (; i < words.length; i++) { const nx = (line ? line + "  " : "") + words[i][0].toUpperCase() + words[i].slice(1); if (c.measureText(nx).width > G.W - 150) break; line = nx; }
       c.fillStyle = s.found.length ? ink : mute; c.fillText(line, 24, 70);
-      c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText(`${s.found.length} ▾`, G.W - 24, 70);
+      c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText(`${s.found.length} of ${s.common.size} ▾`, G.W - 24, 70);
       s.btns.push({ x: 12, y: 50, w: G.W - 24, h: 40, k: "list" });
       // current word
       const wy = 124, off = s.shake > 0 ? Math.sin(s.shake * 70) * 6 : 0, up = s.cur.toUpperCase();
@@ -83,13 +100,15 @@
       s.btns.push(Object.assign(G.pill(c, G.W / 2 - pw * 1.5 - 14, yb, pw, 48, "Delete"), { k: "del" }));
       s.btns.push(Object.assign(G.pill(c, G.W / 2 - 24, yb, 48, 48, "⟲"), { k: "mix" }));
       s.btns.push(Object.assign(G.pill(c, G.W / 2 + pw * 0.5 + 14, yb, pw, 48, "Enter"), { k: "ent" }));
-      const rw = 150; s.btns.push(Object.assign(G.pill(c, G.W / 2 - rw / 2, Math.min(G.H - 56, yb + 64), rw, 40, "Rankings"), { k: "rank" }));
+      const rw = Math.min(150, (G.W - 44) / 2), ry = Math.min(G.H - 56, yb + 64);
+      s.btns.push(Object.assign(G.pill(c, G.W / 2 - rw - 6, ry, rw, 40, "Rankings"), { k: "rank" }));
+      s.btns.push(Object.assign(G.pill(c, G.W / 2 + 6, ry, rw, 40, "Yesterday"), { k: "yday" }));
       // the full word list (tap the words bar), like the real thing
       if (s.open) {
         const x0 = 12, y0 = 50, w = G.W - 24, h = G.H - 62;
         c.fillStyle = dk ? "#1c1c1e" : "#fff"; c.strokeStyle = dk ? "#3a3a3c" : "#dcdcdc"; c.lineWidth = 1; rr(c, x0, y0, w, h, 8); c.fill(); c.stroke();
         c.textAlign = "left"; c.textBaseline = "middle"; c.fillStyle = ink; c.font = `600 15px ${G.UI}`;
-        c.fillText(`You have found ${s.found.length} word${s.found.length === 1 ? "" : "s"}`, x0 + 14, y0 + 22);
+        c.fillText(`You have found ${s.found.length} of ${s.common.size} words`, x0 + 14, y0 + 22);
         c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText("▴ close", x0 + w - 14, y0 + 22);
         c.fillStyle = track; c.fillRect(x0 + 12, y0 + 40, w - 24, 1);
         const words = s.found.slice().sort(), avail = h - 60;
@@ -111,6 +130,7 @@
       else if (b.k === "mix") { const o = s.outer; for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } }
       else if (b.k === "ent") this.enter(G);
       else if (b.k === "rank") this.post(G, true);
+      else if (b.k === "yday") this.yesterday();
     },
     onKey(G, k, d) {
       if (!d) return; const s = G.s;
