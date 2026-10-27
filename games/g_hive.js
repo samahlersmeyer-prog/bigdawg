@@ -61,7 +61,8 @@
       const words = s.found.slice().reverse(); let line = s.found.length ? "" : "Your words…", i = 0;
       for (; i < words.length; i++) { const nx = (line ? line + "  " : "") + words[i][0].toUpperCase() + words[i].slice(1); if (c.measureText(nx).width > G.W - 120) break; line = nx; }
       c.fillStyle = s.found.length ? ink : mute; c.fillText(line, 24, 70);
-      c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText(`${s.found.length} word${s.found.length === 1 ? "" : "s"}`, G.W - 24, 70);
+      c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText(`${s.found.length} ▾`, G.W - 24, 70);
+      s.btns.push({ x: 12, y: 50, w: G.W - 24, h: 40, k: "list" });
       // current word
       const wy = 124, off = s.shake > 0 ? Math.sin(s.shake * 70) * 6 : 0, up = s.cur.toUpperCase();
       c.font = `700 30px ${G.UI}`; c.textAlign = "left"; let x0 = G.W / 2 - c.measureText(up).width / 2 + off;
@@ -83,9 +84,28 @@
       s.btns.push(Object.assign(G.pill(c, G.W / 2 - 24, yb, 48, 48, "⟲"), { k: "mix" }));
       s.btns.push(Object.assign(G.pill(c, G.W / 2 + pw * 0.5 + 14, yb, pw, 48, "Enter"), { k: "ent" }));
       const rw = 150; s.btns.push(Object.assign(G.pill(c, G.W / 2 - rw / 2, Math.min(G.H - 56, yb + 64), rw, 40, "Rankings"), { k: "rank" }));
+      // the full word list (tap the words bar), like the real thing
+      if (s.open) {
+        const x0 = 12, y0 = 50, w = G.W - 24, h = G.H - 62;
+        c.fillStyle = dk ? "#1c1c1e" : "#fff"; c.strokeStyle = dk ? "#3a3a3c" : "#dcdcdc"; c.lineWidth = 1; rr(c, x0, y0, w, h, 8); c.fill(); c.stroke();
+        c.textAlign = "left"; c.textBaseline = "middle"; c.fillStyle = ink; c.font = `600 15px ${G.UI}`;
+        c.fillText(`You have found ${s.found.length} word${s.found.length === 1 ? "" : "s"}`, x0 + 14, y0 + 22);
+        c.textAlign = "right"; c.fillStyle = mute; c.font = `600 13px ${G.UI}`; c.fillText("▴ close", x0 + w - 14, y0 + 22);
+        c.fillStyle = track; c.fillRect(x0 + 12, y0 + 40, w - 24, 1);
+        const words = s.found.slice().sort(), avail = h - 60;
+        let cols = 2, fs = 15, rowH = 25; while (Math.ceil(words.length / cols) * rowH > avail && cols < 4) { cols++; fs = cols === 3 ? 14 : 12.5; rowH = cols === 3 ? 22 : 19; }
+        const per = Math.max(1, Math.floor(avail / rowH)), cw = (w - 28) / cols;
+        words.forEach((wd, i) => { const col = Math.floor(i / Math.ceil(words.length / cols)), row = i % Math.ceil(words.length / cols); if (row >= per) return;
+          const pg = new Set(wd).size === 7; c.textAlign = "left"; c.font = `${pg ? 700 : 400} ${fs}px ${G.UI}`; c.fillStyle = pg ? "#d4a800" : ink;
+          c.fillText(wd[0].toUpperCase() + wd.slice(1), x0 + 14 + col * cw, y0 + 56 + row * rowH + rowH / 2, cw - 6); });
+        if (!words.length) { c.fillStyle = mute; c.font = `400 14px ${G.UI}`; c.fillText("Nothing yet. Start tapping letters!", x0 + 14, y0 + 70); }
+        s.btns.unshift({ x: x0, y: y0, w, h, k: "list" });
+      }
     },
     tap(G, x, y) {
       const s = G.s, b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return;
+      if (b.k === "list") { s.open = !s.open; return; }
+      if (s.open) return;
       if (b.ch) { if (s.cur.length < 19) s.cur += b.ch; s.flash = b.i; s.flashT = 0.12; }
       else if (b.k === "del") s.cur = s.cur.slice(0, -1);
       else if (b.k === "mix") { const o = s.outer; for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } }
