@@ -1017,6 +1017,9 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800 };
 const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true }; // daily Den puzzles get a today-only board too
 const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips'].indexOf(g) < 0); // long or retired games sit out
+// Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
+const SPORTS_GAMES = ['airhockey', 'archery', 'bowl', 'darts', 'dawgball', 'derby', 'duck', 'fg', 'golf', 'hoops', 'kickret', 'pks', 'pool', 'punch', 'shred', 'swim', 'tennis', 'volley'];
+const GOTD_POOLS = { arcade: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) < 0), sports: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) >= 0), den: ['crazy', 'rummy', 'euchre', 'crib'] };
 const ARCADE_LOW = { golf: true, golf18: true }; // lower score wins (strokes)
 const arcBetter_ = (g, a, b) => ARCADE_LOW[g] ? (a > 0 && (!(b > 0) || a < b)) : a > b; // game -> highest believable score
 // A missing game means an old app version (Zoomies only). An unknown game is refused, so a score can never
@@ -1073,12 +1076,16 @@ function getArcade(id, dateKey) {
     games[g] = { week: week.slice(0, 10), all: all.slice(0, 10), myBest: mine ? mine.n : 0, today: DEN_DAILY[g] ? bestBy(rows.filter(r => r.date === dateKey), g).slice(0, 5) : undefined };
   });
   // Game of the Day: one arcade/sports game a day gets its own leaderboard that resets at midnight.
-  const pick = dk => { let h = 7; for (let i = 0; i < dk.length; i++) h = (h * 31 + dk.charCodeAt(i)) >>> 0; return GOTD_POOL[h % GOTD_POOL.length]; };
-  const tg = pick(dateKey), yk = addDays_(dateKey, -1), yg = pick(yk);
-  const gotd = { game: tg, board: bestBy(rowsAll.filter(r => (r.game || 'zoomies') === tg && r.date === dateKey), tg).slice(0, 5),
-    y: { game: yg, win: bestBy(rowsAll.filter(r => (r.game || 'zoomies') === yg && r.date === yk), yg)[0] || null } };
+  const yk = addDays_(dateKey, -1), gotds = {};
+  Object.keys(GOTD_POOLS).forEach(cat => {
+    const pool = GOTD_POOLS[cat];
+    const pick = dk => { let h = cat === 'arcade' ? 7 : cat === 'sports' ? 11 : 13; const k = cat + dk; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return pool[h % pool.length]; };
+    const tg = pick(dateKey), yg = pick(yk);
+    gotds[cat] = { game: tg, cat: cat, board: bestBy(rowsAll.filter(r => (r.game || 'zoomies') === tg && r.date === dateKey), tg).slice(0, 5),
+      y: { game: yg, win: bestBy(rowsAll.filter(r => (r.game || 'zoomies') === yg && r.date === yk), yg)[0] || null } };
+  });
   const z = games.zoomies;
-  return { games: games, week: z.week, all: z.all, myBest: z.myBest, weekStart: ws, gotd: gotd };
+  return { games: games, week: z.week, all: z.all, myBest: z.myBest, weekStart: ws, gotd: gotds.arcade, gotds: gotds };
 }
 // Dare a friend to beat a score. Up to 3 dares per friend per day.
 function sendDare(fromId, toId, dateKey, score, game) {

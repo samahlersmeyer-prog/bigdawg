@@ -2998,7 +2998,7 @@ function renderScores() {
     const nm = el("button", "pname tap", x.name); nm.dataset.card = x.id;
     head.append(el("span", "rank" + (idx === 0 && doneCount(x) ? " r1" : ""), idx + 1), nm);
     if (stats && stats.crown.some(c => c.id === x.id)) { const c = el("span", "crown", "👑"); c.title = "Yesterday's winner"; head.appendChild(c); }
-    const gy = gotd(); if (gy && gy.y && gy.y.win && gy.y.win.id === x.id) { const c = el("span", "crown", "🏆"); c.title = "Won yesterday's Game of the Day"; head.appendChild(c); }
+    if (gotds().some(gy => gy.y && gy.y.win && gy.y.win.id === x.id)) { const c = el("span", "crown", "🏆"); c.title = "Won yesterday's Game of the Day"; head.appendChild(c); }
     if (stats && stats.week.length && stats.week[0].id === x.id && stats.week[0].pts > 0) { const d = emo(":dawgW:", 20); d.classList.add("lead-dawg"); d.title = "Leading the week"; head.appendChild(d); }
     if (x.id === me.id) head.appendChild(el("span", "you", "You"));
     const sk = el("span", "streak", x.s ? `🔥 ${x.s}-day streak` + (x.z ? " 🧊" : "") : ""); if (x.z) sk.title = "Streak freeze used this week";
@@ -3870,7 +3870,9 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
 // Game of the Day (from the server): today's game, its daily board, and yesterday's champ.
-const gotd = () => arcade && arcade.gotd && ARC[arcade.gotd.game] ? arcade.gotd : null;
+const gotds = () => arcade ? (arcade.gotds ? Object.values(arcade.gotds) : arcade.gotd ? [arcade.gotd] : []).filter(g => g && ARC[g.game]) : [];
+const gotd = game => gotds().find(g => g.game === game) || null;           // the Game of the Day entry for this game, if it is one
+const gotdFor = cat => gotds().find(g => (g.cat || arcCat(g.game)) === cat) || null;
 // Start screen for a game: your best, any dares waiting for this game, and a Go button.
 function arcStart(game, panel, onGo) {
   ownLocal(); panel.innerHTML = ""; panel.hidden = false;
@@ -3880,7 +3882,7 @@ function arcStart(game, panel, onGo) {
   const md = medalOf(game, aBest[game]);
   panel.append(el("p", null, `Your best: ${aBest[game] ? fmtG(game, aBest[game]) + (md ? " " + MEDAL_ICON[md] : "") : "none yet"}`));
   if (MEDALS[game]) panel.append(el("p", "medals", MEDALS[game].map((v, i) => `${MEDAL_ICON[i + 1]} ${fmtG(game, v)}`).join("   ")));
-  const gd = gotd(); if (gd && gd.game === game) panel.append(el("p", "gotdline", gd.board.length ? `🎯 Game of the Day! Leader: ${gd.board[0].name} ${fmtG(game, gd.board[0].n)}` : "🎯 Game of the Day! Nobody's played it yet today."));
+  const gd = gotd(game); if (gd) panel.append(el("p", "gotdline", gd.board.length ? `🎯 Game of the Day! Leader: ${gd.board[0].name} ${fmtG(game, gd.board[0].n)}` : "🎯 Game of the Day! Nobody's played it yet today."));
   if (!dare) aDares.filter(d => d.game === game).slice(-3).forEach(d => {
     const row = el("div", "zdare"); row.append(el("span", null, `${d.fromName} dared you: beat ${fmtG(game, d.target)}`));
     const b = el("button", "pill", "Take it"); b.addEventListener("click", e => { e.stopPropagation(); aDare = d; arcStart(game, panel, onGo); });
@@ -3902,7 +3904,7 @@ function soClose(game, score, prev) {
     if (!above.length) lines.push(`👑 That beats everyone. You're #1!`);
     else { const t = above[above.length - 1]; lines.push(`${gap(score, t.n)}${low ? " fewer strokes" : " more"} to pass ${t.name} for #${above.length}.`); }
   }
-  const gd = gotd(); if (gd && gd.game === game && score > 0) {
+  const gd = gotd(game); if (gd && score > 0) {
     const lead = gd.board.filter(x => !me || x.id !== me.id)[0];
     lines.push(!lead || betterG(game, score, lead.n) ? "🎯 You lead today's Game of the Day!" : `🎯 Today's leader: ${lead.name} ${fmtG(game, lead.n)}`);
   }
@@ -4142,7 +4144,7 @@ function renderDenPuz() {
     const [st, done, line] = denStatus(k), td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
     const b = el("button", "gcard c-den" + i); b.dataset.play = k;
     const ic = el("span", "gicon den"); ic.appendChild(emo(ARC[k].icon, 36));
-    const tx = el("span", "gtext"); tx.append(el("b", null, ARC[k].name), el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: /, ""), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
+    const tx = el("span", "gtext"); tx.append(el("b", null, ARC[k].name), el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, (m, ch) => ch.toUpperCase()), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
     b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st)); box.appendChild(b);
   });
 }
@@ -4180,7 +4182,7 @@ function renderArcHub(cat) {
     row.append(b); box.appendChild(row);
   });
   // Compact 3-across grid: icon, name, your best. Badges: 🎯 dares waiting, ▶ a saved game to continue.
-  const gd = cat === "den" ? null : gotd();
+  const gd = gotdFor(cat);
   if (gd) {
     const card = el("button", "gotd"); card.dataset.play = gd.game;
     const lead = gd.board[0];
