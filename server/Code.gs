@@ -898,6 +898,49 @@ function getStats(id, dateKey) {
   };
 }
 
+// Week in Review: last Mon-Sun for the crew being viewed. Podium, your finish and daily points, your best moment, awards.
+function getWeekReview(id, dateKey) {
+  id = cleanId_(id); dateKey = cleanDate_(dateKey);
+  const names = scopedNames_(), days = scopedScores_(), start = addDays_(weekStart_(dateKey), -7), end = addDays_(start, 6);
+  const table = weekTable_(days, start, end, names, true);
+  const mi = table.findIndex(x => x.id === id), mine = mi >= 0 ? table[mi] : null;
+  const DN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], dayName = d => { let i = 0, x = start; while (x < d && i < 6) { x = addDays_(x, 1); i++; } return DN[i]; };
+  const mmss = s => Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  // best moment: fastest clean Mini / Strands vs everyone that week, Five in 1-2, perfect Groups, best day
+  let moment = null;
+  if (mine) {
+    const minis = [], strs = []; let five = null, perf = 0;
+    for (let d = start; d <= end; d = addDays_(d, 1)) {
+      const day = days[d] || {};
+      Object.keys(day).forEach(k => { const x = day[k];
+        if (x.c && !x.c.k) minis.push({ k: k, t: x.c.t, d: d });
+        if (x.s && !x.s.h) strs.push({ k: k, t: x.s.t, d: d }); });
+      const m = day[id]; if (!m) continue;
+      if (m.f && m.f.w && m.f.n <= 2 && (!five || m.f.n < five.n)) five = { n: m.f.n, d: d };
+      if (m.g && m.g.w && m.g.m === 0) perf++;
+    }
+    const place = (list, icon, game) => {
+      list.sort((a, b) => a.t - b.t); const i = list.findIndex(x => x.k === id); if (i < 0 || i > 2) return null;
+      const b = list[i], other = list.find(x => x.k !== id);
+      const rank = list.filter(x => x.t < b.t).length;
+      return { score: 10 - rank * 3, text: `${icon} ${game} in ${mmss(b.t)} on ${dayName(b.d)}${game === 'Strands' ? ', no hints' : ''}. ` + (rank === 0 ? 'Fastest anyone went all week.' : `${rank === 1 ? '2nd' : '3rd'} fastest all week${other ? `, ${b.t - other.t}s off ${names[other.k]}` : ''}.`) };
+    };
+    const opts = [place(minis.slice(), '⚡', 'Mini'), place(strs.slice(), '🎯', 'Strands')].filter(Boolean);
+    if (five) opts.push({ score: five.n === 1 ? 11 : 6, text: five.n === 1 ? `🤯 Five in ONE guess on ${dayName(five.d)}.` : `🧠 Five in 2 guesses on ${dayName(five.d)}.` });
+    if (perf >= 4) opts.push({ score: 5 + perf / 2, text: `💎 ${perf} perfect Groups. Not a single mistake on ${perf} days.` });
+    const bd = mine.by.slice().sort((a, b) => b.p - a.p)[0];
+    if (bd) opts.push({ score: 3, text: `📈 Your best day: ${bd.p} pts on ${dayName(bd.d)}.` });
+    opts.sort((a, b) => b.score - a.score); moment = opts[0] ? opts[0].text : null;
+  }
+  let games = 0; for (let d = start; d <= end; d = addDays_(d, 1)) Object.keys(days[d] || {}).forEach(k => { if (!names[k]) return; const x = days[d][k]; games += ['f', 'g', 'c', 's'].filter(g => x[g]).length; });
+  const crew = CREW_ && CREW_ !== 'all' ? (readCrews_().find(c => c.id === CREW_) || {}).name || '' : '';
+  return {
+    start: start, end: end, crew: crew, players: table.length, games: games,
+    podium: table.slice(0, 3).map(x => ({ id: x.id, name: x.name, pts: x.pts })),
+    me: mine ? { rank: mi + 1, pts: mine.pts, by: mine.by, days: mine.days, above: mi > 0 ? { name: table[mi - 1].name, pts: table[mi - 1].pts } : null, below: mi === 0 && table[1] ? { name: table[1].name, pts: table[1].pts } : null } : null,
+    moment: moment, awards: weekAwards_(days, start, end, names)
+  };
+}
 // Long-run puzzle standings. Like the weekly league, only your best days count, so a few days off (or joining late)
 // doesn't bury you: this month = best 20 days, this year = best 200 days. All time ranks by points per day played.
 function getAllTime(id, dateKey) {
@@ -1135,7 +1178,7 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview
 };
 function doPost(e) {
   let out;

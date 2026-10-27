@@ -361,6 +361,21 @@ input { -webkit-user-select: text; user-select: text; }
 .shadebtn.off { opacity: 0.4; }
 .shadebtn:active { transform: scale(0.92); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wir{display:flex;flex-direction:column;gap:12px;text-align:left;width:100%}
+.wir .kick{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;text-align:center;padding:0 26px}
+.wir h2{margin:0;text-align:center;font-family:var(--title);font-size:28px;line-height:1.1}
+.wir .pod{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;gap:8px;margin-top:4px}
+.wir .pod div{display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:700;font-size:14px;min-width:0}
+.wir .pod div > span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wir .pod i{width:100%;border-radius:10px 10px 4px 4px;background:var(--raise);display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-style:normal;font-size:22px}
+.wir .pod small{color:var(--muted);font-weight:600}
+.wir .card{background:var(--raise);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.wir .card b.big{font-size:20px} .wir .lbl{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.wir .bars{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:96px}
+.wir .bars>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%;font-size:11px;color:var(--muted);font-weight:700}
+.wir .bars em{display:block;width:100%;border-radius:5px;background:#c9c9c9} .wir .bars em.in{background:#2e9e4f}
+.wir .aw{display:grid;grid-template-columns:1fr 1fr;gap:8px} .wir .aw div{background:var(--raise);border-radius:12px;padding:9px 10px;font-size:12.5px;line-height:1.3}
+.wir .aw b{display:flex;align-items:center;gap:4px;font-size:13.5px} .wir .moment{font-size:15px;font-weight:600}
 .crewbar { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; flex: none; }
 .crewbar::-webkit-scrollbar { display: none; }
 .crewbar button { flex: none; font-size: 13.5px; font-weight: 700; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); white-space: nowrap; }
@@ -816,6 +831,7 @@ input { -webkit-user-select: text; user-select: text; }
         <div class="sechead"><h2>This week</h2><span id="league-range"></span></div>
         <ol class="rank-list" id="league-list"></ol>
         <p class="note" id="league-champ"></p>
+        <button class="pill" id="wir-open" style="width:100%">📅 Last week in review</button>
         <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you (tap anyone's points to see which days counted). Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
       </div>
       <div class="box" id="alltime">
@@ -2916,9 +2932,56 @@ function joinPending() {
   store.del("bdd:pendcrew");
   API("joinCrew", me.id, code).then(r => { setCrews(r.crews); switchCrew(r.crew); toast(`You joined ${r.name}! 🐶`, 2600); }).catch(e => toast(errMsg(e), 2600));
 }
-document.addEventListener("click", e => { if (e.target.closest("#crew-manage")) openCrews(); });
+document.addEventListener("click", e => { if (e.target.closest("#crew-manage")) openCrews(); if (e.target.closest("#wir-open")) openWeekReview(); });
 renderCrewBar();
 if (me) API("getCrews", me.id).then(l => setCrews(l)).catch(() => {});
+
+
+// ================= WEEK IN REVIEW =================
+// Pops up once per crew the first time you open the app after the week ends; reopen it from the Week tab.
+function weekKey() { const p = KEY.split("-").map(Number), d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function showWeekReview(r) {
+  if (!r || !r.podium || !r.podium.length) { toast("No league games last week.", 2000); return; }
+  const fmtD = k => new Date(k + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const box = el("div", "wir"), m = r.me, champ = r.podium[0];
+  box.append(el("div", "kick", `Week in review · ${fmtD(r.start)}–${fmtD(r.end).replace(/^[A-Za-z]+ /, "")}${r.crew ? " · " + r.crew : ""}`));
+  box.append(el("h2", null, m && m.rank === 1 ? "You won the week! 🏆" : `🏆 ${champ.name} won the week`));
+  const pod = el("div", "pod");
+  [[1, "🥈", 70], [0, "🥇", 96], [2, "🥉", 54]].forEach(([k, md, h]) => { const x = r.podium[k], d = el("div"); if (x) { const bar = el("i", null, md); bar.style.height = h + "px"; const nm = el("span", null, x.name); d.append(nm, el("small", null, x.pts + " pts"), bar); } pod.appendChild(d); });
+  box.append(pod);
+  if (m) {
+    const yc = el("div", "card"); yc.append(el("span", "lbl", "Your week"));
+    yc.append(el("b", "big", `#${m.rank} of ${r.players} · ${m.pts} pts`), el("span", null, m.above ? `${m.above.pts - m.pts} pts behind ${m.above.name} for #${m.rank - 1}` : m.below ? `${m.pts - m.below.pts} pts ahead of ${m.below.name}` : "Top of the board."));
+    const bars = el("div", "bars"), byD = {}; (m.by || []).forEach(x => byD[x.d] = x);
+    const p = r.start.split("-").map(Number);
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((dn, i) => { const dt = new Date(p[0], p[1] - 1, p[2] + i), dk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`, x = byD[dk], v = x ? x.p : 0;
+      const s = el("div"), e = el("em", x && x.k ? "in" : ""); e.style.height = Math.max(4, v * 2.8) + "px"; s.append(el("small", null, x ? String(v) : "–"), e, el("small", null, dn)); bars.appendChild(s); });
+    yc.append(bars, el("small", "sub", "Green = your best 5 days, the ones that counted"));
+    box.append(yc);
+    if (r.moment) { const mo = el("div", "card"); mo.append(el("span", "lbl", "Your best moment"), el("span", "moment", r.moment)); box.append(mo); }
+  } else box.append(el("p", "sub", "You didn't play last week. This week's a fresh start."));
+  if (r.awards && r.awards.length) {
+    box.append(el("span", "lbl", "Awards")); const aw = el("div", "aw");
+    r.awards.forEach(a => { const meta = AWARDS[a.key]; if (!meta) return; const d = el("div"), h = el("b"); h.append(emo(meta[0], 16), document.createTextNode(meta[1])); d.append(h, document.createTextNode(`${(a.names || [a.name]).join(", ")} · ${a.why}`)); aw.appendChild(d); });
+    box.append(aw);
+  }
+  box.append(el("p", "sub", `${r.players} players · ${r.games} games played`));
+  const go = el("button", "pill solid", "New week. Let's go 🐶"); go.addEventListener("click", closeModal);
+  const sh = el("button", "pill", "Share my week"), ta = el("textarea", "copybox"); ta.rows = 5; ta.readOnly = true; ta.hidden = true;
+  sh.addEventListener("click", () => copy([`Big Dawg Daily · week of ${fmtD(r.start)}${r.crew ? " · " + r.crew : ""}`, r.podium.map((x, i) => `${["🏆", "🥈", "🥉"][i]} ${x.name} ${x.pts}`).join("  "), m ? `Me: #${m.rank} of ${r.players} · ${m.pts} pts` : "", r.moment || "", APP_URL].filter(Boolean).join("\n"), ta));
+  openModal([box, go, sh, ta]);
+}
+function openWeekReview() { if (!me) return; API("getWeekReview", me.id, KEY).then(showWeekReview).catch(e => toast(errMsg(e), 2200)); }
+let wirAsked = "";
+function maybeWeekReview() {
+  if (!me || !crewSel) return;
+  const k = "bdd:wir:" + weekKey() + ":" + crewSel; if (store.get(k) || wirAsked === k) return; wirAsked = k;
+  API("getWeekReview", me.id, KEY).then(r => {
+    if (!r || !r.podium || !r.podium.length || !(r.podium[0].pts > 0)) { store.set(k, 1); return; }
+    const tryShow = (n) => { if (active === "home" && $("modal").hidden && $("splash").hidden && !serving) { store.set(k, 1); showWeekReview(r); } else if (n < 40) setTimeout(() => tryShow(n + 1), 3000); };
+    tryShow(0);
+  }).catch(() => { wirAsked = ""; });
+}
 
 // ================= SCOREBOARD =================
 let board = null, postState = "init", writeChain = Promise.resolve(), synced = false;
@@ -3525,7 +3588,7 @@ let stats = null, statsAt = 0;
 function refreshStats() {
   if (!me) return Promise.resolve();
   statsAt = Date.now();
-  return API("getStats", me.id, KEY).then(st => { stats = st; store.set("bdd:stats", { k: KEY, s: st, c: crewSel }); renderLeague(); if (active === "scores") renderScores(); if (active === "home") renderHome(); }).catch(() => { statsAt = 0; });
+  return API("getStats", me.id, KEY).then(st => { stats = st; store.set("bdd:stats", { k: KEY, s: st, c: crewSel }); setTimeout(maybeWeekReview, 1500); renderLeague(); if (active === "scores") renderScores(); if (active === "home") renderHome(); }).catch(() => { statsAt = 0; });
 }
 // Short headline for the Scoreboard card: Monday-Tuesday it's last week's champ, otherwise yesterday's crown.
 function bannerText() {
