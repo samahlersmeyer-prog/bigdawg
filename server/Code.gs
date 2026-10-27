@@ -8,7 +8,8 @@ const JOKE_HEADERS = ['id', 'playerId', 'text', 'created'];
 const PROGRESS_HEADERS = ['date', 'playerId', 'state', 'updated'];
 const REACT_HEADERS = ['date', 'fromId', 'toId', 'emoji', 'created'];
 const ARCADE_HEADERS = ['date', 'playerId', 'game', 'best', 'plays', 'updated'];
-const DARE_KINDS = ['dare', 'dareres', 'join', 'joinok', 'added']; // Zoomies dares ride along in the Shade tab but never count as shade
+const DARE_KINDS = ['dare', 'dareres', 'join', 'joinok', 'added', 'newbie'];
+const ADMIN_ID = 'siy7j5dcz3rtc4iw'; // Sam: gets a heads-up whenever someone new signs up // Zoomies dares ride along in the Shade tab but never count as shade
 const DAWGS = [':dawgW:', ':dawgL:', ':dawgcope:', ':dawgsweat:', ':dawgpog:', ':dawgpain:', ':dawgclown:', ':dawgsus:', ':dawgskull:']; // Big Dawg emote pack
 const EMOJIS = ['😂', '🔥', '💀', '👏', '🤡'].concat(DAWGS);
 const CLAPS = ['👏', '🫃', '🤡', '🖕'].concat(DAWGS); // clap-back answers to shade
@@ -209,12 +210,24 @@ function claimPlayer(id, pin) {
 }
 
 // New player (needs a PIN) or rename (your own id). Names are unique.
+let byIdNow_ = false;
+// Tell Sam (or whoever started the first crew) that a new player signed up, with a one-tap Add to their crew.
+function notifyNewbie_(newId) {
+  ensureCrews_(); MEMO_.crews = null;
+  const crews = readCrews_(), players = readPlayers_();
+  const admin = players.some(p => p.id === ADMIN_ID) ? ADMIN_ID : (crews[0] && crews[0].owner);
+  if (!admin || admin === newId) return;
+  const home = crews.find(c => c.owner === admin);
+  const tz = ss_().getSpreadsheetTimeZone(); let dk; try { dk = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd'); } catch (e) { dk = new Date().toISOString().slice(0, 10); }
+  const sh = shadeSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 7).setNumberFormat('@');
+  sh.getRange(r, 1, 1, SHADE_HEADERS.length).setValues([[Utilities.getUuid().slice(0, 8), dk, newId, admin, home ? home.id : '', 'newbie', '', new Date(), '', '']]);
+}
 function register(id, name, pin) {
   id = cleanId_(id); name = cleanName_(name);
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     const players = readPlayers_();
-    const byId = players.find(p => p.id === id);
+    const byId = players.find(p => p.id === id); byIdNow_ = !!byId;
     const byName = players.find(p => p.name.toLowerCase() === name.toLowerCase());
     if (byName && byName.id !== id) throw new Error(byId ? 'Someone already uses that name. Try another.' : 'That name is taken. If it\'s you, go back and tap your name.');
     const sh = playersSheet_();
@@ -226,8 +239,9 @@ function register(id, name, pin) {
       sh.getRange(r, 7).setNumberFormat('@');
       sh.getRange(r, 1, 1, 7).setValues([[id, name, new Date(), '', '', '', pinHash_(id, pin)]]);
     }
-    return { id: id, name: name };
   } finally { lock.releaseLock(); }
+  if (!byIdNow_) { try { notifyNewbie_(id); } catch (e) {} }
+  return { id: id, name: name };
 }
 
 function submit(id, dateKey, entry) {
@@ -764,8 +778,8 @@ function addToCrew(id, crewId, targetId, dateKey) {
     addMembers_(c.id, [targetId]);
     const sh = shadeSheet_(), r = sh.getLastRow() + 1; sh.getRange(r, 1, 1, 7).setNumberFormat('@');
     sh.getRange(r, 1, 1, SHADE_HEADERS.length).setValues([[Utilities.getUuid().slice(0, 8), dateKey, id, targetId, c.id, 'added', '', new Date(), '', '']]);
-    // an open "ask to join" from them is now answered
-    readShade_().filter(x => x.kind === 'join' && x.from === targetId && x.text === crewId && x.response !== 'yes' && x.response !== 'no').forEach(x => sh.getRange(x.row, 9, 1, 2).setValues([[new Date(), 'yes']]));
+    // an open "ask to join" (or new-player heads-up) about them is now answered
+    readShade_().filter(x => (x.kind === 'join' || x.kind === 'newbie') && x.from === targetId && x.text === crewId && x.response !== 'yes' && x.response !== 'no').forEach(x => sh.getRange(x.row, 9, 1, 2).setValues([[new Date(), 'yes']]));
   } finally { lock.releaseLock(); }
   return { crews: getCrews(id), name: who.name };
 }
@@ -1062,7 +1076,7 @@ const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true }; // da
 const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips'].indexOf(g) < 0); // long or retired games sit out
 // Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
 const SPORTS_GAMES = ['airhockey', 'archery', 'bowl', 'darts', 'dawgball', 'derby', 'duck', 'fg', 'golf', 'hoops', 'kickret', 'pks', 'pool', 'punch', 'shred', 'swim', 'tennis', 'volley'];
-const GOTD_POOLS = { arcade: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) < 0), sports: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) >= 0), den: ['crazy', 'rummy', 'euchre', 'crib'] };
+const GOTD_POOLS = { arcade: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) < 0), sports: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) >= 0) };
 const ARCADE_LOW = { golf: true, golf18: true }; // lower score wins (strokes)
 const arcBetter_ = (g, a, b) => ARCADE_LOW[g] ? (a > 0 && (!(b > 0) || a < b)) : a > b; // game -> highest believable score
 // A missing game means an old app version (Zoomies only). An unknown game is refused, so a score can never

@@ -3334,11 +3334,12 @@ function renderBell() {
   const n = ((shade.recent || []).filter(x => !x.seen).length) || 0;
   $("bell-n").hidden = !n; $("bell-n").textContent = n > 9 ? "9+" : String(n);
 }
-const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁", join: "🙋", joinok: "🎉", added: "🎉" };
+const NOTE_ICON = { shade: "🎯", fire: "🔥", clap: "👏", dare: "🕹️", dareres: "🏁", join: "🙋", joinok: "🎉", added: "🎉", newbie: "👋" };
 function noteText(x) {
   if (x.kind === "dare") { const d = parseDare(x.text); return `${x.fromName} dared you to beat ${fmtG(d.game, d.target)} in ${ARC[d.game] ? ARC[d.game].name : "the arcade"}`; }
   if (x.kind === "dareres") { const d = parseDare(x.text), [sc, tg] = d.rest.split("/").map(Number), nm = ARC[d.game] ? ARC[d.game].name : "the arcade"; return betterG(d.game, sc, tg) ? `${x.fromName} beat your ${fmtG(d.game, tg)} in ${nm} with ${fmtG(d.game, sc)}` : `${x.fromName} took your ${nm} dare and fell short (${fmtG(d.game, sc)})`; }
   if (x.kind === "join") return `${x.fromName} wants into ${x.crew || "your crew"}`;
+  if (x.kind === "newbie") return `${x.fromName} just joined Big Dawg Daily`;
   if (x.kind === "added") return `${x.fromName} added you to ${x.crew || "a crew"} 🐶`;
   if (x.kind === "joinok") return `You're in ${x.crew || "the crew"}! ${x.fromName} let you in.`;
   if (x.kind === "clap") return `${x.fromName} clapped back`;
@@ -3354,6 +3355,7 @@ function openBell() {
     const tx = el("div"); tx.append(document.createTextNode(noteText(x)), el("small", null, x.date === KEY ? "Today" : x.date));
     r.append(ic, tx);
     if (x.kind === "join" && x.response !== "yes" && x.response !== "no") tx.appendChild(joinButtons(x.id, x.fromName, x.crew));
+    if (x.kind === "newbie" && x.response !== "yes" && x.text && x.crew) { const row = el("div", "inrow"); row.appendChild(addToCrewBtn(x.text, x.crew, x.from, x.fromName, () => { x.response = "yes"; })); tx.appendChild(row); }
     list.appendChild(r);
   });
   const set = el("div", "col");
@@ -3935,7 +3937,7 @@ function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let 
 // Game of the Day (from the server): today's game, its daily board, and yesterday's champ.
 const gotds = () => arcade ? (arcade.gotds ? Object.values(arcade.gotds) : arcade.gotd ? [arcade.gotd] : []).filter(g => g && ARC[g.game]) : [];
 const gotd = game => gotds().find(g => g.game === game) || null;           // the Game of the Day entry for this game, if it is one
-const gotdFor = cat => gotds().find(g => (g.cat || arcCat(g.game)) === cat) || null;
+const gotdFor = cat => cat === "den" ? null : gotds().find(g => (g.cat || arcCat(g.game)) === cat) || null; // the Den stays chill: no Game of the Day
 // Start screen for a game: your best, any dares waiting for this game, and a Go button.
 function arcStart(game, panel, onGo) {
   ownLocal(); panel.innerHTML = ""; panel.hidden = false;
