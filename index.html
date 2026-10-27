@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="605cb87b90";</script>
+<script>window.GAMES_V="759cef166d";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -667,7 +667,7 @@ input { -webkit-user-select: text; user-select: text; }
       <p class="hello">New puzzles every day at midnight. Separate from the main four, with their own leaderboards.</p>
       <div class="cards" id="den-puz"></div>
       <div id="den-dares" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div class="arcade-lbl">Cards</div>
+      <div class="arcade-lbl">Cards &amp; quick puzzles</div>
       <div class="arc-list" id="den-list"></div>
     </div>
   </section>
@@ -4183,7 +4183,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "topdogs", "leash", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -4257,12 +4257,14 @@ function renderArcHub(cat) {
   }
   const list = $(cat === "sports" ? "sp-list" : cat === "den" ? "den-list" : "arc-list"); list.innerHTML = "";
   let all = arcOrder().filter(k => arcCat(k) === cat);
-  if (cat === "den") { renderDenPuz(); all = all.filter(k => !ARC[k].puzzle); }
+  if (cat === "den") { renderDenPuz(); all = all.filter(k => !DEN_PUZ.includes(k)); }
   const recent = (store.get("bdd:recent") || []).filter(k => all.includes(k)).slice(0, 3);
   const cell = k => {
     const r = el("button", "arc-cell"); r.dataset.play = k;
     const ic = el("span", "gicon"); ic.appendChild(emo(ARC[k].icon, 28));
-    r.append(ic, el("b", null, ARC[k].name), el("small", null, aBest[k] ? "Best " + fmtG(k, aBest[k]) + (medalOf(k, aBest[k]) ? " " + MEDAL_ICON[medalOf(k, aBest[k])] : "") : "\u00a0"));
+    const dr = ARC[k].puzzle && denRec(k);
+    if (ARC[k].puzzle) r.append(ic, el("b", null, ARC[k].name), el("small", null, dr && dr.done ? `✓ Today · ${dr.score} pts` : dr ? "In progress" : "Daily puzzle"));
+    else r.append(ic, el("b", null, ARC[k].name), el("small", null, aBest[k] ? "Best " + fmtG(k, aBest[k]) + (medalOf(k, aBest[k]) ? " " + MEDAL_ICON[medalOf(k, aBest[k])] : "") : "\u00a0"));
     if (gd && gd.game === k) r.classList.add("isgotd");
     const td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today; if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", `👑 ${td[0].name}`));
     const n = aDares.filter(d => d.game === k).length, sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
@@ -4737,6 +4739,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_hop.js", "key": "hop", "name": "Hydrant Hop", "icon": "🧯", "blurb": "Run, jump the hydrants, grab the bones.", "how": "The pup runs on his own. Tap anywhere to jump, tap again in the air to double jump. Hop hydrants, puddles, mailboxes and the mailman. Stay LOW under pigeons and frisbees. Bones are +10. One bonk and it's over.", "max": 99999},
 {"file": "g_jump.js", "key": "jump", "name": "Pup Jump", "icon": "🐶", "blurb": "Bounce up forever. Don't look down.", "how": "The pup bounces by itself. Hold the left or right side of the screen (or drag) to steer. Fly off one edge to come out the other. Bones launch you sky high, boxes break after one bounce. Land on cats and squirrels to bop them (+50), but don't bump into them. Don't fall!", "max": 999999},
 {"file": "g_kickret.js", "key": "kickret", "name": "Dawg Return", "icon": "🏈", "blurb": "Return the kick. Juke the cats. Score.", "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.", "cat": "sports", "max": 9999},
+{"file": "g_leash.js", "key": "leash", "name": "Leash", "icon": "🦮", "blurb": "Daily: one path through every square.", "how": "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 1000 minus 3 points per second (min 100).", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_party.js", "key": "party", "name": "Dawg Party", "icon": "🎉", "blurb": "5 random party minigames. One total score.", "how": "Five quick minigames, picked at random every run: Dawg Says, Floor Is Lava, Don't Wake Big Dawg, Face Lift, Tug of Woof and Treat Rain. Each one tells you what to do at the start. Your score is the total of all five.", "max": 1500},
 {"file": "g_pips.js", "key": "pips", "name": "Dawg Pips", "icon": "🎲", "blurb": "Daily: place the dominoes to match every rule.", "how": "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).", "cat": "den", "max": 3000, "puzzle": true},
 {"file": "g_pks.js", "key": "pks", "name": "Pup Kicks", "icon": "⚽", "blurb": "Penalty kicks. Beat the cat keeper.", "how": "Flick up from the ball toward the goal. Aim left or right, flick longer to shoot higher (too long sails over). Bend your flick to curl it. Top corners are worth +50. The cat keeper learns your favorite side, so mix it up. 3 misses and you're out.", "cat": "sports", "max": 9999},
@@ -4754,6 +4757,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_swim.js", "key": "swim", "name": "Doggy Paddle", "icon": "🏊", "blurb": "Race the pool. Tap left, right, left, right.", "how": "Tap the LEFT and RIGHT halves of the screen one after the other. Same side twice or mashing = SLIP. Tap when the shrinking ring hits your pup for a PERFECT stroke. Every 6 strokes tap the blue BREATH button or you slow down. At the far wall, SWIPE DOWN for a flip turn. 50m per heat: Heat 1, Semifinal, Final. Top 2 advance. 1000/600/300/100 per heat + time bonus. Keys: ← → strokes, space = breath, ↓ = turn.", "cat": "sports", "max": 9999},
 {"file": "g_td.js", "key": "td", "name": "Yard Defense", "icon": "🏰", "blurb": "Tower defense. Post pups, guard the yard.", "how": "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to see its range and UPGRADE it (up to ★3) or SELL it back for 75% of what you spent. Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.", "max": 99999},
 {"file": "g_tennis.js", "key": "tennis", "name": "Dawg Open", "icon": "🎾", "blurb": "Tennis vs the cat. Time your swings.", "how": "Your dawg runs to the ball by himself. Tap to swing as the ball reaches the ring: early = cross-court, late = down the line, right on time = a deep rocket. Swipe left/right to aim, swipe up to lob. Serve: tap to toss, tap again at the top. Real tennis scoring, first to 4 games takes the set.", "cat": "sports", "max": 9999},
+{"file": "g_topdogs.js", "key": "topdogs", "name": "Top Dogs", "icon": "👑", "blurb": "Daily: one dog per row, column and color.", "how": "Place a 🐶 so every row, every column and every colored area has exactly one dog. Dogs can't touch each other, not even diagonally. Tap a square once to mark it ✕ (no dog here), twice for a dog, three times to clear. A new board every day, one go, and there's only one answer. Score: 1000 minus 3 points per second (min 100).", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_trail.js", "key": "trail", "name": "Dawg Trail", "icon": "🐂", "blurb": "Wagon-trail adventure. Get the pack west.", "how": "Lead 4 pups 1,200 miles to the Great Dog Park. Tap TRAVEL to roll on a day. Fast pace covers more ground but eats more kibble and gets pups sick. HUNT to catch squirrels for kibble (tap them before they run off). REST heals sick pups. Cross rivers, shop at forts. Score: pups who make it, kibble and treats left, plus a speed bonus.", "max": 9999},
 {"file": "g_trap.js", "key": "trap", "name": "Pup Trap", "icon": "🧀", "blurb": "Push crates. Trap the cats. Eat the cheese.", "how": "You're the pup. Tap or hold on the side you want to move. Walk into crates to push the whole row (if there's room at the end). Box in the cats: when EVERY cat on the board is stuck, they all turn into 🧀 cheese. Eat cheese for points. Clear 3 waves to finish a level. Gray rocks don't move. Get caught 3 times and it's over.", "max": 999999},
 {"file": "g_volley.js", "key": "volley", "name": "Beach Dawgs", "icon": "🏐", "blurb": "2-on-2 beach volleyball. Bump, set, SPIKE.", "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.", "cat": "sports", "max": 9999}]);
