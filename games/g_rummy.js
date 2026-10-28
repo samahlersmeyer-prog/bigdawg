@@ -76,7 +76,7 @@
   }
 
   defGame({
-    key: "rummy", name: "Rummy Dawgs", icon: "🀄", max: 800, cat: "den",
+    key: "rummy", name: "Rummy Dawgs", icon: "🧮", max: 800, cat: "den",
     blurb: "Number-tile rummy vs Rex and Duke.",
     how: "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Win: 200 + the tiles left in the pups' racks. Lose: 100 minus what's left in your rack.",
     save(G) {

@@ -1071,9 +1071,9 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   duck: 99999, derby: 99999, dawgball: 999, kickret: 9999, hoops: 9999, pks: 9999, golf: 72, darts: 9999, bowl: 300,
   punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
-  sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, topdogs: 1000, leash: 1000 };
-const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true }; // daily Den puzzles get a today-only board too
-const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash'].indexOf(g) < 0); // long or retired games sit out
+  sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, topdogs: 1000, leash: 1000, mahjong: 1500 };
+const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true }; // daily Den puzzles get a today-only board too
+const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong'].indexOf(g) < 0); // long or retired games sit out
 // Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
 const SPORTS_GAMES = ['airhockey', 'archery', 'bowl', 'darts', 'dawgball', 'derby', 'duck', 'fg', 'golf', 'hoops', 'kickret', 'pks', 'pool', 'punch', 'shred', 'swim', 'tennis', 'volley'];
 const GOTD_POOLS = { arcade: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) < 0), sports: GOTD_POOL.filter(g => SPORTS_GAMES.indexOf(g) >= 0) };
