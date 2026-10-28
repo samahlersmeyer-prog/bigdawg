@@ -801,7 +801,7 @@ function allScores_() {
   return days;
 }
 // Points for one day. Five: 5 for 1 or 2 guesses, then 4, 3, 2, 1. Groups: 5 minus mistakes.
-// Mini and Strands: 5 for the fastest, then 4, 3, 2, and 1 for everyone else who finished.
+// Mini and Strands: 6 for the fastest, then 5, 4, 3, 2, and 1 for everyone else who finished. Ties share.
 function dayPoints_(day) {
   const parts = dayParts_(day), pts = {};
   Object.keys(parts).forEach(id => { const x = parts[id]; pts[id] = x.f + x.g + x.c + x.s; });
@@ -815,7 +815,9 @@ function dayParts_(day) {
     if (t.f && t.f.w) pts[id].f = Math.min(5, 7 - t.f.n); // 1 or 2 guesses = 5, so a lucky first guess isn't a jackpot
     if (t.g && t.g.w) pts[id].g = 5 - t.g.m;
   });
-  const ranked = (key, score) => Object.keys(day).filter(id => day[id][key]).sort((a, b) => score(day[a][key]) - score(day[b][key])).forEach((id, i) => pts[id][key] = Math.max(1, 6 - i)); // timed games: 6 for fastest
+  // timed games: 6 for fastest; tied times share the higher points (two at 6, next gets 4)
+  const ranked = (key, score) => { const ids = Object.keys(day).filter(id => day[id][key]), v = ids.map(id => score(day[id][key]));
+    ids.forEach((id, i) => pts[id][key] = Math.max(1, 6 - v.filter(x => x < v[i]).length)); };
   ranked('c', c => c.t + (c.k ? 30 : 0));
   ranked('s', x => x.t + 30 * x.h);
   return pts;

@@ -832,7 +832,7 @@ input { -webkit-user-select: text; user-select: text; }
         <ol class="rank-list" id="league-list"></ol>
         <p class="note" id="league-champ"></p>
         <button class="pill" id="wir-open" style="width:100%">📅 Last week in review</button>
-        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1. Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you (tap anyone's points to see which days counted). Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
+        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1 (tied times share the higher points). Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you (tap anyone's points to see which days counted). Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
       </div>
       <div class="box" id="alltime">
         <div class="sechead"><h2>Standings</h2><span id="alltime-sub"></span></div>
@@ -3461,7 +3461,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-shad
 function dayPts(list, by) {
   by = by || {};
   const pts = {}; list.forEach(p => { const t = p.t || {}, b = by[p.id] = { f: 0, g: 0, c: 0, s: 0 }; pts[p.id] = 0; if (t.f) b.f = t.f.w ? Math.min(5, 7 - t.f.n) : 0; if (t.g) b.g = t.g.w ? 5 - t.g.m : 0; pts[p.id] = b.f + b.g; });
-  const ranked = (k, sc) => list.filter(p => p.t && p.t[k]).sort((a, b) => sc(a.t[k]) - sc(b.t[k])).forEach((p, i) => { const v = Math.max(1, 6 - i); by[p.id][k] = v; by[p.id][k + "r"] = i + 1; pts[p.id] += v; });
+  const ranked = (k, sc) => { const L = list.filter(p => p.t && p.t[k]), S = L.map(p => sc(p.t[k])); L.forEach((p, i) => { const r = S.filter(x => x < S[i]).length, v = Math.max(1, 6 - r); by[p.id][k] = v; by[p.id][k + "r"] = r + 1; pts[p.id] += v; }); };
   ranked("c", c => c.t + (c.k ? 30 : 0)); ranked("s", x => x.t + 30 * x.h);
   return pts;
 }
