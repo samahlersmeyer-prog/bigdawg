@@ -2079,6 +2079,7 @@ const freshState = () => ({
 // leaving the app or switching phones never loses progress.
 let syncBusy = false, syncDirty = false, syncRetry = null;
 function save() {
+  if (S && S.five && S.five.guesses && (S.five.guesses.includes(ANSWER) || S.five.guesses.length >= 6)) S.five.fin = true;
   store.set(skey(), S);
   if (!me) return;
   syncDirty = true; pumpSync();
@@ -2094,7 +2095,7 @@ function pumpSync() {
 const GAMES = ["five", "groups", "mini", "strands"];
 function gameRank(g, x) {
   if (!x) return -1;
-  if (g === "five") return (x.locked ? 1000 : 0) + (x.guesses || []).length;
+  if (g === "five") return ((x.fin || (x.guesses || []).includes(ANSWER) || (x.guesses || []).length >= 6) ? 2000 : x.locked ? 1000 : 0) + (x.guesses || []).length; // a real finished board beats a colors-only one
   if (g === "groups") return (((x.solved || []).length === 4 || x.mistakes >= 4) ? 1000 : 0) + (x.history || []).length;
   const done = x.done ? 1e9 : 0, el = Number(x.el) || 0;
   if (g === "mini") return done + (x.fill || []).filter(Boolean).length * 1e5 + (x.started ? 1 : 0) + el / 1e4;
@@ -2202,6 +2203,7 @@ function evaluate(guess, answer) {
   return res;
 }
 let current = "", revealing = false;
+const fiveDoneByGuesses = () => S.five.guesses.includes(ANSWER) || S.five.guesses.length >= 6;
 const fiveDone = () => !!S.five.locked || S.five.guesses.includes(ANSWER) || S.five.guesses.length >= 6;
 const fiveWon = () => S.five.locked ? !!S.five.locked.w : S.five.guesses.includes(ANSWER);
 const fiveN = () => S.five.locked ? S.five.locked.n : S.five.guesses.length;
@@ -2213,7 +2215,7 @@ function renderBoard(flipLast = false) {
     const lockedRow = S.five.locked ? S.five.locked.rows[r] : null;
     for (let c = 0; c < 5; c++) {
       const t = el("div", "tile");
-      if (lockedRow) t.classList.add(lockedRow[c]);
+      if (lockedRow && !(g && fiveDoneByGuesses())) { t.classList.add(lockedRow[c]); t.textContent = g ? g[c] : lockedRow[c] === "g" ? ANSWER[c] : ""; }
       else if (g) {
         t.textContent = g[c];
         if (flipLast && r === S.five.guesses.length - 1) {
@@ -2275,7 +2277,7 @@ function press(k) {
   if (k === "Enter") {
     if (current.length < 5) { toast("Not enough letters"); shakeRow(); return; }
     if (!VALID.has(current.toLowerCase())) { toast("Not in word list"); shakeRow(); return; }
-    S.five.guesses.push(current); current = ""; save();
+    S.five.guesses.push(current); current = ""; if (S.five.guesses.includes(ANSWER) || S.five.guesses.length >= 6) S.five.fin = true; save();
     revealing = true;
     renderBoard(true);
     $("keyboard").hidden = false; $("five-done").hidden = true;
@@ -4915,7 +4917,8 @@ async function afterIdentity() {
     refreshBoard();
     API("loadProgress", me.id, KEY).then(r => {
       if (!r) return;
-      const merged = mergeState(S, JSON.parse(r)); // merge with whatever you've done since opening
+      const rem = JSON.parse(r), merged = mergeState(S, rem); // merge with whatever you've done since opening
+      if (merged && merged.five && merged.five.guesses && merged.five.guesses.length && rem && rem.five && !rem.five.fin && fiveDoneByGuesses()) save(); // put this phone's real board back on the server
       if (!merged || JSON.stringify(merged) === JSON.stringify(S)) return;
       GAMES.forEach(g => { if (!merged[g]) merged[g] = S[g]; });
       S = merged; store.set(skey(), S); save();

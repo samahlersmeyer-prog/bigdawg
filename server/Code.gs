@@ -377,7 +377,7 @@ function saveProgress(id, dateKey, json) {
 // Keeps the furthest-along copy of each game, so an older phone can never roll your progress back.
 function gameRank_(g, x) {
   if (!x) return -1;
-  if (g === 'five') return (x.locked ? 1000 : 0) + (x.guesses || []).length;
+  if (g === 'five') return (x.fin ? 2000 : x.locked ? 1000 : 0) + (x.guesses || []).length; // a real finished board beats a colors-only one
   if (g === 'groups') return (((x.solved || []).length === 4 || x.mistakes >= 4) ? 1000 : 0) + (x.history || []).length;
   const done = x.done ? 1e9 : 0, el = Number(x.el) || 0;
   if (g === 'mini') return done + (x.fill || []).filter(Boolean).length * 1e5 + (x.started ? 1 : 0) + el / 1e4;
