@@ -1072,6 +1072,7 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, topdogs: 1000, leash: 1000, mahjong: 1500, mjrush: 999999, mjzen: 999999 };
+const DEN_SINCE = '2026-10-28'; // daily Den boards start fresh with the chill scoring
 const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true }; // daily Den puzzles get a today-only board too
 const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen'].indexOf(g) < 0); // long or retired games sit out
 // Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
@@ -1130,7 +1131,19 @@ function getArcade(id, dateKey) {
     const rows = rowsAll.filter(r => (r.game || 'zoomies') === g);
     const all = bestBy(rows, g), week = bestBy(rows.filter(r => r.date >= ws && r.date <= dateKey), g);
     const mine = all.find(x => x.id === id);
-    games[g] = { week: week.slice(0, 10), all: all.slice(0, 10), myBest: mine ? mine.n : 0, today: DEN_DAILY[g] ? bestBy(rows.filter(r => r.date === dateKey), g).slice(0, 5) : undefined };
+    games[g] = { week: week.slice(0, 10), all: all.slice(0, 10), myBest: mine ? mine.n : 0, today: DEN_DAILY[g] ? bestBy(rows.filter(r => r.date === dateKey), g).slice(0, 10) : undefined };
+    if (DEN_DAILY[g]) {
+      // Daily Den puzzles: one go a day, so rank by the week (best 5 days, like the league) and by your average day, not one lucky best.
+      const per = {}; rows.filter(r => r.date >= DEN_SINCE && r.date <= dateKey && r.best > 0).forEach(r => (per[r.id] = per[r.id] || {})[r.date] = Math.max((per[r.id] || {})[r.date] || 0, r.best));
+      const wk = [], av = [];
+      Object.keys(per).forEach(k => {
+        const ds = Object.keys(per[k]), inWeek = ds.filter(d => d >= ws).map(d => per[k][d]).sort((a, b) => b - a).slice(0, 5);
+        if (inWeek.length) wk.push({ id: k, name: names[k], n: inWeek.reduce((a, b) => a + b, 0), days: inWeek.length });
+        av.push({ id: k, name: names[k], n: Math.round(ds.reduce((a, d) => a + per[k][d], 0) / ds.length), days: ds.length });
+      });
+      wk.sort((a, b) => b.n - a.n); av.sort((a, b) => (b.days >= 5) - (a.days >= 5) || b.n - a.n);
+      Object.assign(games[g], { daily: true, week: wk.slice(0, 10), all: av.slice(0, 10), myWeek: wk.find(x => x.id === id) || null, myAvg: av.find(x => x.id === id) || null });
+    }
   });
   // Game of the Day: one arcade/sports game a day gets its own leaderboard that resets at midnight.
   const yk = addDays_(dateKey, -1), gotds = {};

@@ -4182,6 +4182,7 @@ function renderArcade() {
   let keys = arcOrder().filter(k => hofCat === "mine" ? aBest[k] > 0 : arcCat(k) === hofCat);
   if (hofCat === "mine" && !keys.length) { box.appendChild(el("p", "note", "Play any arcade or sports game and your bests show up here.")); return; }
   keys.forEach(k => {
+    if (games && games[k] && games[k].daily) return box.appendChild(dailyHof(k, games[k]));
     const g = games && games[k], list = (g && g.all) || [], top = list[0];
     const row = el("button", "hof-row" + (hofOpen === k ? " open" : ""));
     const ic = el("span", "gicon"); ic.appendChild(emo(ARC[k].icon, 24));
@@ -4202,6 +4203,32 @@ function renderArcade() {
       d.append(ol, play); box.appendChild(d);
     }
   });
+}
+// Daily Den puzzles: Today · This week (best 5 days) · All time (average day, 5+ days to rank).
+function dailyHof(k, g) {
+  const wrap = el("div"), top = g.week[0], mw = g.myWeek;
+  const row = el("button", "hof-row" + (hofOpen === k ? " open" : ""));
+  const ic = el("span", "gicon"); ic.appendChild(emo(ARC[k].icon, 24));
+  const mid = el("span"); mid.append(el("b", null, ARC[k].name));
+  const wr = mw ? 1 + g.week.filter(x => x.n > mw.n).length : 0;
+  mid.appendChild(el("small", null, mw ? `You: ${mw.n} this week · #${wr}` : "You: not played this week"));
+  const ch = el("span", "champ");
+  if (top) { ch.append(el("b", null, `👑 ${top.name}`)); ch.appendChild(el("small", null, `${top.n} this week`)); } else ch.appendChild(el("small", null, "No one yet this week"));
+  row.append(ic, mid, ch); row.addEventListener("click", () => { hofOpen = hofOpen === k ? null : k; arcTab = k; renderArcade(); });
+  wrap.appendChild(row);
+  if (hofOpen === k) {
+    const d = el("div", "hof-detail");
+    const sect = (title, list, fmt, empty) => { d.appendChild(el("div", "arc-sec", title)); const ol = el("ol", "rank-list");
+      if (!list.length) ol.appendChild(el("li", "dim", empty));
+      list.forEach((x, i) => { const rk = i + 1; const li = el("li", (rk === 1 ? "lead" : "") + (me && x.id === me.id ? " league-me" : "")); li.append(el("span", "rk", rk), el("span", "nm", x.name), el("span", "ct", fmt(x))); ol.appendChild(li); });
+      d.appendChild(ol); };
+    sect("Today", g.today || [], x => `${x.n}`, "Nobody's played today yet.");
+    sect("This week · best 5 days", g.week, x => `${x.n} · ${x.days}d`, "Nobody's played this week yet.");
+    sect("All time · average day", g.all, x => x.days >= 5 ? `${x.n} avg · ${x.days}d` : `${x.n} avg · ${x.days}d (needs 5)`, "No scores yet.");
+    const play = el("button", "pill solid", `Play ${ARC[k].name}`); play.dataset.play = k; d.appendChild(play);
+    wrap.appendChild(d);
+  }
+  return wrap;
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
