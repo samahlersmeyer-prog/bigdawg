@@ -26,6 +26,19 @@
     return !(left && right);
   }
   // Deal faces onto the given positions so the board can be cleared: remove random free pairs in turn, giving each pair a face.
+  // Re-deal the tiles that are left so the board can still be cleared. If the leftover tiles are stuck in a shape that can
+  // never be cleared (say, two matching tiles stacked on each other), lay them out flat on the bottom layer instead.
+  function redeal(s, R) {
+    const cnt = {}; s.alive.forEach(i => cnt[s.face[i]] = (cnt[s.face[i]] || 0) + 1);
+    const kinds = []; Object.keys(cnt).forEach(k => { for (let n = 0; n < cnt[k] / 2; n++) kinds.push(+k); });
+    let at = s.alive, f = deal(R, at, kinds);
+    if (!f) {
+      const mid = [3.5, 2.5], flat = POS.map((p, i) => i).filter(i => POS[i][2] === 0).sort((a, b) => Math.hypot(POS[a][0] - mid[0], (POS[a][1] - mid[1]) * 1.6) - Math.hypot(POS[b][0] - mid[0], (POS[b][1] - mid[1]) * 1.6));
+      at = flat.slice(0, s.alive.length); f = deal(R, at, kinds);
+    }
+    if (!f) return false;
+    s.alive = at.slice(); at.forEach(i => s.face[i] = f[i]); return true;
+  }
   function deal(R, alive, kindsIn) {
     for (let tries = 0; tries < 200; tries++) {
       const left = alive.slice(), face = {}; let k = 0, ok = true;
@@ -58,9 +71,7 @@
     moves(s) { const free = s.alive.filter(i => isFree(i, s.alive)), out = []; for (let a = 0; a < free.length; a++) for (let b = a + 1; b < free.length; b++) if (s.face[free[a]] === s.face[free[b]]) out.push([free[a], free[b]]); return out; },
     shuffle(G, paid) {
       const s = G.s; if (paid) s.time -= 5; s.sel = -1; s.hint = null;
-      const cnt = {}; s.alive.forEach(i => cnt[s.face[i]] = (cnt[s.face[i]] || 0) + 1);
-      const kinds = []; Object.keys(cnt).forEach(k => { for (let n = 0; n < cnt[k] / 2; n++) kinds.push(+k); });
-      const f = deal(rng("rs" + Math.random()), s.alive, kinds); if (f) s.alive.forEach(i => s.face[i] = f[i]);
+      redeal(s, rng("rs" + Math.random()));
       s.msg = paid ? "Shuffled −5s" : "No matches: shuffled"; s.msgT = 1.1;
     },
     pick(G, i) {
@@ -96,7 +107,7 @@
       c.fillStyle = "rgba(255,255,255,0.15)"; rr(c, 12, 46, bw, 14, 7); c.fill();
       c.fillStyle = s.time < 15 ? "#ff5252" : s.time < 35 ? "#ffd23f" : "#69f0ae"; rr(c, 12, 46, Math.max(14, bw * frac), 14, 7); c.fill();
       G.text(c, `${Math.ceil(s.time)}s`, G.W / 2, 72, 10, "#fff");
-      const order = s.alive.slice().sort((a, b) => POS[a][2] - POS[b][2] || POS[a][1] - POS[b][1] || POS[b][0] - POS[a][0]), hint = s.hint ? new Set(s.hint.pair) : null;
+      const order = s.alive.slice().sort((a, b) => POS[a][2] - POS[b][2] || POS[a][1] - POS[b][1] || POS[a][0] - POS[b][0]), hint = s.hint ? new Set(s.hint.pair) : null;
       order.forEach(i => {
         const [col, row, l] = POS[i], x = g.ox + col * g.tw - l * g.dep, y = g.oy + row * g.th - l * g.dep, free = isFree(i, s.alive), sel = s.sel === i;
         c.fillStyle = "#8a7350"; rr(c, x + g.dep, y + g.dep, g.tw - 2, g.th - 2, 6); c.fill();
