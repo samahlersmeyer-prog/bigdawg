@@ -32,11 +32,14 @@
     for (const i of order) { if (clues <= DIFF[d][2]) break; const v = g[i]; g[i] = 0; if (solve(g.slice(), 2).n !== 1) g[i] = v; else clues--; }
     return { sol, giv: g };
   }
-  const scoreOf = (d, st) => Math.max(Math.round(DIFF[d][1] * 0.2), DIFF[d][1] - Math.floor(st.el) - 30 * st.mist);
+  // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
+  const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
+  const LIM = [900, 1500, 2400];
+  const scoreOf = (d, st) => Math.max(Math.round(DIFF[d][1] * 0.3), Math.round(DIFF[d][1] * 0.7) + speed(st.el, LIM[d], DIFF[d][1] * 0.3) - Math.round(DIFF[d][1] * 0.03) * st.mist);
   defGame({
     key: "sudoku", name: "Dawg Sudoku", icon: "🔢", max: 3000, cat: "den", puzzle: true,
     blurb: "Daily: Easy, Medium and Hard sudoku.",
-    how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number is a mistake (+30 seconds). One try at each per day; your progress is saved if you leave. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%). Your best of the three counts.",
+    how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number counts as a mistake. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick and a small cost per mistake. No clock on screen, so take your time. Your best of the three counts.",
     reset(G) { this.reset0(G); const cur = typeof store !== "undefined" && me ? store.get(this.curKey()) : null; if (cur !== null && cur !== undefined && !(this.rec(cur) || {}).done && this.rec(cur)) this.open(G, cur); },
     reset0(G) { G.s = { phase: "pick", btns: [], sel: -1, notes: false, msg: "", msgT: 0, bad: -1, badT: 0, endT: 0 }; },
     rec(d) { return store.get(rk(d)); },
@@ -84,13 +87,13 @@
           c.fillStyle = [dk ? "#22382a" : "#e3f1e0", dk ? "#3a3420" : "#fbefc9", dk ? "#3d2629" : "#f6dcdc"][d]; rr(c, x, y, bw, 78, 14); c.fill();
           c.textAlign = "left"; c.fillStyle = fg; c.font = `700 22px ${G.TITLE}`; c.fillText(label, x + 18, y + 28);
           c.font = `400 14px ${G.UI}`; c.fillStyle = dk ? "#ccc" : "#444";
-          c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? `In progress · ${Math.floor(r.el / 60)}:${String(Math.floor(r.el % 60)).padStart(2, "0")}` : `Up to ${DIFF[d][1]} pts`, x + 18, y + 54);
+          c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? "In progress" : `Up to ${DIFF[d][1]} pts`, x + 18, y + 54);
           G.pill(c, x + bw - 100, y + 19, 86, 40, r && r.done ? "Results" : r ? "Resume" : "Play", !(r && r.done));
           s.btns.push({ x, y, w: bw, h: 78, d });
         });
       } else {
         const N = Math.min(G.W - 16, G.H - 230), cs = N / 9, ox = (G.W - N) / 2, oy = 44;
-        G.pbar(c, DIFF[s.d][0][0] + DIFF[s.d][0].slice(1).toLowerCase(), `${Math.floor(s.el / 60)}:${String(Math.floor(s.el % 60)).padStart(2, "0")}`, s.mist ? `Mistakes: ${s.mist}` : "");
+        G.pbar(c, DIFF[s.d][0][0] + DIFF[s.d][0].slice(1).toLowerCase(), "", s.mist ? `Mistakes: ${s.mist}` : "");
         const sv = s.sel >= 0 ? s.g[s.sel] : 0;
         for (let i = 0; i < 81; i++) {
           const [r, cc, b] = RC[i], x = ox + cc * cs, y = oy + r * cs;

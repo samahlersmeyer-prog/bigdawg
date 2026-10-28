@@ -26,11 +26,13 @@
     const s = vs.reduce((a, b) => a + b, 0);
     return r.t === "s" ? s === r.n : r.t === "<" ? s < r.n : r.t === ">" ? s > r.n : r.t === "=" ? vs.every(v => v === vs[0]) : r.t === "!" ? new Set(vs).size === vs.length : true;
   }
+  // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
+  const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
   const DEL = (p, o) => [1, p.w, -1, -p.w][o];
   defGame({
     key: "pips", name: "Dawg Pips", icon: "🎲", max: 3000, cat: "den", puzzle: true,
     blurb: "Daily: place the dominoes to match every rule.",
-    how: "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).",
+    how: "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, plus a small bonus for going quick. No clock on screen, so take your time.",
     reset(G) { this.reset0(G); const cur = typeof store !== "undefined" && me ? store.get(this.curKey()) : null; if (cur !== null && cur !== undefined && !(this.rec(cur) || {}).done && this.rec(cur)) this.open(G, cur); },
     reset0(G) { G.s = { phase: "pick", btns: [], sel: -1, o: 0, msg: "", msgT: 0, endT: 0 }; },
     rec(d) { return store.get(rk(d)); },
@@ -69,7 +71,7 @@
     check(G) {
       const s = G.s, v = this.vals(s), bad = s.p.regions.map((r, i) => regionOk(r, v) === false ? i : -1).filter(i => i >= 0);
       if (bad.length) { s.bad = bad; s.msg = "So close! A rule is broken."; s.msgT = 2; G.buzz(); return this.persist(G); }
-      const sc = Math.max(Math.round(DIFF[s.d][1] * 0.2), DIFF[s.d][1] - Math.floor(s.el)); s.final = sc; s.phase = "won"; s.endT = 1.3;
+      const sc = Math.round(DIFF[s.d][1] * 0.7) + speed(s.el, [300, 600, 900][s.d], DIFF[s.d][1] * 0.3); s.final = sc; s.phase = "won"; s.endT = 1.3;
       this.persist(G, { done: true, score: sc }); G.sfx("win");
     },
     update(G, dt) {
@@ -89,13 +91,13 @@
           c.fillStyle = [dk ? "#22382a" : "#e3f1e0", dk ? "#3a3420" : "#fbefc9", dk ? "#3d2629" : "#f6dcdc"][d]; rr(c, x, y, bw, 78, 14); c.fill();
           c.textAlign = "left"; c.fillStyle = fg; c.font = `700 22px ${G.TITLE}`; c.fillText(label, x + 18, y + 28);
           c.font = `400 14px ${G.UI}`; c.fillStyle = dk ? "#ccc" : "#444";
-          c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? `In progress · ${Math.floor(r.el / 60)}:${String(Math.floor(r.el % 60)).padStart(2, "0")}` : `${pz(d).dom.length} dominoes · up to ${DIFF[d][1]} pts`, x + 18, y + 54);
+          c.fillText(r && r.done ? `Solved · ${r.score} pts` : r ? "In progress" : `${pz(d).dom.length} dominoes · up to ${DIFF[d][1]} pts`, x + 18, y + 54);
           G.pill(c, x + bw - 100, y + 19, 86, 40, r && r.done ? "Review" : r ? "Resume" : "Play", !(r && r.done));
           s.btns.push({ x, y, w: bw, h: 78, d });
         });
       } else {
         const p = s.p, v = this.vals(s);
-        G.pbar(c, DIFF[s.d][0][0] + DIFF[s.d][0].slice(1).toLowerCase(), `${Math.floor(s.el / 60)}:${String(Math.floor(s.el % 60)).padStart(2, "0")}`, `${s.pl.filter(Boolean).length}/${p.dom.length}`);
+        G.pbar(c, DIFF[s.d][0][0] + DIFF[s.d][0].slice(1).toLowerCase(), "", `${s.pl.filter(Boolean).length}/${p.dom.length}`);
         const cs = Math.floor(Math.min(64, (G.W - 28) / p.w, (G.H * 0.46) / p.h)), bwid = cs * p.w, ox = (G.W - bwid) / 2, oy = 54;
         const cx = k => ox + (k % p.w) * cs, cy = k => oy + Math.floor(k / p.w) * cs;
         // regions

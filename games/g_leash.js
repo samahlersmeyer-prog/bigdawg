@@ -7,11 +7,13 @@
   const rk = () => "bdd:den:leash:" + KEY + ":" + (me ? me.id : "");
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
-  const scoreOf = el => Math.max(100, 1000 - 3 * Math.floor(el));
+  // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
+  const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
+  const scoreOf = el => 700 + speed(el, 300, 300);
   defGame({
     key: "leash", name: "Leash", icon: "🦮", max: 1000, cat: "den", puzzle: true,
     blurb: "Daily: one path through every square.",
-    how: "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 1000 minus 3 points per second (min 100).",
+    how: "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
     reset(G) {
       const p = pz(), n = p.n, nums = {}; Object.keys(p.nums).forEach(k => nums[+k] = p.nums[k]);
       const s = G.s = { n, nums, last: Math.max(...Object.values(nums)), start: +Object.keys(nums).find(k => nums[k] === 1), btns: [], msg: "", msgT: 0, postT: 0, drag: false };
@@ -52,7 +54,6 @@
       c.fillStyle = dk ? "#121213" : "#fff"; c.fillRect(0, 0, G.W, G.H); s.btns = [];
       c.fillStyle = ink; c.font = `500 15px ${G.UI}`; c.textAlign = "left"; c.textBaseline = "middle";
       c.fillText(s.done ? "Walked! 🦮" : `Fill every square · next: ${Math.min(this.nextNum(s), s.last)}`, 14, 22);
-      c.textAlign = "right"; c.font = `700 15px ${G.UI}`; c.fillText(mmss(s.el), G.W - 14, 22);
       const N = Math.min(G.W - 24, G.H - 170), cs = N / n, ox = (G.W - N) / 2, oy = 46; s.L = [ox, oy, cs];
       const inPath = new Set(s.path), col = s.done ? "#2e9e4f" : "#ff7a1a";
       c.fillStyle = dk ? "#1e1e22" : "#f4f2ee"; rr(c, ox, oy, N, N, 10); c.fill();

@@ -40,11 +40,13 @@
     }
     return null;
   }
-  const scoreOf = s => Math.max(100, 1500 - 3 * Math.floor(s.el + s.pen));
+  // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
+  const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
+  const scoreOf = s => Math.max(100, 1000 + speed(s.el, 600, 500) - Math.round(s.pen * 1.5));
   defGame({
     key: "mahjong", name: "Dawg Mahjong", icon: "🀄", max: 1500, cat: "den", puzzle: true,
     blurb: "Daily: match pairs to clear the board.",
-    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair (+15 seconds) and Shuffle mixes the tiles left (+30 seconds). Same board for everyone, one go per day, always solvable. Score: 1500 minus 3 points per second (min 100).",
+    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
     reset(G) {
       const s = G.s = { btns: [], sel: -1, msg: "", msgT: 0, postT: 0, hint: null };
       const r = store.get(rk());
@@ -52,7 +54,7 @@
       else { const all = POS.map((p, i) => i), f = deal(rng("dawg-mahjong-" + KEY), all), face = all.map(i => f[i]); Object.assign(s, { face, alive: all, el: 0, pen: 0, done: false, posted: false, shuf: 0 }); }
     },
     persist(G) { const s = G.s; store.set(rk(), { face: s.face, alive: s.alive, el: s.el, pen: s.pen, done: s.done, posted: s.posted, shuf: s.shuf, score: s.done ? scoreOf(s) : 0 }); },
-    info(G) { const s = G.s, t = s.el + s.pen, sc = scoreOf(s); return { score: sc, title: t < 180 ? "Cleared! Speedy 🐶" : "Board cleared! 🀄", sub: `${mmss(t)}${s.pen ? ` (incl. ${s.pen}s of hints/shuffles)` : ""} · ${sc} pts.`, share: `Dawg Mahjong #${dayN() + 1} · ${mmss(t)} 🀄` }; },
+    info(G) { const s = G.s, t = s.el + s.pen, sc = scoreOf(s); return { score: sc, title: t < 180 ? "Cleared! Speedy 🐶" : "Board cleared! 🀄", sub: `${mmss(t)}${s.pen ? " · with a little help" : ""} · ${sc} pts.`, share: `Dawg Mahjong #${dayN() + 1} · ${mmss(t)} 🀄` }; },
     moves(s) { const free = s.alive.filter(i => isFree(i, s.alive)), out = []; for (let a = 0; a < free.length; a++) for (let b = a + 1; b < free.length; b++) if (s.face[free[a]] === s.face[free[b]]) out.push([free[a], free[b]]); return out; },
     pick(G, i) {
       const s = G.s; s.hint = null;
@@ -71,7 +73,7 @@
       const kinds = []; Object.keys(cnt).forEach(k => { for (let n = 0; n < cnt[k] / 2; n++) kinds.push(+k); });
       const f = deal(rng("dawg-mahjong-" + KEY + "-" + s.shuf + "-" + s.alive.length), s.alive, kinds);
       if (f) s.alive.forEach(i => s.face[i] = f[i]);
-      s.msg = "Shuffled (+30s)"; s.msgT = 1.2; this.persist(G);
+      s.msg = "Shuffled"; s.msgT = 1.2; this.persist(G);
     },
     update(G, dt) {
       const s = G.s; if (s.msgT > 0) s.msgT -= dt; if (s.hint && (s.hint.t -= dt) <= 0) s.hint = null;
@@ -88,7 +90,6 @@
       c.fillStyle = dk ? "#121213" : "#fff"; c.fillRect(0, 0, G.W, G.H); s.btns = [];
       c.fillStyle = ink; c.font = `500 15px ${G.UI}`; c.textAlign = "left"; c.textBaseline = "middle";
       c.fillText(s.done ? "Board cleared! 🐶" : `${s.alive.length} tiles left`, 14, 22);
-      c.textAlign = "right"; c.font = `700 15px ${G.UI}`; c.fillText(mmss(s.el + s.pen), G.W - 14, 22);
       const order = s.alive.slice().sort((a, b) => POS[a][2] - POS[b][2] || POS[a][1] - POS[b][1] || POS[b][0] - POS[a][0]);
       const hint = s.hint ? new Set(s.hint.pair) : null;
       order.forEach(i => {
@@ -103,8 +104,8 @@
       s.hit = order.slice().reverse().map(i => { const [col, row, l] = POS[i]; return { i, x: g.ox + col * g.tw - l * g.dep, y: g.oy + row * g.th - l * g.dep, w: g.tw - 2, h: g.th - 2 }; });
       const by = g.oy + 6 * g.th + 18, bw = (G.W - 48) / 3;
       if (!s.done) {
-        s.btns.push(Object.assign(G.pill(c, 16, by, bw, 46, "Hint +15s"), { k: "hint" }));
-        s.btns.push(Object.assign(G.pill(c, 24 + bw, by, bw, 46, "Shuffle +30s"), { k: "shuf" }));
+        s.btns.push(Object.assign(G.pill(c, 16, by, bw, 46, "Hint"), { k: "hint" }));
+        s.btns.push(Object.assign(G.pill(c, 24 + bw, by, bw, 46, "Shuffle"), { k: "shuf" }));
         c.fillStyle = dk ? "#aaa" : "#666"; c.font = `500 13px ${G.UI}`; c.textAlign = "center"; c.fillText(`${this.moves(s).length} matches open`, 32 + 2.5 * bw, by + 23);
       } else if (s.posted) { const w = Math.min(260, G.W - 40); s.btns.push(Object.assign(G.pill(c, G.W / 2 - w / 2, by, w, 46, `See results · ${mmss(s.el + s.pen)}`, true), { k: "res" })); }
       if (s.msgT > 0 && s.msg) { c.save(); c.globalAlpha = Math.min(1, s.msgT * 2); c.font = `600 15px ${G.UI}`; c.textAlign = "center"; const w = c.measureText(s.msg).width + 30; c.fillStyle = dk ? "#fff" : "#121213"; rr(c, G.W / 2 - w / 2, 34, w, 34, 8); c.fill(); c.fillStyle = dk ? "#121213" : "#fff"; c.fillText(s.msg, G.W / 2, 51); c.restore(); }
