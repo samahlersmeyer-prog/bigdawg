@@ -130,4 +130,59 @@
       const t = s.hit && s.hit.find(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h); if (t) this.pick(G, t.i);
     }
   });
+
+  // ---------- Mahjong Zen: the relaxed version. No clock, board after board, play as long as you like. ----------
+  defGame({
+    key: "mjzen", name: "Mahjong Zen", icon: "🍵", max: 999999,
+    blurb: "Relaxed endless tile matching. No clock.",
+    how: "The relaxed one: no clock, ever. Match pairs of free tiles (nothing on top, and the left or right side open). Clear a board and a new one deals. Hints and shuffles are free, and it reshuffles for you if you run out of matches. Leave any time; your board is saved. Tap Finish when you want to post your score: 10 per match and 200 per board cleared.",
+    save(G) { const s = G.s; return { label: `Board ${s.level} · ${s.score} pts`, v: { level: s.level, score: s.score, face: s.face, alive: s.alive, cleared: s.cleared } }; },
+    load(G, sv) { Object.assign(G.s, sv.v); G.s.msg = "Welcome back"; G.s.msgT = 1.2; },
+    reset(G) { G.s = { level: 0, score: 0, cleared: 0, t: 0, sel: -1, hint: null, msg: "", msgT: 0, btns: [], pops: [] }; this.newBoard(G); },
+    newBoard(G) { const s = G.s; s.level++; const all = POS.map((p, i) => i), f = deal(rng("zen" + Math.random()), all); s.face = all.map(i => f[i]); s.alive = all; s.sel = -1; s.hint = null; s.msg = s.level > 1 ? `Board ${s.level}` : "Take your time 🍵"; s.msgT = 1.4; },
+    moves(s) { const free = s.alive.filter(i => isFree(i, s.alive)), out = []; for (let a = 0; a < free.length; a++) for (let b = a + 1; b < free.length; b++) if (s.face[free[a]] === s.face[free[b]]) out.push([free[a], free[b]]); return out; },
+    pick(G, i) {
+      const s = G.s; s.hint = null;
+      if (!isFree(i, s.alive)) { G.buzz(); return; }
+      if (s.sel < 0 || s.sel === i) { s.sel = s.sel === i ? -1 : i; return; }
+      if (s.face[s.sel] !== s.face[i]) { s.sel = i; return; }
+      s.score += 10; s.alive = s.alive.filter(j => j !== i && j !== s.sel); s.sel = -1; G.sfx("pop");
+      if (!s.alive.length) { s.cleared++; s.score += 200; G.sfx("win"); s.msg = "Board cleared! +200"; s.msgT = 1.6; s.wait = 1.4; return; }
+      if (!this.moves(s).length) { redeal(s, rng("zs" + Math.random())); s.msg = "Reshuffled for you"; s.msgT = 1.3; }
+    },
+    update(G, dt) {
+      const s = G.s; s.t += dt; if (s.msgT > 0) s.msgT -= dt; if (s.hint && (s.hint.t -= dt) <= 0) s.hint = null;
+      if (s.wait > 0) { s.wait -= dt; if (s.wait <= 0) this.newBoard(G); }
+    },
+    geo(G) { const tw = Math.min((G.W - 28) / 8.3, (G.H - 190) / 6 / 1.28), th = tw * 1.28, dep = Math.max(3, tw * 0.09); return { tw, th, dep, ox: (G.W - 8 * tw) / 2 + dep * 1.5, oy: 56 + dep * 3 }; },
+    draw(G, c) {
+      const s = G.s, g = this.geo(G);
+      const bg = c.createLinearGradient(0, 0, 0, G.H); bg.addColorStop(0, "#2f4f4f"); bg.addColorStop(1, "#1f3535"); c.fillStyle = bg; c.fillRect(0, 0, G.W, G.H);
+      G.hud(c, `SCORE ${s.score}`, `BOARD ${s.level}`, `${s.alive.length} LEFT`);
+      const order = s.alive.slice().sort((a, b) => POS[a][2] - POS[b][2] || POS[a][1] - POS[b][1] || POS[a][0] - POS[b][0]), hint = s.hint ? new Set(s.hint.pair) : null;
+      order.forEach(i => {
+        const [col, row, l] = POS[i], x = g.ox + col * g.tw - l * g.dep, y = g.oy + row * g.th - l * g.dep, free = isFree(i, s.alive), sel = s.sel === i;
+        c.fillStyle = "#8a7350"; rr(c, x + g.dep, y + g.dep, g.tw - 2, g.th - 2, 6); c.fill();
+        c.fillStyle = sel ? "#ffd23f" : hint && hint.has(i) ? "#b6f0c2" : BG[s.face[i] % BG.length]; rr(c, x, y, g.tw - 2, g.th - 2, 6); c.fill();
+        c.strokeStyle = sel ? "#e0a800" : "rgba(0,0,0,0.3)"; c.lineWidth = sel ? 2.5 : 1; c.stroke();
+        G.emoji(c, FACES[s.face[i]], x + (g.tw - 2) / 2, y + (g.th - 2) / 2 + 1, g.tw * 0.62);
+        if (!free) { c.fillStyle = "rgba(10,25,25,0.38)"; rr(c, x, y, g.tw - 2, g.th - 2, 6); c.fill(); }
+      });
+      s.hit = order.slice().reverse().map(i => { const [col, row, l] = POS[i]; return { i, x: g.ox + col * g.tw - l * g.dep, y: g.oy + row * g.th - l * g.dep, w: g.tw - 2, h: g.th - 2 }; });
+      const by = g.oy + 6 * g.th + 16, w3 = (G.W - 48) / 3; s.btns = [];
+      [["HINT", "hint"], ["SHUFFLE", "shuf"], ["FINISH", "fin"]].forEach(([tx, k], i) => { const x = 16 + i * (w3 + 8); c.fillStyle = k === "fin" ? "#ffd23f" : "rgba(255,255,255,0.92)"; rr(c, x, by, w3, 44, 22); c.fill(); G.text(c, tx, x + w3 / 2, by + 22, 10, "#1f3535"); s.btns.push({ x, y: by, w: w3, h: 44, k }); });
+      if (s.msgT > 0 && s.msg) G.banner(c, s.msg, "#ffd23f", G.H * 0.42, 18);
+      G.hint(c, "NO CLOCK · TAP FINISH TO POST YOUR SCORE", 5, by + 70);
+    },
+    tap(G, x, y) {
+      const s = G.s; if (s.wait > 0) return;
+      const b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+      if (b) {
+        if (b.k === "fin") return G.over(s.score, s.cleared ? `${s.cleared} board${s.cleared > 1 ? "s" : ""} cleared 🍵` : "Nice and easy 🍵");
+        if (b.k === "shuf") { redeal(s, rng("zs" + Math.random())); s.sel = -1; s.msg = "Shuffled"; s.msgT = 1; return; }
+        const m = this.moves(s); if (m.length) s.hint = { pair: m[Math.floor(Math.random() * m.length)], t: 2.5 }; return;
+      }
+      const tl = s.hit && s.hit.find(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h); if (tl) this.pick(G, tl.i);
+    }
+  });
 })();
