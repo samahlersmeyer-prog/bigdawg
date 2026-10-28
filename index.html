@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<script>window.GAMES_V="f54941d32f";</script>
+<script>window.GAMES_V="2b5e4ca08a";</script>
 <title>Big Dawg Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3930,7 +3930,7 @@ const MEDALS = { zoomies: [10, 30, 60], snake: [10, 25, 45], fetch: [500, 1500, 
   darts: [500, 900, 1300], bowl: [100, 150, 200], punch: [500, 3000, 6000], volley: [1000, 2000, 3000], swim: [1500, 3000, 4000], shred: [1000, 2500, 4500],
   fg: [200, 400, 550], airhockey: [300, 700, 1200], tennis: [500, 1000, 1500], drive: [400, 900, 1500], drip: [700, 1200, 1600], pool: [800, 1500, 2200],
   td: [5000, 20000, 40000], pop: [500, 1500, 3000], trail: [1000, 2500, 4000], archery: [60, 80, 92], party: [400, 650, 850], dash: [2000, 8000, 20000],
-  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200], crazy: [150, 250, 330], rummy: [80, 220, 320],
+  harvest: [3000, 10000, 20000], dvz: [500, 1500, 3000], trap: [500, 1500, 3500], euchre: [100, 150, 200], crib: [100, 140, 200], crazy: [150, 250, 330], rummy: [80, 220, 320], mjrush: [2000, 6000, 15000],
   };
 const MEDAL_ICON = ["", "🥉", "🥈", "🥇"], MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
 function medalOf(g, v) { const m = MEDALS[g]; if (!m || !(v > 0)) return 0; let n = 0; m.forEach((t, i) => { if (lowG(g) ? v <= t : v >= t) n = i + 1; }); return n; }
@@ -4183,7 +4183,7 @@ function renderArcade() {
 }
 document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("click", () => { hofCat = b.dataset.cat; hofOpen = null; renderArcade(); }));
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
-const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "topdogs", "leash", "mahjong", "party", "pupman", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
+const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "topdogs", "leash", "mahjong", "party", "pupman", "mjrush", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
@@ -4741,6 +4741,7 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 {"file": "g_kickret.js", "key": "kickret", "name": "Dawg Return", "icon": "🏈", "blurb": "Return the kick. Juke the cats. Score.", "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.", "cat": "sports", "max": 9999},
 {"file": "g_leash.js", "key": "leash", "name": "Leash", "icon": "🦮", "blurb": "Daily: one path through every square.", "how": "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 1000 minus 3 points per second (min 100).", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_mahjong.js", "key": "mahjong", "name": "Dawg Mahjong", "icon": "🀄", "blurb": "Daily: match pairs to clear the board.", "how": "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair (+15 seconds) and Shuffle mixes the tiles left (+30 seconds). Same board for everyone, one go per day, always solvable. Score: 1500 minus 3 points per second (min 100).", "cat": "den", "max": 1500, "puzzle": true},
+{"file": "g_mjrush.js", "key": "mjrush", "name": "Mahjong Rush", "icon": "🀄", "blurb": "Endless tile matching vs the clock.", "how": "Match pairs of free tiles (nothing on top, left or right side open) before the clock runs out. Every match adds 2 seconds. Match again within 3 seconds to build a combo (x2, x3, up to x5) for bigger points. Clear the board for +25 seconds and a level bonus, then a new board deals. Out of matches? Shuffle is free but costs 5 seconds. Hint costs 5 seconds too.", "max": 999999},
 {"file": "g_party.js", "key": "party", "name": "Dawg Party", "icon": "🎉", "blurb": "5 random party minigames. One total score.", "how": "Five quick minigames, picked at random every run: Dawg Says, Floor Is Lava, Don't Wake Big Dawg, Face Lift, Tug of Woof and Treat Rain. Each one tells you what to do at the start. Your score is the total of all five.", "max": 1500},
 {"file": "g_pips.js", "key": "pips", "name": "Dawg Pips", "icon": "🎲", "blurb": "Daily: place the dominoes to match every rule.", "how": "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: Easy 1000 / Medium 2000 / Hard 3000, minus your seconds (min 20%).", "cat": "den", "max": 3000, "puzzle": true},
 {"file": "g_pks.js", "key": "pks", "name": "Pup Kicks", "icon": "⚽", "blurb": "Penalty kicks. Beat the cat keeper.", "how": "Flick up from the ball toward the goal. Aim left or right, flick longer to shoot higher (too long sails over). Bend your flick to curl it. Top corners are worth +50. The cat keeper learns your favorite side, so mix it up. 3 misses and you're out.", "cat": "sports", "max": 9999},
