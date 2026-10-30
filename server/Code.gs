@@ -166,10 +166,7 @@ function asDateKey_(v, tz) {
 }
 
 function readPlayers_() {
-  const sh = playersSheet_();
-  const n = sh.getLastRow() - 1;
-  if (n < 1) return [];
-  return sh.getRange(2, 1, n, 7).getValues().map((r, i) => ({ id: String(r[0]), name: String(r[1]), row: i + 2, spice: Number(r[3]) || 0, jokes: r[4] === true || r[4] === 'TRUE', mute: r[5] === true || r[5] === 'TRUE', pin: String(r[6] || '') })).filter(p => p.id);
+  return tabValues_('players', playersSheet_, 7).map((r, i) => ({ id: String(r[0]), name: String(r[1]), row: i + 2, spice: Number(r[3]) || 0, jokes: r[4] === true || r[4] === 'TRUE', mute: r[5] === true || r[5] === 'TRUE', pin: String(r[6] || '') })).filter(p => p.id);
 }
 
 // Players and PINs. A PIN is stored scrambled (never as the 4 digits). To reset someone's PIN, clear their cell in the Players tab's "pin" column.
@@ -300,10 +297,8 @@ function getBoard(dateKey, viewerId) {
   dateKey = cleanDate_(dateKey); viewerId = String(viewerId || '');
   const names = {};
   readPlayers_().forEach(p => names[p.id] = p.name);
-  const sh = scoresSheet_();
-  const tz = ss_().getSpreadsheetTimeZone();
-  const n = sh.getLastRow() - 1;
-  const vals = n > 0 ? sh.getRange(2, 1, n, SCORE_HEADERS.length).getValues() : [];
+  const tz = tz_();
+  const vals = tabValues_('scores', scoresSheet_, SCORE_HEADERS.length);
   const today = {}, played = {};
   vals.forEach(v => {
     const d = asDateKey_(v[0], tz), id = String(v[1]);
@@ -435,11 +430,8 @@ function addDays_(dateKey, n) {
   return Utilities.formatDate(new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)), 'UTC', 'yyyy-MM-dd');
 }
 function readShade_() {
-  const sh = shadeSheet_();
-  const n = sh.getLastRow() - 1;
-  if (n < 1) return [];
-  const tz = ss_().getSpreadsheetTimeZone();
-  return sh.getRange(2, 1, n, SHADE_HEADERS.length).getValues().map((r, i) => ({
+  const tz = tz_();
+  return tabValues_('shade', shadeSheet_, SHADE_HEADERS.length).map((r, i) => ({
     id: String(r[0]), date: asDateKey_(r[1], tz), from: String(r[2]), to: String(r[3]), text: String(r[4]),
     kind: String(r[5]), replyTo: String(r[6]), seen: r[8] !== '' && r[8] != null, response: String(r[9] || ''), row: i + 2
   }));
@@ -788,12 +780,9 @@ const NOT_MATES_ = "Shade, reactions and dares are just for your crew. Invite th
 // ---------------- League, crowns, trophies, head-to-head ----------------
 // Every finished game as { 'yyyy-MM-dd': { playerId: result } }.
 function allScores_() {
-  const sh = scoresSheet_();
-  const tz = ss_().getSpreadsheetTimeZone();
-  const n = sh.getLastRow() - 1;
+  const tz = tz_();
   const days = {};
-  if (n < 1) return days;
-  sh.getRange(2, 1, n, SCORE_HEADERS.length).getValues().forEach(v => {
+  tabValues_('scores', scoresSheet_, SCORE_HEADERS.length).forEach(v => {
     const d = asDateKey_(v[0], tz), id = String(v[1]);
     if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
     (days[d] = days[d] || {})[id] = parseRow_(v);
@@ -1090,11 +1079,8 @@ const cleanGame_ = g => { if (g == null || g === '') return 'zoomies'; if (!ARCA
 // Dares are stored as "game:score" (older ones are just "score", meaning Zoomies).
 function parseDare_(text) { const m = String(text).match(/^(?:([a-z]+):)?(\d+)/); return { game: cleanGame_(m && m[1]), target: m ? Number(m[2]) : 0 }; }
 function readArcade_() {
-  const sh = arcadeSheet_();
-  const n = sh.getLastRow() - 1;
-  if (n < 1) return [];
-  const tz = ss_().getSpreadsheetTimeZone();
-  return sh.getRange(2, 1, n, ARCADE_HEADERS.length).getValues().map((r, i) => ({
+  const tz = tz_();
+  return tabValues_('arcade', arcadeSheet_, ARCADE_HEADERS.length).map((r, i) => ({
     date: asDateKey_(r[0], tz), id: String(r[1]), game: String(r[2]), best: Number(r[3]) || 0, plays: Number(r[4]) || 0, row: i + 2
   }));
 }
@@ -1201,6 +1187,43 @@ function answerDare(id, dateKey, dareId, score) {
   return { won: won, score: score, target: target };
 }
 
+// ---------------- Short read cache ----------------
+// When everyone opens the app at once, the same tabs used to be read over and over. Read-only calls now share
+// one copy of the big tabs for up to 30 seconds. Any call that changes data bumps a version number before and
+// after it runs, so nobody sees an old copy after a change, and calls that write always read the sheet fresh.
+const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1 };
+const RC_SECS_ = 30;
+let READONLY_ = false, RC_VER_ = null, TZ_ = null;
+function rcVer_() { if (RC_VER_ == null) { try { RC_VER_ = CacheService.getScriptCache().get('rc:ver') || '0'; } catch (e) { RC_VER_ = 'x' + Date.now(); } } return RC_VER_; }
+function rcBump_() { try { CacheService.getScriptCache().put('rc:ver', String(Date.now()) + Math.random().toString(36).slice(2, 6), 21600); } catch (e) {} RC_VER_ = null; }
+function tz_() {
+  if (TZ_) return TZ_;
+  try { TZ_ = CacheService.getScriptCache().get('rc:tz'); } catch (e) {}
+  if (!TZ_) { TZ_ = ss_().getSpreadsheetTimeZone(); try { CacheService.getScriptCache().put('rc:tz', TZ_, 21600); } catch (e) {} }
+  return TZ_;
+}
+// All data rows (row 2 down) of a tab, `cols` wide. Dates survive the trip through the cache.
+function tabValues_(tag, getSheet, cols) {
+  const read = () => { const sh = getSheet(), n = sh.getLastRow() - 1; return n < 1 ? [] : sh.getRange(2, 1, n, cols).getValues(); };
+  if (!READONLY_) return read();
+  const cache = CacheService.getScriptCache(), base = 'rc:' + tag + ':' + rcVer_();
+  try {
+    const n = Number(cache.get(base + ':n') || -1);
+    if (n > 0) {
+      const keys = []; for (let i = 0; i < n; i++) keys.push(base + ':' + i);
+      const got = cache.getAll(keys);
+      if (keys.every(k => got[k] != null)) return JSON.parse(keys.map(k => got[k]).join(''), (k, v) => typeof v === 'string' && v.charAt(0) === '\u0001' ? new Date(Number(v.slice(1))) : v);
+    }
+  } catch (e) {}
+  const vals = read();
+  try {
+    const str = JSON.stringify(vals.map(r => r.map(v => v instanceof Date ? '\u0001' + v.getTime() : v))), parts = {}; let i = 0;
+    for (let at = 0; at < str.length; at += 24000, i++) parts[base + ":" + i] = str.slice(at, at + 24000);
+    if (i <= 150) { cache.putAll(parts, RC_SECS_); cache.put(base + ':n', String(i), RC_SECS_); }
+  } catch (e) {}
+  return vals;
+}
+
 // ---------------- Fast JSON API ----------------
 // The game page can live on a fast static host (GitHub Pages) and talk to this script over HTTPS.
 // The page sends {fn, args} as plain text (no CORS preflight); only the functions listed here can be called.
@@ -1217,10 +1240,15 @@ function doPost(e) {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const fn = API_FNS[req.fn];
     if (!fn) throw new Error('Unknown call.');
+    READONLY_ = !!READ_FNS_[req.fn]; RC_VER_ = null;
+    if (!READONLY_) rcBump_();
     setScope_(req.crew, req.me);
     out = { ok: true, result: fn.apply(null, Array.isArray(req.args) ? req.args : []) };
   } catch (err) {
     out = { ok: false, error: String((err && err.message) || err) };
+  } finally {
+    if (!READONLY_) rcBump_();
+    READONLY_ = false;
   }
   return ContentService.createTextOutput(JSON.stringify(out === undefined ? null : out)).setMimeType(ContentService.MimeType.JSON);
 }
