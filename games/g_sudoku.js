@@ -35,11 +35,12 @@
   // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
   const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
   const LIM = [900, 1500, 2400];
-  const scoreOf = (d, st) => Math.max(Math.round(DIFF[d][1] * 0.3), Math.round(DIFF[d][1] * 0.7) + speed(st.el, LIM[d], DIFF[d][1] * 0.3) - Math.round(DIFF[d][1] * 0.03) * st.mist);
+  // Like the NYT: a wrong number doesn't cost anything (we still bounce it so you know). Solving + a speed bonus.
+  const scoreOf = (d, st) => Math.round(DIFF[d][1] * 0.7) + speed(st.el, LIM[d], DIFF[d][1] * 0.3);
   defGame({
     key: "sudoku", name: "Dawg Sudoku", icon: "🔢", max: 3000, cat: "den", puzzle: true,
     blurb: "Daily: Easy, Medium and Hard sudoku.",
-    how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. A wrong number counts as a mistake. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick and a small cost per mistake. No clock on screen, so take your time. Your best of the three counts.",
+    how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick. A wrong number just bounces back; it doesn't cost you anything. No clock on screen, so take your time. Your best of the three counts.",
     reset(G) { this.reset0(G); const cur = typeof store !== "undefined" && me ? store.get(this.curKey()) : null; if (cur !== null && cur !== undefined && !(this.rec(cur) || {}).done && this.rec(cur)) this.open(G, cur); },
     reset0(G) { G.s = { phase: "pick", btns: [], sel: -1, notes: false, msg: "", msgT: 0, bad: -1, badT: 0, endT: 0 }; },
     rec(d) { return store.get(rk(d)); },
@@ -65,7 +66,7 @@
       if (v === 0) { s.g[i] = 0; s.n[i] = 0; return this.persist(G); }
       if (s.notes) { if (!s.g[i]) s.n[i] ^= 1 << v; return this.persist(G); }
       if (s.g[i] === v) return;
-      if (s.sol[i] !== v) { s.mist++; s.bad = i; s.badV = v; s.badT = 0.8; G.buzz(); s.msg = "Not quite! +30s"; s.msgT = 1.2; return this.persist(G); }
+      if (s.sol[i] !== v) { s.mist++; s.bad = i; s.badV = v; s.badT = 0.8; G.buzz(); s.msg = "Not that one"; s.msgT = 1.2; return this.persist(G); }
       s.g[i] = v; s.n[i] = 0; PEERS[i].forEach(j => s.n[j] &= ~(1 << v)); G.sfx("pop");
       if (s.g.every((x, k) => x === s.sol[k])) { s.phase = "won"; s.endT = 1.3; const sc = scoreOf(s.d, s); s.final = sc; this.persist(G, { done: true, score: sc }); G.sfx("win"); }
       else this.persist(G);
