@@ -11,7 +11,8 @@
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
   // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
   const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
-  const scoreOf = s => s.won ? Math.max(100, 700 - 100 * s.mist + speed(s.el, 600, 300)) : 100 * s.found;
+  // Mistakes matter most (like the main Groups); time is only a small tiebreaker. A miss still beats nothing.
+  const scoreOf = s => s.won ? 900 - 100 * s.mist + speed(s.el, 600, 100) : 50 + 100 * s.found;
   function fitText(c, str, x, y, w, maxSz, col, one) {
     c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle";
     const lines = !one && str.length > 9 && str.includes(" ") ? str.split(" ") : [str];
@@ -22,7 +23,7 @@
   defGame({
     key: "sgroups", name: "Sports Groups", icon: "🏟️", max: 1000, cat: "den", puzzle: true,
     blurb: "Daily: find four groups of four, sports edition.",
-    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 700, minus 100 per mistake, plus a small bonus (up to 300) for going quick. Missing it is 100 per group found. No clock on screen, so take your time.",
+    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 900, minus 100 per mistake, plus a small bonus (up to 100) for going quick, so a perfect solve beats a fast sloppy one. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
     reset(G) {
       const p = PUZ[pIdx()], s = G.s = { p, sel: [], msg: "", msgT: 0, shake: 0, btns: [], postT: 0 };
       const r = store.get(rk());

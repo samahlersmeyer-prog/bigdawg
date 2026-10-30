@@ -1,7 +1,8 @@
 // ---------- Kick Dawg (field goals in the wind) ----------
 // View from behind the kicker. Two taps per kick: (1) an AIM arrow swings left/right - tap to lock it,
 // (2) a POWER meter fills up and down - tap to lock it. Wind bends the ball in flight, so lock the aim off-center.
-// Score = total yards of made kicks. Start at 20 yds, +5 after every make. 3 misses ends it.
+// Score = yards of each make plus an angle bonus. Kicks run 20-60 yards and move around the field: the left and right
+// hashes early, then wide angles from out near the numbers. 3 misses ends it.
 (function () {
   const TH = 38 * Math.PI / 180, GRAV = 10.7, SIMS = 1.55;           // launch angle, gravity (yd/s^2), sim speed-up
   const HW = 3.08, BAR = 3.33, UPH = 10, BR = 0.16, POST = 0.12;     // half gap, crossbar height, upright height (yards)
@@ -11,9 +12,18 @@
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const rangeOf = p => 16 + 68 * p;                                    // carry (yards) at a given power 0..1
   function lay(G) { const H = G.H; return { hz: H * 0.45, f: H * 0.95, cz: 5, ch: 1.6 }; }
-  function proj(G, X, Y, Z) {
-    const L = G.s.L, s = L.f / Math.max(0.5, Z + L.cz);
-    P.s = s; P.x = G.W / 2 + (X - G.s.camX) * s; P.y = L.hz + (L.ch - Y) * s; return P;
+  // Camera stands behind the ball and turns to face the posts (so angled kicks still look straight on).
+  const C3 = { x: 0, y: 0, z: 0 };
+  function cam(G, X, Y, Z) { const s = G.s, dx = X - s.bx, cs = s.yc, sn = s.ys; C3.x = dx * cs - Z * sn; C3.y = Y; C3.z = dx * sn + Z * cs + s.L.cz; return C3; }
+  function scr(G, x, y, z) { const L = G.s.L, sc = L.f / Math.max(0.5, z); P.s = sc; P.x = G.W / 2 + x * sc; P.y = L.hz + (L.ch - y) * sc; return P; }
+  function proj(G, X, Y, Z) { const q = cam(G, X, Y, Z); return scr(G, q.x, q.y, q.z); }
+  const NEAR = 0.6;
+  function clipPoly(pts) { // keep the part in front of the camera
+    const out = [];
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length], ai = a.z >= NEAR, bi = b.z >= NEAR;
+      if (ai) out.push(a);
+      if (ai !== bi) { const t = (NEAR - a.z) / (b.z - a.z); out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR }); } }
+    return out;
   }
   function needP(D) { // power that just clears the bar with zero wind
     const R = D / Math.max(0.05, 1 - (BAR + 0.5) / (D * Math.tan(TH)));
@@ -25,17 +35,21 @@
     s.phase = "aim"; s.res = null; s.ft = 0; s.crossed = false; s.decided = false; s.doink = false;
     s.face = ":dawgW:"; s.kickT = 0; s.lockT = 0.35; s.aim = 0; s.pow = 0;
     s.aph = Math.random() * 6.28; s.pph = 0;
-    // hash mark: the ball sits a little left or right of center (more on longer kicks)
-    s.bx = (Math.random() * 2 - 1) * Math.min(3, 1 + D * 0.04);
-    s.camX = s.bx * 0.85;
+    // the spot: hashes early, then wider angles out toward the numbers
+    const lat = Math.min(11, 1.5 + s.makes * 1.1), side = Math.random() < 0.5 ? -1 : 1;
+    s.bx = side * lat * (s.makes < 2 ? Math.random() : 0.45 + 0.55 * Math.random());
+    const ang = Math.atan2(-s.bx, D); s.yc = Math.cos(ang); s.ys = Math.sin(ang); s.head = ang;
+    s.spot = Math.abs(s.bx) < 1.2 ? "MIDDLE" : (Math.abs(s.bx) <= 3.6 ? "HASH" : Math.abs(s.bx) <= 7 ? "WIDE" : "SHARP ANGLE") + (s.bx < 0 ? " · LEFT" : " · RIGHT");
+    s.bonus = Math.round(Math.abs(s.bx) * 2);
+    s.camX = 0;
     s.pan = 0;
     s.ball = { x: s.bx, y: 0.22, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, ax: 0, on: false };
     // wind grows with distance (and a touch with every kick)
-    const mx = Math.min(24, 3 + (D - 20) * 0.42 + s.kicks * 0.15);
+    const mx = Math.min(16, 2 + (D - 20) * 0.28 + s.kicks * 0.08);
     const mph = Math.round(mx * (0.3 + 0.7 * Math.random()));
     s.wind = (Math.random() < 0.5 ? -1 : 1) * Math.max(1, mph);
-    s.aspd = 2.3 + (D - 20) * 0.035;   // arrow swing speed (rad/s of phase)
-    s.pspd = 1.15 + (D - 20) * 0.018;  // meter speed (full sweeps per second)
+    s.aspd = Math.min(2.0, 1.35 + s.kicks * 0.04);   // arrow swing speed (rad/s of phase) - human friendly
+    s.pspd = Math.min(0.95, 0.62 + s.kicks * 0.02);  // meter speed (full sweeps per second)
   }
 
   function lockTap(G) {
@@ -48,7 +62,7 @@
   function kick(G) {
     const s = G.s, b = s.ball, R = rangeOf(s.pow), v = Math.sqrt(R * GRAV / Math.sin(2 * TH));
     const vh = v * Math.cos(TH);
-    b.vx = vh * Math.sin(s.aim); b.vz = vh * Math.cos(s.aim); b.vy = v * Math.sin(TH);
+    b.vx = vh * Math.sin(s.head + s.aim); b.vz = vh * Math.cos(s.head + s.aim); b.vy = v * Math.sin(TH);
     b.ax = s.wind * WINDK; b.on = true; b.spin = 9 + s.pow * 6;
     s.phase = "fly"; s.kickT = 0.2; s.ft = 0; s.kicks++;
     G.sfx("pop"); G.buzz();
@@ -58,7 +72,7 @@
     const s = G.s; if (s.decided) return;
     s.decided = true; s.res = { good, txt, sub: sub || "", t: 0 };
     if (good) {
-      s.score = Math.min(9999, s.score + s.dist); s.makes++; s.face = ":dawgpog:";
+      s.gain = s.dist + s.bonus; s.score = Math.min(9999, s.score + s.gain); s.makes++; s.face = ":dawgpog:";
       s.long = Math.max(s.long, s.dist);
       G.sfx("win");
     } else {
@@ -70,7 +84,7 @@
   defGame({
     key: "fg", name: "Kick Dawg", icon: "🏈", max: 9999, cat: "sports",
     blurb: "Field goals. Read the wind. Split the uprights.",
-    how: "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter. WIND (top left, and the flags on the posts) bends the ball, so aim into it. Every make scores its yards and moves you back 5. 3 misses and you're done.",
+    how: "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. 3 misses and you're done.",
     reset(G) {
       G.s = { L: lay(G), dist: 20, score: 0, makes: 0, miss: 0, kicks: 0, long: 0, face: ":dawgW:", wind: 0, camX: 0 };
       newKick(G);
@@ -122,7 +136,7 @@
               G.over(s.score, s.score >= 600 ? "Leg of a legend!" : s.score >= 250 ? "Big leg, bad wind." : "Wide right. Ruff.");
               return;
             }
-            if (s.res.good) s.dist += 5;
+            if (s.res.good) s.dist = s.makes < 8 ? 20 + s.makes * 5 : [35, 40, 45, 45, 50, 50, 55, 55, 60, 60][Math.floor(Math.random() * 10)];
             newKick(G);
           }
         } else if (s.ft > 6) decide(G, false, "NO GOOD", "SHORT");
@@ -170,6 +184,7 @@
       line3(G, c, -FW, 0, zn, -FW, 0, D, 2); line3(G, c, FW, 0, zn, FW, 0, D, 2);
       c.fillStyle = dark ? "rgba(255,255,255,0.7)" : "#fff";
       for (let z = Math.ceil(zn + 1); z < gl; z++) for (const hx of [-HW, HW]) {
+        if (cam(G, hx, 0, z).z < NEAR + 0.5) continue;
         const a = proj(G, hx, 0, z), w = Math.max(1, 0.5 * a.s);
         c.fillRect(a.x - w / 2, a.y - 0.5, w, Math.max(1, a.s * 0.06));
       }
@@ -191,7 +206,7 @@
       c.restore();
       // ---- aim arrow + power meter ----
       if (s.phase === "aim" || s.phase === "power") {
-        drawMeter(G, c, s.phase === "power" ? s.pow : 0, needP(D), s.phase === "power");
+        drawMeter(G, c, s.phase === "power" ? s.pow : 0, needP(Math.hypot(D, s.bx)), s.phase === "power");
       }
       // ---- result ----
       if (s.res) {
@@ -205,19 +220,19 @@
         c.restore();
         if (r.sub) G.text(c, r.sub, W / 2, y + 36, 12, "#fff");
         G.img(c, s.face, W / 2, H - 90, 96 + (r.good ? Math.abs(Math.sin(t * 9)) * 8 : 0), r.good ? Math.sin(t * 10) * 0.12 : 0);
-        if (r.good) G.text(c, `+${D}`, W / 2 + 70, H - 120 - Math.min(20, r.t * 40), 16, "#ffd23f");
+        if (r.good) G.text(c, `+${s.gain}`, W / 2 + 70, H - 120 - Math.min(20, r.t * 40), 16, "#ffd23f");
       }
       // ---- HUD + wind ----
       let lives = ""; for (let i = 0; i < 3; i++) lives += i < 3 - s.miss ? "🏈" : "✖️";
       G.hud(c, `SCORE ${s.score || 0}`, `${D} YD`, lives);
-      if (!s.res) drawWind(G, c, s.wind, t);
+      if (!s.res) { drawWind(G, c, s.wind, t); if (s.phase !== "fly") G.text(c, s.bonus ? `${s.spot} · +${s.bonus} ANGLE` : s.spot, W / 2, 50, 10, "#fff"); }
       if (!s.kicks && s.phase === "aim") G.hint(c, "TAP TO LOCK AIM", 99, H * 0.62);
       else if (!s.kicks && s.phase === "power") G.hint(c, "TAP TO LOCK POWER", 99, H * 0.62);
     }
   });
 
   function drawArrow(G, c, x, y, aim, locked, t) {
-    const s = G.s, tg = proj(G, s.bx + s.dist * Math.tan(aim), BAR + 1.5, s.dist), tx = tg.x, ty = tg.y;
+    const s = G.s, tg = proj(G, s.bx + s.dist * Math.tan(s.head + aim), BAR + 1.5, s.dist), tx = tg.x, ty = tg.y;
     const ang = Math.atan2(tx - x, -(ty - y)), len = Math.min(G.H * 0.2, 120), oy = y - 8;
     // faint aim line out to the posts (no wind - that's on you)
     c.setLineDash([5, 7]); c.strokeStyle = locked ? "rgba(91,227,91,0.7)" : "rgba(255,240,120,0.55)";
@@ -264,13 +279,17 @@
     c.lineTo(x, y + h); c.closePath(); c.fill();
   }
   function quad(G, c, x0, x1, z0, z1, col) {
-    const a = proj(G, x0, 0, z0), ax = a.x, ay = a.y; const b = proj(G, x1, 0, z0), bx = b.x;
-    const d = proj(G, x1, 0, z1), dx = d.x, dy = d.y; const e = proj(G, x0, 0, z1), ex = e.x;
-    c.fillStyle = col; c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, ay); c.lineTo(dx, dy); c.lineTo(ex, dy); c.closePath(); c.fill();
+    const pts = clipPoly([[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => Object.assign({}, cam(G, x, 0, z))));
+    if (pts.length < 3) return;
+    c.fillStyle = col; c.beginPath(); pts.forEach((q, i) => { const p = scr(G, q.x, q.y, q.z); i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y); }); c.closePath(); c.fill();
   }
   function line3(G, c, x0, y0, z0, x1, y1, z1, w) {
-    const a = proj(G, x0, y0, z0), ax = a.x, ay = a.y; const b = proj(G, x1, y1, z1);
-    c.lineWidth = w; c.beginPath(); c.moveTo(ax, ay); c.lineTo(b.x, b.y); c.stroke();
+    let a = Object.assign({}, cam(G, x0, y0, z0)), b = Object.assign({}, cam(G, x1, y1, z1));
+    if (a.z < NEAR && b.z < NEAR) return;
+    if (a.z < NEAR) { const t = (NEAR - a.z) / (b.z - a.z); a = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR }; }
+    if (b.z < NEAR) { const t = (NEAR - b.z) / (a.z - b.z); b = { x: b.x + (a.x - b.x) * t, y: b.y + (a.y - b.y) * t, z: NEAR }; }
+    const p = scr(G, a.x, a.y, a.z), ax = p.x, ay = p.y, q = scr(G, b.x, b.y, b.z);
+    c.lineWidth = w; c.beginPath(); c.moveTo(ax, ay); c.lineTo(q.x, q.y); c.stroke();
   }
   function drawPosts(G, c, D, dark, t) {
     const s = G.s, base = proj(G, 0, 0, D + 1.5), bx = base.x, by = base.y, sc = base.s;
@@ -279,9 +298,10 @@
     const pw = Math.max(2, 0.3 * sc); c.fillRect(bx - pw / 2, by - (BAR - 0.4) * sc, pw, (BAR - 0.4) * sc);
     c.strokeStyle = "#ffd400"; c.lineCap = "round"; c.lineWidth = Math.max(2, 0.28 * ps);
     c.beginPath(); c.moveTo(bx, by - (BAR - 0.4) * sc); c.lineTo(barx, bry); c.stroke();
-    const lx = barx - HW * ps, rx = barx + HW * ps, top = bry - UPH * ps;
+    const pl = proj(G, -HW, BAR, D), lx = pl.x, ly = pl.y, pr = proj(G, HW, BAR, D), rx = pr.x, ry = pr.y;
+    const tl = proj(G, -HW, BAR + UPH, D), tly = tl.y, tr = proj(G, HW, BAR + UPH, D), tryy = tr.y, top = Math.min(tly, tryy);
     c.lineWidth = Math.max(2, 0.24 * ps);
-    c.beginPath(); c.moveTo(lx, bry); c.lineTo(rx, bry); c.moveTo(lx, bry); c.lineTo(lx, top); c.moveTo(rx, bry); c.lineTo(rx, top); c.stroke();
+    c.beginPath(); c.moveTo(lx, ly); c.lineTo(rx, ry); c.moveTo(lx, ly); c.lineTo(lx, tly); c.moveTo(rx, ry); c.lineTo(rx, tryy); c.stroke();
     c.lineCap = "butt";
     const wd = Math.sign(s.wind) || 1, wm = Math.abs(s.wind || 0), fl = Math.max(14, ps * 1.4), fh = Math.max(7, ps * 0.45);
     const fy = Math.max(top, 40);   // keep the flags below the HUD on short kicks
