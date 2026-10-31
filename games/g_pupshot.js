@@ -1,9 +1,7 @@
-// ---------- Pup Shot + Boing Hoops (Arcade: basketball physics puzzles) ----------
-// Pup Shot: pull back and let go to fling the ball. While it flies, TAP to warp the pup to the ball, then shoot
+// ---------- Pup Shot (Arcade: basketball physics puzzles) ----------
+// Pull back and let go to fling the ball. While it flies, TAP to warp the pup to the ball, then shoot
 //   again from right there (even in mid-air). Get it through the hoop in as few shots as you can.
-// Boing Hoops: the aim arrow swings on its own. Press and hold to lock the aim and build power, let go to throw.
-//   Bombs blast the ball, magnets pull it, pink pads bounce it.
-// Both: 12 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
+// 12 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
 (function () {
   const GR = 140, BR = 2.6, RIM = 13, FLOOR = [-30, 146, 160, 30];
   // ---- levels (a 100 x 150 court, y grows downward) ----
@@ -21,20 +19,6 @@
     { d: [12, 138], h: [14, 72, "l"], w: [[0, 96, 66, 5]], par: 2 },
     { d: [88, 138], h: [10, 120, "l"], w: [[30, 46, 8, 100], [30, 0, 8, 22]], par: 2 },
     { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 2 }
-  ];
-  const BOING = [
-    { d: [16, 138], h: [68, 100, "r"], w: [], par: 1, a: [30, 75], tip: "HOLD TO POWER UP, LET GO" },
-    { d: [15, 138], h: [74, 120, "r"], w: [[44, 78, 8, 68]], par: 1, a: [45, 80] },
-    { d: [15, 138], h: [60, 62, "r"], w: [], bombs: [[56, 141]], par: 1, a: [30, 75], tip: "BOMBS BLAST THE BALL" },
-    { d: [15, 138], h: [76, 90, "r"], w: [[40, 0, 8, 90]], mags: [[82, 100]], par: 1, a: [15, 55], tip: "MAGNETS PULL IT IN" },
-    { d: [14, 138], h: [70, 98, "r"], w: [[30, 0, 6, 104], [40, 141, 26, 5, 1]], par: 1, a: [8, 45], tip: "PINK PADS ARE BOUNCY" },
-    { d: [14, 138], h: [80, 126, "r"], w: [[22, 0, 78, 84]], par: 1, a: [5, 40] },
-    { d: [15, 138], h: [52, 82, "r"], w: [], bombs: [[42, 118], [64, 84]], par: 1, a: [25, 65] },
-    { d: [14, 138], h: [74, 126, "r"], w: [[50, 72, 8, 74]], mags: [[80, 112]], par: 1, a: [40, 82] },
-    { d: [86, 138], h: [10, 96, "l"], w: [[36, 62, 6, 84]], par: 1, a: [100, 150] },
-    { d: [16, 138], h: [74, 46, "r"], w: [[30, 141, 24, 5, 1]], bombs: [[66, 82]], par: 1, a: [45, 85] },
-    { d: [14, 138], h: [76, 110, "r"], w: [[36, 76, 6, 70], [92, 0, 8, 146, 1]], par: 1, a: [40, 80] },
-    { d: [50, 138], h: [12, 58, "l"], w: [[28, 90, 6, 56], [70, 90, 6, 56]], mags: [[18, 46]], bombs: [[50, 100]], par: 1, a: [60, 120] }
   ];
   // ---- physics (pure, so it can be tested off-screen) ----
   function world(L) {
@@ -69,8 +53,8 @@
     }
     return "";
   }
-  const SPEED = p => 30 + 100 * p, SPEEDB = p => 35 + 120 * p;   // Boing throws a bit harder (no warp to get height)
-  const ENG = { SHOT, BOING, world, step, SPEED, SPEEDB, BR };
+  const SPEED = p => 30 + 100 * p;
+  const ENG = { SHOT, world, step, SPEED, BR };
   const levelPts = (shots, par) => Math.max(100, 500 - 100 * Math.max(0, shots - par));
   const stars = (shots, par) => shots <= par ? 3 : shots === par + 1 ? 2 : 1;
 
@@ -110,7 +94,7 @@
   }
   function common(key) {
     return {
-      newLevel(G) { const s = G.s, L = (key === "pupshot" ? SHOT : BOING)[s.lv]; s.L = L; s.W = world(L); s.shots = 0; s.fx = []; s.clear = 0; this.home(G); s.tipT = 4; },
+      newLevel(G) { const s = G.s, L = SHOT[s.lv]; s.L = L; s.W = world(L); s.shots = 0; s.fx = []; s.clear = 0; this.home(G); s.tipT = 4; },
       home(G) { const s = G.s; s.dog = { x: s.L.d[0], y: s.L.d[1] - 4 }; s.ball = { x: s.dog.x + 3, y: s.dog.y - 2, vx: 0, vy: 0 }; s.phase = "aim"; s.rot = 0; s.rest = 0; s.flyT = 0; s.W.bombs.forEach(q => q.on = true); },
       cleared(G) { const s = G.s; s.score += levelPts(s.shots, s.L.par); s.clear = 1.6; s.phase = "clear"; G.sfx("win"); s.fx.push({ k: "swish", x: s.W.hx + RIM / 2, y: s.W.hy + 4, t: 0 }); },
       advance(G) { const s = G.s; s.lv++; if (s.lv >= 12) { s.done = true; return G.over(s.score, "All 12 courts cleared! 🏀"); } this.newLevel(G); },
@@ -119,7 +103,7 @@
       fly(G, dt) {
         // fixed 1/60 s steps so every throw flies exactly the same on every phone (and matches the level checker)
         const s = G.s, ev = []; let r = ""; s.acc = (s.acc || 0) + dt;
-        while (s.acc >= 1 / 60 && !r) { s.acc -= 1 / 60; r = step(s.W, s.ball, 1 / 60, key === "boing" ? 0.72 : 0.55, ev); }
+        while (s.acc >= 1 / 60 && !r) { s.acc -= 1 / 60; r = step(s.W, s.ball, 1 / 60, 0.55, ev); }
         if (r) s.acc = 0; s.rot += s.ball.vx * dt * 0.25; s.flyT += dt;
         ev.forEach(e => { s.fx.push(Object.assign(e, { t: 0 })); G.sfx("pop"); if (e.k === "boom") G.buzz(); });
         if (r === "score") return this.cleared(G);
@@ -172,37 +156,4 @@
   });
   pup._eng = ENG; defGame(pup);
 
-  // ======== Boing Hoops ========
-  const boing = Object.assign(common("boing"), {
-    key: "boing", name: "Boing Hoops", icon: "🪀", max: 99999,
-    blurb: "Time the swing, hold for power. Bombs, magnets, bouncy pads.",
-    how: "The aim arrow swings back and forth on its own. Press and HOLD to lock the aim and build power (the arrow grows), then let go to throw. Hold longer to throw farther. The ball is extra bouncy. 💣 bombs blast it away, 🧲 magnets pull it in, and pink pads send it flying. Get it in the hoop! Each court is worth 500 in one shot, 100 less for each extra try. 12 courts.",
-    reset(G) { G.s = { lv: 0, score: 0, ph: 0 }; this.newLevel(G); },
-    aimAng(s) { const [a0, a1] = s.L.a; return (a0 + (a1 - a0) * (0.5 - 0.5 * Math.cos(s.ph))) * Math.PI / 180; },
-    update(G, dt) {
-      const s = G.s; this.tickFx(G, dt);
-      if (s.phase === "aim") { if (!s.hold) { s.ph += dt * 1.6; s.ang = this.aimAng(s); s.pow = 0; } else { s.pt += dt * 0.85; s.pow = s.pt % 2 < 1 ? s.pt % 2 : 2 - s.pt % 2; } }
-      if (s.phase === "fly") { const r = this.fly(G, dt); if (r === "out" || r === "rest") { if (r === "out") G.sfx("lose"); s.phase = "back"; s.bt = 0.5; } }
-      if (s.phase === "back") { s.bt -= dt; if (s.bt <= 0) this.home(G); }
-    },
-    draw(G, c) {
-      const s = G.s, V = view(G), S = V.S, X = x => V.ox + x * S, Y = y => V.oy + y * S;
-      drawCourt(G, c, s, V);
-      G.img(c, s.phase === "clear" ? ":dawgpog:" : ":dawgW:", X(s.dog.x), Y(s.dog.y), 11 * S);
-      if (s.phase === "aim") { const a = s.ang || 0, len = (10 + 22 * (s.pow || 0)) * S, x0 = X(s.dog.x), y0 = Y(s.dog.y - 2);
-        c.save(); c.translate(x0, y0); c.rotate(-a); c.fillStyle = s.hold ? "#ff6b3d" : "#ffd23f"; c.strokeStyle = "rgba(0,0,0,0.5)"; c.lineWidth = 2;
-        c.beginPath(); c.moveTo(4 * S, -1.2 * S); c.lineTo(len - 3 * S, -1.2 * S); c.lineTo(len - 3 * S, -3 * S); c.lineTo(len + 2 * S, 0); c.lineTo(len - 3 * S, 3 * S); c.lineTo(len - 3 * S, 1.2 * S); c.lineTo(4 * S, 1.2 * S); c.closePath(); c.stroke(); c.fill(); c.restore(); }
-      if (s.phase !== "clear" || s.clear > 1.2) drawBall(G, c, V, s.phase === "aim" ? { x: s.dog.x + 3.5, y: s.dog.y - 3 } : s.ball, s.rot);
-      hud(G, c, s); banner(G, c, s);
-      if (s.tipT > 0 && s.L.tip) G.hint(c, s.L.tip, s.tipT, G.H * 0.2);
-      if (s.shots >= s.L.par + 5) { s.skip = { x: 8, y: 40, w: 70, h: 36 }; c.fillStyle = "rgba(0,0,0,0.45)"; c.fillRect(8, 42, 70, 32); G.text(c, "SKIP", 43, 58, 10, "#fff"); } else s.skip = null;
-    },
-    down(G, x, y) { const s = G.s, k = s.skip; if (k && x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h && s.phase !== "clear") { s.shots = 99; return this.advance(G); }
-      if (s.phase === "aim") { s.hold = true; s.pt = 0; s.pow = 0; } },
-    move() { },
-    up(G) { const s = G.s; if (s.phase !== "aim" || !s.hold) return; s.hold = false; const p = Math.max(0.05, s.pow), v = ENG.SPEEDB(p), a = s.ang;
-      s.ball.x = s.dog.x + Math.cos(a) * 3; s.ball.y = s.dog.y - 2 - Math.sin(a) * 3; s.ball.vx = Math.cos(a) * v; s.ball.vy = -Math.sin(a) * v; s.phase = "fly"; s.shots++; s.rest = 0; s.flyT = 0; G.sfx("pop"); },
-    onKey(G, k, d) { if (k === " ") d ? this.down(G, -1, -1) : this.up(G); }
-  });
-  boing._eng = ENG; defGame(boing);
 })();
