@@ -18,7 +18,7 @@ Sam's daily puzzle app for his friends. Live at https://samahlersmeyer-prog.gith
 - `js/social.js` — Crews, Week in Review, Scoreboard/standings, Shade (roasts), Big Dawg emotes, confetti/sounds/crown/league/player cards/reactions.
 - `js/arcade.js` — Arcade / Sports / Den hubs, built-in Zoomies, Long Dawg, Fetch Breakout, the shared arcade engine, and the `defGameMeta([...])` list of every lazy-loaded game.
 - `js/boot.js` — identity ("Who's playing?" + PIN) and `boot()`.
-- `games/g_*.js` — one file per arcade/sports/den game, lazy-loaded. To add a game: create `games/g_x.js` and add its entry to `defGameMeta` in `js/arcade.js`.
+- `games/g_*.js` — one file per arcade/sports/den game, lazy-loaded. To add a game: create `games/g_x.js`, add its entry to `defGameMeta` in `js/arcade.js`, and add its key to a section in `ARC_GROUPS` (Arcade and Sports each have 3 sections; unlisted games fall into the last one).
 - `sw.js` — service worker (instant open, quiet background updates). `strands_x.json` — Strands bonus words, fetched after load.
 - `server/Code.gs` — Apps Script backend; data in Google Sheet `1VL0FSSHy4VFphMntUA0tKgXBEG4ELWKx7zyXdJvS6Bw`. `server/Loader.gs` is pasted once in Apps Script and pulls `Code.gs` from GitHub, so pushing `Code.gs` goes live in about 10 minutes, no deploy. Server functions are in `API_FNS`.
 
