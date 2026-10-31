@@ -22,7 +22,7 @@
       const n = Math.min(8, 3 + s.lvl), spots = [], used = new Set();
       for (let k = 0; k < 60 && spots.length < n; k++) {
         const horiz = Math.random() < 0.5, x = 1 + Math.floor(Math.random() * (C - 4)), y = 3 + Math.floor(Math.random() * (R - 6));
-        if (Math.abs(x - mid) < 2 && y <= half + 1) continue;
+        if (Math.abs(x + 1 - mid) + Math.abs(y - half) < 6 || (Math.abs(x + 1 - mid) < 3 && y <= half + 2)) continue; // keep critters away from the pup's start
         const cells = horiz ? [[x, y], [x + 1, y], [x + 2, y]] : [[x + 1, y - 1], [x + 1, y], [x + 1, y + 1]];
         if (cells.some(([a, b]) => used.has(a + "," + b) || used.has(a + "," + (b - 1)) || used.has(a + "," + (b + 1)))) continue;
         cells.forEach(([a, b]) => { s.dug[b][a] = true; used.add(a + "," + b); });
@@ -33,7 +33,7 @@
         const x = Math.floor(Math.random() * C), y = 2 + Math.floor(Math.random() * (R - 4));
         if (s.dug[y][x] || s.dug[y + 1][x] || s.rocks.some(r => Math.abs(r.x - x) + Math.abs(r.y - y) < 3) || used.has(x + "," + (y - 1))) continue;
         s.rocks.push({ x, y, st: "rest", t: 0 }); }
-      s.bark = null; s.held = null; s.rocksDropped = 0; s.bonus = null;
+      s.bark = null; s.held = null; s.rocksDropped = 0; s.bonus = null; s.grace = 2;
     },
     pts(s, e) { return (e.k === "badger" ? 2 : 1) * [200, 300, 400, 500][Math.min(3, Math.floor(e.y / (s.R / 4)))]; },
     free(s, x, y) { return x >= 0 && x < C && y >= 0 && y < s.R && s.dug[y][x] && !s.rocks.some(r => r.st !== "gone" && Math.round(r.x) === x && Math.round(r.y) === y); },
@@ -42,7 +42,7 @@
       const s = G.s, lv = s.lvl - 1; s.msgT = Math.max(0, s.msgT - dt);
       s.fx.forEach(f => f.t += dt); s.fx = s.fx.filter(f => f.t < 0.9);
       if (s.dead > 0) { s.dead -= dt; if (s.dead <= 0) { s.dead = 0; if (s.lives <= 0) return G.over(s.score, s.lvl > 2 ? `Yard ${s.lvl}. Good digging!` : "Caught in the tunnels!");
-        s.p = { x: s.start[0], y: s.start[1], dir: [0, 0] }; s.en.forEach(e => { e.x = e.tx = e.hx; e.y = e.ty = e.hy; e.puff = 0; e.ghost = 0; }); } return; }
+        s.p = { x: s.start[0], y: s.start[1], dir: [0, 0] }; s.grace = 2; s.en.forEach(e => { e.x = e.tx = e.hx; e.y = e.ty = e.hy; e.puff = 0; e.ghost = 0; }); } return; }
       // player: grid-aligned movement, digs as it goes
       const p = s.p, sp = 3.4 * dt, d = s.held;
       if (d) {
@@ -75,7 +75,8 @@
         else if (r.st === "gone") r.t -= dt; });
       s.rocks = s.rocks.filter(r => r.st !== "gone" || r.t > 0);
       // critters
-      const espd = (1.7 + lv * 0.18) * dt;
+      if (s.grace > 0) s.grace -= dt;   // a short head start: critters wait at first and after each life
+      const espd = s.grace > 0 ? 0 : (1.7 + lv * 0.18) * dt;
       s.en.forEach(e => {
         if (e.dead) { e.dead += dt; return; }
         if (e.puff > 0) { e.pT = (e.pT || 0) + dt; if (e.pT > 0.9) { e.pT = 0; e.puff--; } return; }
