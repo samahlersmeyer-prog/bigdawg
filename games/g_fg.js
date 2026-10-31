@@ -45,11 +45,13 @@
     s.pan = 0;
     s.ball = { x: s.bx, y: 0.22, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, ax: 0, on: false };
     // wind grows with distance (and a touch with every kick)
-    const mx = Math.min(16, 2 + (D - 20) * 0.28 + s.kicks * 0.08);
-    const mph = Math.round(mx * (0.3 + 0.7 * Math.random()));
+    // PRO RANGE (1000+ points): 40-60 yarders only, real wind that keeps building, a touch quicker meters
+    const pro = s.score >= 1000; if (pro && !s.pro) { s.pro = true; s.proT = 2.2; }
+    const mx = pro ? Math.min(30, 18 + (s.score - 1000) / 100) : Math.min(16, 2 + (D - 20) * 0.28 + s.kicks * 0.08);
+    const mph = Math.round(pro ? mx * (0.55 + 0.45 * Math.random()) : mx * (0.3 + 0.7 * Math.random()));
     s.wind = (Math.random() < 0.5 ? -1 : 1) * Math.max(1, mph);
-    s.aspd = Math.min(2.0, 1.35 + s.kicks * 0.04);   // arrow swing speed (rad/s of phase) - human friendly
-    s.pspd = Math.min(0.95, 0.62 + s.kicks * 0.02);  // meter speed (full sweeps per second)
+    s.aspd = pro ? 2.2 : Math.min(2.0, 1.35 + s.kicks * 0.04);   // arrow swing speed (rad/s of phase) - human friendly
+    s.pspd = pro ? 1.0 : Math.min(0.95, 0.62 + s.kicks * 0.02);  // meter speed (full sweeps per second)
   }
 
   function lockTap(G) {
@@ -84,7 +86,7 @@
   defGame({
     key: "fg", name: "Kick Dawg", icon: "🏈", max: 9999, cat: "sports",
     blurb: "Field goals. Read the wind. Split the uprights.",
-    how: "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. 3 misses and you're done.",
+    how: "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. Hit 1,000 points and you're in PRO RANGE: nothing shorter than 40 yards and the wind really picks up. 3 misses and you're done.",
     reset(G) {
       G.s = { L: lay(G), dist: 20, score: 0, makes: 0, miss: 0, kicks: 0, long: 0, face: ":dawgW:", wind: 0, camX: 0 };
       newKick(G);
@@ -136,7 +138,7 @@
               G.over(s.score, s.score >= 600 ? "Leg of a legend!" : s.score >= 250 ? "Big leg, bad wind." : "Wide right. Ruff.");
               return;
             }
-            if (s.res.good) s.dist = s.makes < 8 ? 20 + s.makes * 5 : [35, 40, 45, 45, 50, 50, 55, 55, 60, 60][Math.floor(Math.random() * 10)];
+            if (s.res.good) s.dist = s.score >= 1000 ? [40, 45, 50, 50, 55, 55, 60, 60][Math.floor(Math.random() * 8)] : s.makes < 8 ? 20 + s.makes * 5 : [35, 40, 45, 45, 50, 50, 55, 55, 60, 60][Math.floor(Math.random() * 10)];
             newKick(G);
           }
         } else if (s.ft > 6) decide(G, false, "NO GOOD", "SHORT");
@@ -224,7 +226,8 @@
       }
       // ---- HUD + wind ----
       let lives = ""; for (let i = 0; i < 3; i++) lives += i < 3 - s.miss ? "🏈" : "✖️";
-      G.hud(c, `SCORE ${s.score || 0}`, `${D} YD`, lives);
+      G.hud(c, `SCORE ${s.score || 0}`, s.pro ? `PRO · ${D} YD` : `${D} YD`, lives);
+      if (s.proT > 0) { s.proT -= 1 / 60; G.banner(c, "PRO RANGE", "#ff6b6b", H * 0.36); G.text(c, "40+ YARDERS · BIG WIND", W / 2, H * 0.36 + 34, 11, "#fff"); }
       if (!s.res) { drawWind(G, c, s.wind, t); if (s.phase !== "fly") G.text(c, s.bonus ? `${s.spot} · +${s.bonus} ANGLE` : s.spot, W / 2, 50, 10, "#fff"); }
       if (!s.kicks && s.phase === "aim") G.hint(c, "TAP TO LOCK AIM", 99, H * 0.62);
       else if (!s.kicks && s.phase === "power") G.hint(c, "TAP TO LOCK POWER", 99, H * 0.62);
