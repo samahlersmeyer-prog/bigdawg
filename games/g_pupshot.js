@@ -9,16 +9,16 @@
   // d: pup start, h: [rim-left x, rim y, backboard side], w: [x, y, w, h, bouncy?], par: shots, bombs/mags: [x, y], a: aim swing (deg)
   const SHOT = [
     { d: [18, 138], h: [68, 96, "r"], w: [], par: 1, tip: "HOLD TO CHARGE, LET GO" },
-    { d: [15, 138], h: [72, 118, "r"], w: [[44, 96, 8, 50]], par: 2, tip: "LOB IT OVER THE WALL" },
-    { d: [15, 138], h: [74, 112, "r"], w: [[30, 0, 70, 78]], par: 1, tip: "KEEP IT LOW" },
-    { d: [15, 138], h: [70, 42, "r"], w: [[60, 58, 34, 4]], par: 3, tip: "TAP WHILE IT FLIES TO WARP" },
+    { d: [15, 138], h: [72, 118, "r"], w: [[44, 96, 8, 50]], par: 1, tip: "LOB IT OVER THE WALL" },
+    { d: [15, 138], h: [74, 112, "r"], w: [[30, 0, 70, 78]], par: 2, tip: "KEEP IT LOW" },
+    { d: [15, 138], h: [70, 42, "r"], w: [[60, 58, 34, 4]], par: 2, tip: "TAP WHILE IT FLIES TO WARP" },
     { d: [85, 138], h: [12, 92, "l"], w: [[4, 106, 28, 4]], par: 2 },
-    { d: [14, 138], h: [76, 112, "r"], w: [[54, 92, 4, 54], [93, 92, 4, 54]], par: 2, tip: "DROP IT IN THE BOX" },
-    { d: [12, 138], h: [74, 108, "r"], w: [[48, 0, 8, 62], [48, 86, 8, 60]], par: 2, tip: "THREAD THE WINDOW" },
-    { d: [15, 138], h: [68, 48, "r"], w: [[62, 66, 32, 80]], par: 3 },
-    { d: [12, 138], h: [74, 118, "r"], w: [[40, 34, 10, 112]], par: 4 },
+    { d: [14, 138], h: [76, 112, "r"], w: [[54, 92, 4, 54], [93, 92, 4, 54]], par: 1, tip: "DROP IT IN THE BOX" },
+    { d: [12, 138], h: [74, 108, "r"], w: [[48, 0, 8, 62], [48, 86, 8, 60]], par: 1, tip: "THREAD THE WINDOW" },
+    { d: [15, 138], h: [68, 48, "r"], w: [[62, 66, 32, 80]], par: 2 },
+    { d: [12, 138], h: [74, 118, "r"], w: [[40, 34, 10, 112]], par: 3 },
     { d: [12, 138], h: [14, 72, "l"], w: [[0, 96, 66, 5]], par: 3 },
-    { d: [88, 138], h: [10, 120, "l"], w: [[30, 46, 8, 100], [30, 0, 8, 22]], par: 4 },
+    { d: [88, 138], h: [10, 120, "l"], w: [[30, 46, 8, 100], [30, 0, 8, 22]], par: 3 },
     { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 3 }
   ];
   // ---- physics (pure, so it can be tested off-screen) ----
@@ -55,7 +55,8 @@
     return "";
   }
   const SPEED = p => 30 + 100 * p;
-  const ANG = 60 * Math.PI / 180, CHARGE = 1.1; // fixed launch angle; seconds of holding to reach full power
+  const ANG = 70 * Math.PI / 180, CHARGE = 1.5; // fixed launch angle; seconds to sweep from empty to full
+  const chargeP = t => 1 - Math.abs((t / CHARGE) % 2 - 1); // power climbs to full, then falls back down, and repeats
   const aimDir = (W, x) => W.hx + RIM / 2 >= x ? 1 : -1; // always shoot toward the hoop
   const ENG = { SHOT, world, step, SPEED, BR, ANG, aimDir, RIM };
   const levelPts = (shots, par) => Math.max(100, 500 - 100 * Math.max(0, shots - par));
@@ -122,13 +123,13 @@
   const pup = Object.assign(common("pupshot"), {
     key: "pupshot", name: "Pup Shot", icon: "🏀", max: 99999,
     blurb: "Fling it, warp to it, dunk it. 12 courts.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: watch the power meter. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
     reset(G) { G.s = { lv: 0, score: 0 }; this.newLevel(G); },
     update(G, dt) {
       const s = G.s; this.tickFx(G, dt);
       if (s.phase === "fly") { const r = this.fly(G, dt); if (r === "out") { G.sfx("lose"); this.home(G); } }
-      if (s.phase === "warp") { s.wt -= dt; if (s.wt <= 0) { s.phase = "aim"; if (s.held) s.charge = { p: 0 }; } } // still holding after the warp tap? start charging
-      if (s.phase === "aim" && s.charge) s.charge.p = Math.min(1, s.charge.p + dt / CHARGE);
+      if (s.phase === "warp") { s.wt -= dt; if (s.wt <= 0) { s.phase = "aim"; if (s.held) s.charge = { p: 0, t: 0 }; } } // still holding after the warp tap? start charging
+      if (s.phase === "aim" && s.charge) { s.charge.t += dt; s.charge.p = chargeP(s.charge.t); }
     },
     shoot(G) { const s = G.s, d = s.charge; s.charge = null; if (!d || d.p < 0.06) return; const v = ENG.SPEED(d.p), dir = aimDir(s.W, s.dog.x), cx = Math.cos(ANG) * dir, sy = Math.sin(ANG);
       s.ball.x = s.dog.x + cx * 3; s.ball.y = s.dog.y - sy * 3; s.ball.vx = cx * v; s.ball.vy = -sy * v;
@@ -142,7 +143,7 @@
         const len = (8 + 14 * p) * S, ex = px + ca * len, ey = py - sa * len; c.strokeStyle = s.charge ? "#ffd23f" : "rgba(255,255,255,0.75)"; c.lineWidth = Math.max(2, S * 0.7); c.lineCap = "round";
         c.beginPath(); c.moveTo(px + ca * 7 * S, py - sa * 7 * S); c.lineTo(ex, ey); c.moveTo(ex, ey); c.lineTo(ex + (-ca * 0.9 - sa * 0.5) * 3 * S, ey + (sa * 0.9 - ca * 0.5) * 3 * S); c.moveTo(ex, ey); c.lineTo(ex + (-ca * 0.9 + sa * 0.5) * 3 * S, ey + (sa * 0.9 + ca * 0.5) * 3 * S); c.stroke();
         const mh = 18 * S, mx = X(s.dog.x) - dir * 9 * S - 3, my = Y(s.dog.y) - mh + 4 * S; c.fillStyle = "rgba(0,0,0,0.4)"; c.fillRect(mx, my, 6, mh);
-        c.fillStyle = p >= 1 ? "#ff5a5a" : p > 0.66 ? "#ffb13f" : "#6cdc6c"; c.fillRect(mx, my + mh * (1 - p), 6, mh * p); c.strokeStyle = "rgba(255,255,255,0.8)"; c.lineWidth = 1; c.strokeRect(mx, my, 6, mh); }
+        c.fillStyle = p > 0.92 ? "#ff5a5a" : p > 0.66 ? "#ffb13f" : "#6cdc6c"; c.fillRect(mx, my + mh * (1 - p), 6, mh * p); c.strokeStyle = "rgba(255,255,255,0.8)"; c.lineWidth = 1; c.strokeRect(mx, my, 6, mh); }
       G.img(c, s.phase === "clear" ? ":dawgpog:" : s.phase === "fly" ? ":dawgsus:" : ":dawgW:", X(s.dog.x), Y(s.dog.y), 11 * S);
       if (s.phase !== "clear" || s.clear > 1.2) drawBall(G, c, V, s.phase === "aim" || s.phase === "warp" ? { x: s.dog.x + 3.5, y: s.dog.y - 3 } : s.ball, s.rot);
       hud(G, c, s); banner(G, c, s);
@@ -157,7 +158,7 @@
       this.press(G); },
     up(G) { this.release(G); },
     // hold = charge; a press while the ball flies warps (keep holding to go straight into charging the next shot)
-    press(G) { const s = G.s; s.held = true; if (s.phase === "fly") this.warp(G); else if (s.phase === "aim" && !s.charge) s.charge = { p: 0 }; },
+    press(G) { const s = G.s; s.held = true; if (s.phase === "fly") this.warp(G); else if (s.phase === "aim" && !s.charge) s.charge = { p: 0, t: 0 }; },
     release(G) { const s = G.s; s.held = false; if (s.phase === "aim" && s.charge) this.shoot(G); s.charge = null; },
     onKey(G, k, d) { const s = G.s; if (k !== " ") return; if (d) { if (s.keyDown) return; s.keyDown = true; this.press(G); } else { s.keyDown = false; this.release(G); } } // ignores key repeat
   });
