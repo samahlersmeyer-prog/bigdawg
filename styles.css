@@ -151,6 +151,11 @@ input { -webkit-user-select: text; user-select: text; }
 #alltime-seg { grid-template-columns: repeat(4, 1fr) !important; } #alltime-seg button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 #phof-seg { grid-template-columns: repeat(4, 1fr) !important; } #phof-seg button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 .arc-sec { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -2px; }
+.arc-sec.arc-grp { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; text-transform: none; letter-spacing: 0; margin: 14px 2px 0; padding-top: 10px; border-top: 1px solid var(--line, rgba(127,127,127,.25)); }
+.arc-sec.arc-grp:first-child { border-top: 0; padding-top: 0; margin-top: 4px; }
+.arc-sec.arc-grp > span { font-size: 18px; align-self: center; }
+.arc-sec.arc-grp b { font-size: 16px; font-weight: 800; color: var(--ink, inherit); }
+.arc-sec.arc-grp small { font-size: 12px; font-weight: 600; color: var(--muted); }
 .arc-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 9px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); min-width: 0; }
 .arc-cell .gicon { width: 48px; height: 48px; font-size: 28px; }
 .arc-cell b { font-family: var(--title); font-size: 14.5px; line-height: 1.12; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 100%; }

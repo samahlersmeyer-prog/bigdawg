@@ -340,6 +340,19 @@ document.querySelectorAll("#hof-seg button").forEach(b => b.addEventListener("cl
 const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to steer. Eat bones, grow longer.", fetch: "Bounce the ball. Smash the treats." };
 const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+// Sections inside the Arcade and Sports hubs (max 3 each). Order inside a section follows ARC_ORDER.
+const ARC_GROUPS = {
+  arcade: [
+    { icon: "🏃", name: "Run & Jump", sub: "Reflexes. Don't crash.", keys: ["dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"] },
+    { icon: "💥", name: "Blast & Battle", sub: "Shoot, smash, defend.", keys: ["pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"] },
+    { icon: "🧠", name: "Chill & Think", sub: "Puzzles, putts and party games.", keys: ["blocks", "trap", "mjrush", "mjzen", "putt", "putt18", "drip", "trail", "party"] }
+  ],
+  sports: [
+    { icon: "🏈", name: "Ball Games", sub: "Football, baseball, hoops, soccer.", keys: ["seven", "fg", "kickret", "dawgball", "derby", "hoops", "pks", "volley"] },
+    { icon: "🎯", name: "Aim & Accuracy", sub: "Steady paws.", keys: ["golf", "golf18", "darts", "archery", "bowl", "pool", "duck"] },
+    { icon: "🥊", name: "Head-to-Head & Racing", sub: "Beat the cat. Beat the clock.", keys: ["tennis", "airhockey", "punch", "swim", "shred"] }
+  ]
+};
 const arcOrder = () => ARC_ORDER.filter(k => ARC[k]).concat(Object.keys(ARC).filter(k => !ARC_ORDER.includes(k)));
 const arcCat = k => (ARC[k] && ARC[k].cat) || "arcade";
 function renderArcSub() {
@@ -426,8 +439,21 @@ function renderArcHub(cat) {
     if (n) r.appendChild(el("span", "badge", `🎯${n}`)); else if (sv) r.appendChild(el("span", "badge go", "▶"));
     return r;
   };
-  if (recent.length >= 2 && cat !== "den") { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); list.appendChild(el("div", "arc-sec", "All games")); }
-  all.forEach(k => list.appendChild(cell(k)));
+  if (recent.length >= 2 && cat !== "den") { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); }
+  const groups = ARC_GROUPS[cat];
+  if (groups) {
+    // Three sections per hub. Any game not listed lands in the last section, so new games always show up.
+    const placed = new Set(groups.flatMap(g => g.keys));
+    groups.forEach((g, i) => {
+      const keys = all.filter(k => g.keys.includes(k) || (i === groups.length - 1 && !placed.has(k)));
+      if (!keys.length) return;
+      const h = el("div", "arc-sec arc-grp"); h.append(el("span", null, g.icon), el("b", null, g.name), el("small", null, g.sub));
+      list.appendChild(h); keys.forEach(k => list.appendChild(cell(k)));
+    });
+  } else {
+    if (recent.length >= 2 && cat !== "den") list.appendChild(el("div", "arc-sec", "All games"));
+    all.forEach(k => list.appendChild(cell(k)));
+  }
   if (!arcade) refreshArcade();
 }
 $("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
