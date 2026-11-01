@@ -37,3 +37,13 @@ shell = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./
 src = re.sub(r'const SHELL = \[.*?\];', "const SHELL = " + str(shell).replace("'", '"') + ";", src)
 sw.write_text(src, encoding="utf-8")
 print(f"stamped: sw bdd-{version}, games {h(games)}, {len(assets)} app files")
+
+# Rebuild legacy/ (the old-iPad copy) from the files just stamped. Needs Node; see tools/legacy/build.mjs.
+import shutil, subprocess
+lg = ROOT / "tools" / "legacy"
+if shutil.which("node"):
+    if not (lg / "node_modules").exists():
+        subprocess.run(["npm", "install", "--silent", "--no-audit", "--no-fund"], cwd=lg, check=True)
+    subprocess.run(["node", "build.mjs"], cwd=lg, check=True)
+else:
+    print("legacy: SKIPPED (Node not installed) - legacy/ is now out of date")

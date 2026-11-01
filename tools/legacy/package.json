@@ -1,0 +1,15 @@
+{
+  "name": "bigdawg-legacy-build",
+  "private": true,
+  "description": "Builds legacy/ (the old-iPad copy of the app). Run through tools/stamp.py.",
+  "type": "module",
+  "dependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "acorn": "^8.14.0",
+    "core-js": "^3.40.0",
+    "core-js-builder": "^3.40.0",
+    "postcss": "^8.5.0",
+    "whatwg-fetch": "^3.6.20"
+  }
+}

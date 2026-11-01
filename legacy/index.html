@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" class="legacy">
+<head>
+<!-- Built by tools/legacy/build.mjs from index.html. Don't edit; run python3 tools/stamp.py. -->
+<base href="../" target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Big Dawg">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121213" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<script>window.GAMES_V="9147c4ccff";</script>
+<title>Big Dawg Daily</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@600;700&family=Press+Start+2P&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="legacy/styles.css?v=2aa5a29b70">
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section class="view" id="v-home">
+    <header class="bar home-bar">
+      <div class="wordmark">Big Dawg Daily</div>
+      <div class="bar-r"><button class="icon" id="home-idea" aria-label="Send feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button><button class="icon bell" id="home-bell" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span class="bell-n" id="bell-n" hidden></span></button><button class="icon" id="home-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.3"/></svg></button><button class="icon" data-help="about" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button></div>
+    </header>
+    <div class="home-body">
+      <p class="hello" id="hello"></p>
+      <a class="fastcta" id="fast-tip" target="_top" href="#" hidden>
+        <b>⚡ Big Dawg loads fast AF now</b>
+        <span>Tap here, then Share → Add to Home Screen. Same scores, same crew.</span>
+      </a>
+      <div class="cards">
+        <button class="gcard c-five" data-go="five">
+          <span class="gicon"><span class="ic-five"><i style="background:var(--hit)"></i><i style="background:var(--near)"></i><i style="background:var(--miss)"></i></span></span>
+          <span class="gtext"><b>Five</b><span class="gsub" id="sub-five">Guess the word in 6 tries</span></span>
+          <span class="gstat" id="st-five">Play</span>
+        </button>
+        <button class="gcard c-groups" data-go="groups">
+          <span class="gicon"><span class="ic-groups"><i style="background:var(--g0)"></i><i style="background:var(--g1)"></i><i style="background:var(--g2)"></i><i style="background:var(--g3)"></i></span></span>
+          <span class="gtext"><b>Groups</b><span class="gsub" id="sub-groups">Find the four hidden groups</span></span>
+          <span class="gstat" id="st-groups">Play</span>
+        </button>
+        <button class="gcard c-strands" data-go="strands">
+          <span class="gicon"><span class="ic-strands"><svg viewBox="0 0 36 36"><path d="M8 8 L18 18 L28 10" stroke="var(--st-word)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 28 L28 28" stroke="var(--st-span)" stroke-width="5" fill="none" stroke-linecap="round"/></svg></span></span>
+          <span class="gtext"><b>Strands</b><span class="gsub" id="sub-strands">Find the theme words, timed</span></span>
+          <span class="gstat" id="st-strands">Play</span>
+        </button>
+        <button class="gcard c-mini" data-go="mini">
+          <span class="gicon"><span class="ic-mini" id="ic-mini"></span></span>
+          <span class="gtext"><b>The Mini</b><span class="gsub" id="sub-mini">A quick crossword, timed</span></span>
+          <span class="gstat" id="st-mini">Play</span>
+        </button>
+        <button class="gcard c-scores" data-go="scores">
+          <span class="gicon ic-scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M12 14v3M8.5 20h7l-1-3h-5z"/></svg></span>
+          <span class="gtext"><b>Scoreboard</b><span class="gsub" id="sub-scores">See how everyone did today</span></span>
+          <span class="gstat done" id="st-scores">View</span>
+        </button>
+        <div class="hub3">
+          <button class="hub-btn hb-arcade" data-go="arcade"><span class="ab-icon" id="ab-icon"></span><b>Arcade</b><small id="sub-arcade">just for fun</small></button>
+          <button class="hub-btn hb-sports" data-go="sports"><span class="ab-icon" id="sb-icon"></span><b>Sports</b><small id="sub-sports">just for fun</small></button>
+          <button class="hub-btn hb-den" data-go="den"><span class="ab-icon" id="db-icon"></span><b>The Den</b><small id="sub-den">puzzles &amp; cards</small></button>
+        </div>
+      </div>
+      <div class="tip" id="install-tip" hidden>
+        <span><b>Make it an app:</b> in Safari, tap Share, then Add to Home Screen. It opens full screen and remembers you.</span>
+        <button id="tip-close">Got it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FIVE -->
+  <section class="view" id="v-five" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Five</h1>
+      <div class="bar-r">
+        <button class="icon" data-help="five" aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button>
+        <button class="icon" data-go="scores" aria-label="Scoreboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button>
+      </div>
+    </header>
+    <div class="main"><div class="fit"><div class="board" id="board" aria-label="Guesses"></div></div></div>
+    <div class="keyboard" id="keyboard" aria-label="Keyboard"></div>
+    <div class="donebar" id="five-done" hidden><p id="five-done-text"></p><button class="pill solid" data-results="five">See results</button></div>
+  </section>
+
+  <!-- LONG DAWG (snake) -->
+  <section class="view" id="v-snake" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Long Dawg</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="zwrap swipe" id="swrap">
+      <canvas id="sc" aria-label="Long Dawg game"></canvas>
+      <div class="zhud" id="shud" hidden>0</div>
+      <div class="zpanel" id="spanel"></div>
+    </div>
+  </section>
+
+  <!-- FETCH BREAKOUT -->
+  <section class="view" id="v-fetch" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Fetch Breakout</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="zwrap swipe" id="fwrap">
+      <canvas id="fc" aria-label="Fetch Breakout game"></canvas>
+      <div class="zpanel" id="fpanel"></div>
+    </div>
+  </section>
+
+  <!-- ARCADE MENU -->
+  <section class="view" id="v-arcade" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Arcade</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="arc-body">
+      <div class="arc-marquee"><b>BIG DAWG ARCADE</b><span>Just for fun. Not on the daily scoreboard.</span></div>
+      <div id="arc-dares" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="arc-list" id="arc-list"></div>
+    </div>
+  </section>
+
+  <!-- THE DEN MENU -->
+  <section class="view" id="v-den" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>The Den</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="arc-body">
+      <p class="hello">New puzzles every day at midnight. Separate from the main four, with their own leaderboards.</p>
+      <div class="cards" id="den-puz"></div>
+      <div id="den-dares" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="arcade-lbl">Cards &amp; quick puzzles</div>
+      <div class="arc-list" id="den-list"></div>
+    </div>
+  </section>
+
+  <!-- SPORTS MENU -->
+  <section class="view" id="v-sports" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Sports</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="arc-body">
+      <div class="arc-marquee sports"><b>BIG DAWG SPORTS</b><span>Big bragging rights. Not on the daily scoreboard.</span></div>
+      <div id="sp-dares" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="arc-list" id="sp-list"></div>
+    </div>
+  </section>
+
+  <!-- ARCADE GAME (shared screen for the newer games) -->
+  <section class="view" id="v-game" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" id="g-back" data-go="arcade" aria-label="Back to the game list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1 id="g-title">Arcade</h1>
+      <div class="bar-r"><button class="icon" id="g-help" hidden aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="zwrap swipe" id="gwrap">
+      <canvas id="gc" aria-label="Arcade game"></canvas>
+      <div class="zpanel" id="gpanel"></div>
+    </div>
+  </section>
+
+  <!-- ZOOMIES (arcade) -->
+  <section class="view" id="v-zoomies" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="arcade" aria-label="Back to arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Zoomies</h1>
+      <div class="bar-r"><button class="icon arc-board" aria-label="High scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button></div>
+    </header>
+    <div class="zwrap" id="zwrap">
+      <canvas id="zc" aria-label="Zoomies game"></canvas>
+      <div class="zhud" id="zhud" hidden>0</div>
+      <div class="zpanel" id="zpanel"></div>
+    </div>
+  </section>
+
+  <!-- GROUPS -->
+  <section class="view" id="v-groups" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Groups</h1>
+      <div class="bar-r">
+        <button class="icon" data-help="groups" aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button>
+        <button class="icon" data-go="scores" aria-label="Scoreboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button>
+      </div>
+    </header>
+    <div class="main">
+      <p class="hint">Create four groups of four!</p>
+      <div class="fit"><div class="ggrid" id="ggrid"></div></div>
+      <div class="mistakes" id="mistakes-wrap">Mistakes remaining: <span class="dots" id="dots"></span></div>
+    </div>
+    <div class="gactions" id="gactions">
+      <button class="pill" id="g-shuffle">Shuffle</button>
+      <button class="pill" id="g-clear" disabled>Deselect all</button>
+      <button class="pill solid" id="g-submit" disabled>Submit</button>
+    </div>
+    <div class="donebar" id="groups-done" hidden><p id="groups-done-text"></p><button class="pill solid" data-results="groups">See results</button></div>
+  </section>
+
+  <!-- STRANDS -->
+  <section class="view" id="v-strands" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Strands</h1>
+      <div class="bar-r">
+        <button class="icon" data-help="strands" aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button>
+        <button class="icon" data-go="scores" aria-label="Scoreboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button>
+      </div>
+    </header>
+    <div class="main">
+      <div class="minibar" id="st-bar" hidden>
+        <span class="timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span id="st-timer">0:00</span></span>
+        <span class="st-count" id="st-count"></span>
+      </div>
+      <div class="fit">
+        <div class="startpanel" id="st-start">
+          <span class="ic-strands" style="width:72px;height:72px"><svg viewBox="0 0 36 36" style="width:72px;height:72px"><path d="M8 8 L18 18 L28 10" stroke="var(--st-word)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 28 L28 28" stroke="var(--st-span)" stroke-width="5" fill="none" stroke-linecap="round"/></svg></span>
+          <h2>Ready?</h2>
+          <p>Find the hidden theme words and the spangram. The clock starts when you tap Start and pauses whenever you leave.</p>
+          <button class="pill solid" id="st-go">Start</button>
+        </div>
+        <div class="stwrap" id="st-wrap" hidden>
+          <div class="sttheme"><span>Today's theme</span><b id="st-theme"></b></div>
+          <div class="stword" id="st-word"></div>
+          <div class="stfit"><div class="stgrid" id="stgrid" aria-label="Letter grid"><svg id="st-lines" viewBox="0 0 6 8" preserveAspectRatio="none"></svg></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="gactions" id="st-actions" hidden>
+      <button class="pill" id="st-hint">Hint</button>
+      <button class="pill" id="st-clear">Clear</button>
+      <button class="pill solid" id="st-enter">Enter</button>
+    </div>
+    <div class="donebar" id="strands-done" hidden><p id="strands-done-text"></p><button class="pill solid" data-results="strands">See results</button></div>
+  </section>
+
+  <!-- MINI -->
+  <section class="view" id="v-mini" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="home" aria-label="Back to games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>The Mini</h1>
+      <div class="bar-r">
+        <button class="icon" data-help="mini" aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.3-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg></button>
+        <button class="icon" data-go="scores" aria-label="Scoreboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-5"/></svg></button>
+      </div>
+    </header>
+    <div class="main">
+      <div class="minibar" id="minibar" hidden>
+        <span class="timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span id="mini-timer">0:00</span></span>
+        <span><button class="textbtn" id="mini-list">Clues</button><button class="textbtn" id="mini-check">Check</button></span>
+      </div>
+      <div class="fit" id="mini-fit">
+        <div class="startpanel" id="mini-start">
+          <span class="ghost" id="mini-ghost" aria-hidden="true"></span>
+          <h2>Ready?</h2>
+          <p>The clock starts when you tap Start, and pauses whenever you leave the puzzle.</p>
+          <button class="pill solid" id="mini-go">Start</button>
+        </div>
+        <div class="cw" id="cw" aria-label="Crossword grid" hidden></div>
+      </div>
+    </div>
+    <div class="cluebar" id="cluebar" hidden>
+      <button class="icon" id="clue-prev" aria-label="Previous clue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="ct" id="clue-text" aria-label="Show all clues"></button>
+      <button class="icon" id="clue-next" aria-label="Next clue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="keyboard" id="mini-kb" aria-label="Keyboard" hidden></div>
+    <div class="donebar" id="mini-done" hidden><p id="mini-done-text"></p><button class="pill solid" data-results="mini">See results</button></div>
+  </section>
+
+  <!-- SCORES -->
+  <section class="view" id="v-scores" hidden>
+    <header class="bar">
+      <div class="bar-l"><button class="icon" data-go="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+      <h1>Scoreboard</h1>
+      <div class="bar-r"><button class="icon" id="scores-refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button></div>
+    </header>
+    <div class="scroll">
+      <div class="seg tabs" id="sc-tabs" role="tablist"><button data-tab="today" class="on">Today</button><button data-tab="week">Week</button><button data-tab="shade">Shade</button><button data-tab="arcade" aria-label="Arcade high scores">🕹️</button><button data-tab="more" aria-label="Invite and settings">⚙️</button></div>
+      <div class="crewbar" id="crewbar" hidden></div>
+      <div class="pane" data-pane="today">
+      <div class="sechead"><h2>Today</h2><span id="scores-date"></span></div>
+      <p class="note" id="scores-note">Loading the scoreboard…</p>
+      <ul class="plist" id="scores-body"></ul>
+      <div class="box" id="slackers" hidden>
+        <h3>Haven't played yet today</h3>
+        <div class="chips" id="slacker-chips"></div>
+      </div>
+      </div>
+      <div class="pane" data-pane="week" hidden>
+      <div class="box" id="league" hidden>
+        <div class="sechead"><h2>This week</h2><span id="league-range"></span></div>
+        <ol class="rank-list" id="league-list"></ol>
+        <p class="note" id="league-champ"></p>
+        <button class="pill" id="wir-open" style="width:100%">📅 Last week in review</button>
+        <p class="note">Points: Five 5 (in 1 or 2) down to 1 (in 6). Groups 5 minus mistakes. Mini and Strands 6 for fastest, then 5, 4, 3, 2, 1 (tied times share the higher points). Today's board ranks by the same points. Your best 5 days count, so a day or two off won't sink you (tap anyone's points to see which days counted). Miss a day and a 🧊 streak freeze saves your streak automatically, once a week. Tap any name for trophies and head-to-head.</p>
+      </div>
+      <div class="box" id="alltime">
+        <div class="sechead"><h2>Standings</h2><span id="alltime-sub"></span></div>
+        <div class="seg" id="alltime-seg"><button data-k="month" class="on">Month</button><button data-k="year">Year</button><button data-k="all">All time</button><button data-k="champs">Champs</button></div>
+        <ol class="rank-list" id="alltime-list"><li class="dim">Loading…</li></ol>
+        <p class="note" id="alltime-note"></p>
+      </div>
+      <div class="box" id="phof">
+        <div class="sechead"><h2>Hall of Fame</h2><span>Puzzles, all time</span></div>
+        <div class="seg" id="phof-seg"><button data-k="mini" class="on">Mini</button><button data-k="strands">Strands</button><button data-k="five">Five</button><button data-k="groups">Groups</button></div>
+        <ol class="rank-list" id="phof-list"><li class="dim">Loading…</li></ol>
+        <p class="note" id="phof-note"></p>
+      </div>
+      <div class="box" id="awards" hidden>
+        <div class="sechead"><h2 id="awards-title">Weekly awards</h2><span id="awards-sub"></span></div>
+        <ul class="awards" id="awards-list"></ul>
+      </div>
+      </div>
+      <div class="pane" data-pane="shade" hidden>
+      <div class="box">
+        <div class="sechead"><h2>Shade board</h2><span>Last 7 days</span></div>
+        <div class="shadecols">
+          <div><h3>Most shade received</h3><ol class="rank-list" id="sb-recv"></ol></div>
+          <div><h3>Most shade thrown</h3><ol class="rank-list" id="sb-sent"></ol></div>
+          <div style="grid-column:1/-1"><h3>Most clap backs</h3><ol class="rank-list" id="sb-claps"></ol></div>
+        </div>
+        <p class="note" id="sb-ls"></p>
+      </div>
+      </div>
+      <div class="pane" data-pane="arcade" hidden>
+      <div class="box">
+        <div class="sechead"><h2>Hall of Fame</h2><span>All-time bests · tap a game</span></div>
+        <div class="seg hof-seg" id="hof-seg"><button data-cat="arcade" class="on">🕹️ Arcade</button><button data-cat="sports">🏆 Sports</button><button data-cat="den">🧩 Den</button><button data-cat="mine">⭐ Mine</button></div>
+        <div class="hof" id="hof"></div>
+      </div>
+      </div>
+      <div class="pane" data-pane="more" hidden>
+      <div class="box">
+        <h3>Your crews</h3>
+        <p class="note" id="crew-note">Crews are invite-only groups with their own scoreboard, weekly league and champ.</p>
+        <div class="inrow"><button class="pill solid" id="crew-manage">Manage crews</button></div>
+      </div>
+      <div class="box">
+        <h3>Invite friends</h3>
+        <p class="note">Send them this link. Everyone gets the same puzzles each day.</p>
+        <div class="linkbox" id="invite-link"></div>
+        <div class="inrow"><button class="pill solid" id="invite-copy">Copy invite link</button><button class="pill" id="share-all">Copy my results</button></div>
+        <textarea class="copybox" id="copy-fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>
+      </div>
+      <div class="box" id="settings">
+        <div class="sechead"><h2>Settings</h2></div>
+        <span class="lbl2">Your name</span>
+        <div class="inrow"><input id="nick" maxlength="20" autocomplete="nickname" aria-label="Your name on the scoreboard"><button class="pill" id="nick-save">Save</button></div>
+        <span class="lbl2">Shade spice level</span>
+        <div class="seg" id="spice-seg"><button data-spice="1">Mild</button><button data-spice="2">Medium</button><button data-spice="3">Unhinged</button></div>
+        <label class="toggle"><input type="checkbox" id="opt-jokes"> Use inside jokes in my shade</label>
+        <div id="jokes-box" hidden style="display:flex;flex-direction:column;gap:8px">
+          <p class="note">Shared with the whole crew. Type {name} where the person getting roasted goes.</p>
+          <div class="inrow"><input id="joke-in" maxlength="140" placeholder="{name} still owes me $20" aria-label="New inside joke"><button class="pill" id="joke-add">Add</button></div>
+          <ul class="jokelist" id="joke-list"></ul>
+        </div>
+        <label class="toggle"><input type="checkbox" id="opt-mute"> Mute shade sent to me</label>
+        <label class="toggle"><input type="checkbox" id="opt-fx"> Sounds and confetti</label>
+        <p class="note">Not you? <button class="textbtn" id="switch-player" style="padding:0;text-decoration:underline">Switch player</button></p>
+      </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="modal" hidden><div class="sheet" role="dialog" aria-modal="true"><button class="icon close" id="modal-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="stack" id="modal-body"></div></div></div>
+<div class="served" id="served" hidden role="dialog" aria-modal="true" aria-labelledby="served-title">
+  <div class="served-in">
+    <div class="stamp">SERVED</div>
+    <h2 id="served-title">You've been served</h2>
+    <p class="from" id="served-from"></p>
+    <blockquote class="shadecard" id="served-text"></blockquote>
+    <div class="col" id="served-acts"><button class="pill solid" id="served-fire">🔥 Fire back</button><button class="pill" id="served-l">Take the L</button></div>
+    <div class="claps" id="served-claps"><p class="clabel">or clap back</p><div class="crow" id="clap-row"></div></div>
+    <div class="col" id="served-okrow" hidden><button class="pill solid" id="served-ok">Noted 😤</button></div>
+    <div class="col" id="served-darerow" hidden><button class="pill solid" id="served-play">🐶 Play now</button><button class="pill" id="served-trash">🗣️ Talk trash</button><button class="pill" id="served-later">Not now</button></div>
+    <p class="note" id="served-more"></p>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="splash" id="splash">
+  <div class="wordmark">Big Dawg Daily</div>
+  <p class="tagline">Four puzzles a day with your crew</p>
+  <div class="dotload" id="splash-load"><i></i><i></i><i></i></div>
+  <a class="fastcta" id="fast-splash" target="_top" href="#" hidden><b>⚡ Tired of waiting? Big Dawg loads fast AF now</b><span>Tap here</span></a>
+  <div class="choices" id="who" hidden>
+    <h2>Who's playing?</h2>
+    <input id="who-q" type="search" placeholder="Start typing your name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Your name">
+    <p id="who-hint" class="whohint"></p>
+    <div class="whogrid" id="who-list"></div>
+    <button class="pill" id="who-new" type="button">I'm new here</button>
+  </div>
+  <form class="choices" id="pin-form" hidden>
+    <h2 id="pin-q"></h2>
+    <p id="pin-sub"></p>
+    <input class="pinbox" id="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="····" aria-label="4-digit PIN">
+    <button class="pill solid" id="pin-go" type="submit">Let's go</button>
+    <p id="pin-msg" role="status"></p>
+    <button class="textbtn" id="pin-back" type="button">Back</button>
+  </form>
+  <form id="join-form" hidden>
+    <h2>What should your friends call you?</h2>
+    <input id="join-name" maxlength="20" autocomplete="nickname" placeholder="Your name" aria-label="Your name">
+    <input class="pinbox" id="join-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="····" aria-label="Pick a 4-digit PIN">
+    <button class="pill solid" id="join-go" type="submit">Start playing</button>
+    <p id="join-msg" role="status">Pick a 4-digit PIN. You'll use it if the app ever forgets you, and it keeps anyone else from playing as you.</p>
+    <button class="textbtn" id="join-back" type="button">Back</button>
+  </form>
+  <div class="choices" id="confirm" hidden>
+    <h2 id="confirm-q"></h2>
+    <button class="pill solid" id="confirm-yes"></button>
+    <button class="pill" id="confirm-no">I'm someone else</button>
+  </div>
+</div>
+
+<script src="legacy/poly.js?v=4466ef71b2"></script>
+<script src="legacy/js/data.js?v=b126989d96"></script>
+<script src="legacy/js/core.js?v=b265a166a8"></script>
+<script src="legacy/js/daily.js?v=2f20610604"></script>
+<script src="legacy/js/social.js?v=0d349af123"></script>
+<script src="legacy/js/arcade.js?v=4ac80ee25e"></script>
+<script src="legacy/js/boot.js?v=d73a21fcc9"></script>
+</body>
+</html>
