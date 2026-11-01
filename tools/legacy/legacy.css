@@ -35,3 +35,7 @@
 
 /* Gap spacing is emulated with margins; keep the few spots that push an item to the far side */
 .legacy .tip button, .legacy .streak, .legacy .jokelist .textbtn, .legacy .stat .tag { margin-left: auto !important; }
+
+/* No double-tap zoom on the puzzle boards */
+.legacy .stgrid, .legacy .board, .legacy .ggrid, .legacy .cw, .legacy .keyboard { -ms-touch-action: manipulation; touch-action: manipulation; }
+.legacy .stgrid { touch-action: none; }

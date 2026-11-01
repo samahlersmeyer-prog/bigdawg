@@ -211,6 +211,8 @@ html = html.replace(/<script src="js\/(\w+)\.js\?v=\w*"><\/script>/g, (m, f) => 
 html = html.replace(/(<script src="legacy\/js\/data\.js)/, `<script src="legacy/poly.js?v=${h(poly)}"></script>\n$1`);
 html = html.replace(/<script>\s*\/\/ Keep the installed app up to date[\s\S]*?<\/script>\s*/, "");
 html = html.replace(/<link rel="manifest"[^>]*>\s*/, "");
+// iOS 9 zooms on double-tap (e.g. quick taps in Strands); old Safari still honors user-scalable=no.
+html = html.replace(/<meta name="viewport" content="[^"]*">/, '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">');
 html = html.replace("<head>", "<head>\n<!-- Built by tools/legacy/build.mjs from index.html. Don't edit; run python3 tools/stamp.py. -->");
 if (/serviceWorker/.test(html)) throw new Error("legacy: service worker script still in page");
 write("index.html", html);

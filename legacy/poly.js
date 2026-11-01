@@ -12119,7 +12119,7 @@ if (DESCRIPTORS && !('size' in URLSearchParamsPrototype)) {
           if (touch) lastTouch = Date.now(); else if (Date.now() - lastTouch < 1000) return; // skip the fake mouse events after a tap
           if (!touch && t === "mousemove" && !ev.buttons && !ev.which) return;
           var p = touch ? (ev.changedTouches && ev.changedTouches[0]) || {} : ev;
-          if (t === "touchmove" && target.nodeType === 1) ev.preventDefault(); // drag, don't scroll
+          if ((t === "touchmove" || t === "touchstart") && target.nodeType === 1) ev.preventDefault(); // drag, don't scroll or double-tap zoom
           fn.call(target, {
             type: type, target: ev.target, currentTarget: target, pointerId: touch ? p.identifier || 1 : 1, pointerType: touch ? "touch" : "mouse",
             clientX: p.clientX, clientY: p.clientY, pageX: p.pageX, pageY: p.pageY, button: 0, isPrimary: true,
