@@ -84,6 +84,10 @@ input { -webkit-user-select: text; user-select: text; }
 .home-body > :not([hidden]) ~ :not([hidden]) {
   margin-top: 10px;
 }
+.home-body > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
 .hello { margin: 0; font-size: 15px; color: var(--muted); }
 .hello b { color: var(--ink); font-weight: 700; }
 .cards { display: -webkit-flex; display: flex; flex-direction: column; }
@@ -144,6 +148,10 @@ input { -webkit-user-select: text; user-select: text; }
 .arc-body > :not([hidden]) ~ :not([hidden]) {
   margin-top: 10px;
 }
+.arc-body > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
 .arc-tile { display: -webkit-flex; display: flex; align-items: center; padding: 14px 16px; border-radius: 16px; text-align: left; color: var(--ink); -webkit-flex-direction: row; flex-direction: row; flex-wrap: wrap; }
 .arc-tile > :nth-child(3n+1) {
   flex: 0 0 56px;
@@ -171,6 +179,10 @@ input { -webkit-user-select: text; user-select: text; }
 .notes { display: -webkit-flex; display: flex; flex-direction: column; max-height: 60vh; overflow-y: auto; }
 .notes > :not([hidden]) ~ :not([hidden]) {
   margin-top: 8px;
+}
+.notes > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
 }
 .note-row { display: -webkit-flex; display: flex; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--raise); text-align: left; font-size: 14px; line-height: 1.35; -webkit-flex-direction: row; flex-direction: row; flex-wrap: wrap; }
 .note-row > :nth-child(2n+1) {
@@ -875,6 +887,10 @@ input { -webkit-user-select: text; user-select: text; }
 .scroll > :not([hidden]) ~ :not([hidden]) {
   margin-top: 16px;
 }
+.scroll > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
 .sechead { display: -webkit-flex; display: flex; align-items: baseline; justify-content: space-between; }
 .sechead > :not([hidden]) ~ :not([hidden]) {
   margin-left: 8px;
@@ -1292,6 +1308,10 @@ input { -webkit-user-select: text; user-select: text; }
 .sheet > :not([hidden]) ~ :not([hidden]) {
   margin-top: 14px;
 }
+.sheet > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
 .sheet .close { position: absolute; top: 8px; right: 8px; }
 .sheet h2 { margin: 0; font-family: var(--title); font-size: 28px; line-height: 1.1; text-align: center; text-wrap: balance; }
 .sheet .sub { margin: 0; text-align: center; color: var(--muted); }
@@ -1455,6 +1475,10 @@ input { -webkit-user-select: text; user-select: text; }
 }
 .whogrid > :nth-child(n+3) {
   margin-top: 8px;
+}
+.whogrid > * {
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
 }
 .whogrid button { min-height: 48px; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--line); font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .whogrid button:active { border-color: var(--ink); }

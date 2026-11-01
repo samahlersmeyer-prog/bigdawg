@@ -190,6 +190,9 @@ function convertCss(css) {
       else if (/column/.test(dir)) add(sel(rule, ":not([hidden]) ~ :not([hidden])"), { [/reverse/.test(dir) ? "margin-bottom" : "margin-top"]: rg });
       else add(sel(rule, ":not([hidden]) ~ :not([hidden])"), { [/reverse/.test(dir) ? "margin-right" : "margin-left"]: cg });
     }
+    // Safari 9 lets items in a scrolling column shrink below their content (no min-height:auto), so they overlap.
+    if (/auto|scroll/.test(d["overflow-y"] || d.overflow || "") && (/column/.test(d["flex-direction"] || "") || (isGrid && disp && !button)))
+      after.push(postcss.rule({ selector: sel(rule, "*"), nodes: [postcss.decl({ prop: "-webkit-flex-shrink", value: "0" }), postcss.decl({ prop: "flex-shrink", value: "0" })] }));
     if ((isFlex && !button) || (isGrid && !button && disp)) { // old WebKit wants the prefixed name alongside
       const ds = []; rule.each(x => { if (x.type === "decl" && x.prop === "display" && /flex/.test(x.value) && !/webkit/.test(x.value)) ds.push(x); });
       ds.forEach(x => x.cloneBefore({ value: "-webkit-" + x.value.replace(/\s*!important/, "") }));
