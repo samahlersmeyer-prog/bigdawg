@@ -60,6 +60,37 @@
     };
   }
 
+  // ---------- Server calls: fall back to a <script> tag (JSONP) ----------
+  // The app POSTs to the Apps Script URL, which redirects to googleusercontent.com. Old Safari can refuse that
+  // cross-site redirect, so if a POST fails we send the same request as GET ?cb=..&q=.. (server doGet answers JS).
+  var realFetch = window.fetch, jsonpN = 0, KEY = "bdd:jsonp";
+  var useJsonp = false; try { useJsonp = localStorage.getItem(KEY) === "1"; } catch (e) {}
+  function jsonp(url, body) {
+    return new Promise(function (resolve, reject) {
+      var name = "__bdj" + (++jsonpN) + "_" + Date.now(), s = document.createElement("script"), done = false;
+      var finish = function (err, data) {
+        if (done) return; done = true; clearTimeout(t);
+        try { delete window[name]; } catch (e) { window[name] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        if (err) reject(err); else resolve({ ok: true, status: 200, json: function () { return Promise.resolve(data); }, text: function () { return Promise.resolve(JSON.stringify(data)); } });
+      };
+      var t = setTimeout(function () { finish(new TypeError("Network request failed")); }, 25000);
+      window[name] = function (data) { finish(null, data); };
+      s.onerror = function () { finish(new TypeError("Network request failed")); };
+      s.src = url + (url.indexOf("?") < 0 ? "?" : "&") + "cb=" + name + "&q=" + encodeURIComponent(body || "{}");
+      document.head.appendChild(s);
+    });
+  }
+  if (realFetch) window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : input && input.url;
+    if (!/^https:\/\/script\.google\.com\/macros\//.test(url || "") || !init || init.method !== "POST") return realFetch.apply(this, arguments);
+    if (useJsonp) return jsonp(url, init.body);
+    var self = this, args = arguments;
+    return realFetch.apply(self, args).catch(function () {
+      return jsonp(url, init.body).then(function (r) { useJsonp = true; try { localStorage.setItem(KEY, "1"); } catch (e) {} return r; });
+    });
+  };
+
   // ---------- Dates without Intl (iOS 9 ignores the options to toLocaleDateString) ----------
   if (!window.Intl) {
     var DS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

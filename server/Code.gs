@@ -64,7 +64,15 @@ function cachedPage_() {
 }
 function clearPageCache() { CacheService.getScriptCache().remove('page:n'); return 'Cleared'; }
 
-function doGet() {
+function doGet(e) {
+  // Old iPads (legacy/ page) can't always make the cross-site POST, so they call the API by <script> tag:
+  // GET ?cb=<callback>&q=<the same JSON the POST sends>, answered as JavaScript.
+  const p = (e && e.parameter) || {};
+  if (p.cb && p.q && /^[\w$.]{1,60}$/.test(p.cb)) {
+    let req = {}; try { req = JSON.parse(p.q); } catch (err) {}
+    const js = JSON.stringify(apiCall_(req)).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'); // old JS can't have these raw
+    return ContentService.createTextOutput(p.cb + '(' + js + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   const html = cachedPage_();
   return HtmlService.createHtmlOutput(html)
     .setTitle(APP_TITLE)
@@ -1236,9 +1244,14 @@ const API_FNS = {
   bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview
 };
 function doPost(e) {
+  let req = {};
+  try { req = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) {}
+  const out = apiCall_(req);
+  return ContentService.createTextOutput(JSON.stringify(out === undefined ? null : out)).setMimeType(ContentService.MimeType.JSON);
+}
+function apiCall_(req) {
   let out;
   try {
-    const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const fn = API_FNS[req.fn];
     if (!fn) throw new Error('Unknown call.');
     READONLY_ = !!READ_FNS_[req.fn]; RC_VER_ = null;
@@ -1251,7 +1264,7 @@ function doPost(e) {
     if (!READONLY_) rcBump_();
     READONLY_ = false;
   }
-  return ContentService.createTextOutput(JSON.stringify(out === undefined ? null : out)).setMimeType(ContentService.MimeType.JSON);
+  return out === undefined ? null : out;
 }
 // Everything the app needs when it opens, in one round trip instead of five.
 function bootData(id, dateKey) {
