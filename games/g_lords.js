@@ -1,9 +1,10 @@
 // ---------- Dawg Lords (crowd cannon) ----------
 // An endless red cat horde marches down the road and keeps getting bigger. Your cannon at the bottom fires pups,
 // one per cannon per shot; drag to move it. The x99 gate in the middle multiplies every pup that goes through.
-// Pups that hit the horde knock cats out and push the front back. On the sides, shoot a crate down to 0 and the
-// +N tiles behind it roll down the side lane: slide under them to catch them, and each adds N cannons. The crates
-// keep restocking. Every so often a boss marches in with the horde: beat it and catch the gold tile it drops.
+// Pups that hit the horde knock cats out and push the front back. The side conveyors never stop: +1 tiles (left)
+// and +99 tiles (right) roll into a block, and the block's number is the shots it takes to break it. The longer you
+// stay in the middle, the bigger it gets. Break the left block for MORE cannons, the right block for BIGGER cannons;
+// the upgrade rolls down to you and you catch it. Every so often a boss marches in; beat it for a gold drop.
 (function () {
   const PERKS = [
     { k: "rate", n: "BIG CANNON", e: "⚡", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "+8% fire rate" },
@@ -14,9 +15,9 @@
   ];
   const BOSSES = [{ n: "FAT CAT", e: "😾" }, { n: "TOMCAT KING", e: "🦁" }, { n: "TIGER LORD", e: "🐯" }, { n: "THE BIG MEOW", e: "🙀" }];
   // Tuning knobs (kept together so balance changes are one-line edits).
-  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 60, fire: 1.5, lhp: 3, rhp: 15, hpg: 1.7, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, rv0: 2 };
+  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 60, fire: 2.5, lhp: 3, rhp: 15, hpg: 1.7, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, belt: 34, gap: [70, 300], c0: 2, tv: [1, 99], n0: [5, 120], ng: [1.25, 3] };
   const SP = 7.2; // spacing of the little soldiers in the horde
-  const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
+  const fmtN = n => n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
   const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
   const mkey = () => "bdd:lords3:" + (typeof me !== "undefined" && me ? me.id : "");
   const today = () => new Date().toDateString();
@@ -28,41 +29,39 @@
   defGame({
     key: "lords", name: "Dawg Lords", icon: "👑", max: 99999, T,
     blurb: "Hold back an endless cat horde. x99 gate. Bosses.",
-    how: "An endless cat horde marches down the road, and it keeps getting bigger. Drag to move your cannon; every cannon fires one pup at a time. Pups that go through the x99 gate in the middle become 99 pups, and every pup that hits the horde knocks out a cat and pushes the front back. To power up, move to a side and shoot the crate until its number hits 0. The +N tiles behind it then roll down that side lane: slide your cannon under them to catch them, and each one adds N cannons. Missed tiles are gone, and a new crate restocks right away. Every so often a boss marches in with the horde. Knock it out and it drops a gold tile worth a lot of cannons: catch it! If the horde reaches the gate, the gate stops working until you push them back, and if it reaches your cannon it's over. Score is 10 points a second you hold the road plus 250 for every boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. The side conveyors never stop rolling: +1s on the left and +99s on the right pile into the block at the bottom, and its number is how many pups it takes to break it. Break the left block for MORE cannons and the right block for BIGGER cannons (each shot counts double). The upgrade rolls down the lane toward you, so slide over and catch it. The catch: time spent shooting the sides is time not feeding the x99, and the blocks get bigger the longer you wait. Every so often a boss marches in with the horde; knock it out and catch its gold drop for extra cannons. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
         cols: [{ x0: W * 0.035, x1: W * 0.2 }, { x0: W * 0.8, x1: W * 0.965 }],
-        t: 0, score: 0, kills: 0, cx: W / 2, tx: W / 2, cd: 0, pups: [], fx: [], drops: [], bank: [0, 0], start: 0, tiles: [[], []], lock: [null, null],
+        t: 0, score: 0, kills: 0, cx: W / 2, tx: W / 2, cd: 0, pups: [], fx: [], drops: [], ups: [], more: 0, pow: 1, start: 0, tiles: [[], []], lock: [null, null], beltD: [0, 0],
         front: 60, boss: null, bossN: 0, nextBoss: T.boss1, gateOn: true, gflash: 0, msg: null, sfxT: 0, recoil: 0 };
     },
     begin(G) {
       const s = G.s; s.mode = "play"; s.daily = s.meta.lastDay !== today(); G.t = 0;
-      s.start = 2 * (s.meta.side || 0); this.fillBelts(s);
+      s.start = 2 * (s.meta.side || 0); s.more = 0; s.pow = 1; s.ups = []; this.fillBelts(s);
       s.msg = { txt: s.daily ? "DAILY 2X COINS!" : "HOLD THE ROAD!", t: 2 };
     },
     per(s) { return Math.max(1, Math.floor((s.ax1 - s.ax0) / SP)); },
     unit(s) { return Math.max(1, Math.round(T.unit * Math.exp(s.t / T.unitG))); }, // cats per little soldier: the horde keeps growing
     march(s) { return (T.march + T.marchT * s.t) * Math.pow(0.95, s.meta.slow || 0) * (s.boss ? 1.25 : 1); },
     onScreen(s) { return Math.max(0, Math.round((s.front - 36) / SP + 1)) * this.per(s) * this.unit(s); },
-    // Each side lane: a crate (hp = pups needed) with a batch of tiles stacked behind it. Crates restock forever.
-    newSeg(s, i) {
-      const old = s.lock[i], lvl = old ? old.lvl + 1 : 0, hp = Math.round((i ? T.rhp : T.lhp) * Math.pow(T.hpg, lvl));
-      s.lock[i] = { hp, hp0: hp, lvl, open: false, flash: 0 };
-      const n = i ? 4 : 6, v = i ? T.rv0 + lvl : 1 + Math.floor(lvl / 3), by = this.blockY(s);
-      s.tiles[i] = []; for (let k = 0; k < n; k++) { const ty = by - 34 - k * 29; if (ty < 50) break; s.tiles[i].push({ ty, y: ty - 260, v }); }
+    // Each side lane: a conveyor that never stops, feeding a block. Block number = shots needed to break it.
+    resetBlock(s, i) { const L = s.lock[i], lvl = L ? L.lvl + 1 : 0; s.lock[i] = { n: Math.round(T.n0[i] * Math.pow(T.ng[i], lvl)), lvl, flash: 0 }; },
+    blockY(s) { return s.gy; },
+    cannons(s) { return T.c0 + (s.start || 0) + s.more; },
+    fillBelts(s) {
+      s.lock = [null, null]; s.tiles = [[], []]; s.beltD = [0, 0]; this.resetBlock(s, 0); this.resetBlock(s, 1);
+      for (let i = 0; i < 2; i++) for (let y = this.blockY(s) - 34; y >= 48; y -= T.gap[i]) s.tiles[i].push({ y, v: T.tv[i] });
     },
-    blockY(s) { return s.gy - 64; },
-    cannons(s) { return 1 + (s.start || 0) + s.bank[0] + s.bank[1]; },
-    fillBelts(s) { s.lock = [null, null]; s.tiles = [[], []]; this.newSeg(s, 0); this.newSeg(s, 1); },
     save(G) {
       const s = G.s; if (s.mode !== "play" || s.t < 5) return null;
-      return { label: `⏱ ${fmtT(s.t)}`, t: s.t, kills: s.kills, daily: s.daily, bank: s.bank, start: s.start, lv: s.lock.map(l => l.lvl), bossN: s.bossN, nextBoss: s.nextBoss };
+      return { label: `⏱ ${fmtT(s.t)}`, t: s.t, kills: s.kills, daily: s.daily, more: s.more, pow: s.pow, start: s.start, lv: s.lock.map(l => l.lvl), ln: s.lock.map(l => l.n), bossN: s.bossN, nextBoss: s.nextBoss };
     },
     load(G, v) {
-      if (!v.bank || v.t == null) throw new Error("old save");
-      const s = G.s; s.mode = "play"; ["t", "kills", "daily", "start", "bossN", "nextBoss"].forEach(k => s[k] = v[k]); s.bank = v.bank.slice();
-      this.fillBelts(s); if (v.lv) [0, 1].forEach(i => { s.lock[i].lvl = v.lv[i] - 1; this.newSeg(s, i); });
+      if (v.more == null || v.t == null) throw new Error("old save");
+      const s = G.s; s.mode = "play"; ["t", "kills", "daily", "start", "bossN", "nextBoss", "more", "pow"].forEach(k => s[k] = v[k]);
+      this.fillBelts(s); if (v.lv) [0, 1].forEach(i => { s.lock[i].lvl = v.lv[i]; s.lock[i].n = v.ln[i]; });
       s.front = 60; s.msg = { txt: "BACK TO THE ROAD!", t: 1.5 };
     },
     // A clump of pups. One dot can stand for many pups (w) so huge multipliers stay smooth on a phone.
@@ -74,9 +73,9 @@
     // Knock out cats at the front; every row cleared pushes the horde back a step.
     hitHorde(s, w) { s.kills += w; s.front = Math.max(60, s.front - w / (this.per(s) * this.unit(s)) * SP); },
     catchAt(s, x, half) { return Math.abs(s.cx - x) < half; },
-    gain(G, v, col) {
+    gain(G, v, col, txt) {
       const s = G.s; s.recoil = 0.6;
-      s.fx.push({ txt: `+${fmtN(v)} 🔫`, x: s.cx, y: s.cy - 40, t: 0.8, col });
+      s.fx.push({ txt: txt || `+${fmtN(v)} 🔫`, x: Math.max(70, Math.min(s.W - 70, s.cx)), y: s.cy - 44, t: 1, col });
       if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
     },
     update(G, dt) {
@@ -89,24 +88,30 @@
       if (s.cd <= 0) {
         s.cd = 1 / (T.fire * (1 + 0.08 * (m.rate || 0)));
         const C = this.cannons(s), k = Math.min(6, C); // one pup per cannon; past 6 cannons each dot carries several
-        const w = C * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
+        const w = C * s.pow * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
         for (let i = 0; i < k; i++) this.add(s, s.cx + (i - (k - 1) / 2) * sp, s.cy - 26, w, (Math.random() - 0.5) * 18);
         s.recoil = 1;
       }
-      // side lanes
+      // side conveyors never stop: each tile that rolls into the block adds its value to the block
       for (let i = 0; i < 2; i++) {
-        const Tl = s.tiles[i], c = s.cols[i], L = s.lock[i], cxm = (c.x0 + c.x1) / 2; L.flash = Math.max(0, L.flash - dt);
-        if (!L.open) { Tl.forEach(t => t.y = Math.min(t.ty, t.y + 130 * dt)); continue; }
-        Tl.forEach(t => t.y += 80 * dt);
-        while (Tl.length && Tl[0].y >= s.cy - 24) {
-          const t = Tl.shift();
-          if (this.catchAt(s, cxm, (c.x1 - c.x0) / 2 + 16)) { s.bank[i] += t.v; this.gain(G, t.v, i ? "#ffd23f" : "#82b1ff"); }
-          else s.fx.push({ txt: "MISSED", x: cxm, y: s.cy - 10, t: 0.6, col: "#ff8a80" });
-        }
-        if (!Tl.length) this.newSeg(s, i);
+        const Tl = s.tiles[i], L = s.lock[i], c = s.cols[i], by = this.blockY(s); L.flash = Math.max(0, L.flash - dt);
+        Tl.forEach(t => t.y += T.belt * dt);
+        s.beltD[i] += T.belt * dt; if (s.beltD[i] >= T.gap[i]) { s.beltD[i] -= T.gap[i]; Tl.push({ y: 40, v: T.tv[i] }); }
+        while (Tl.length && Tl[0].y >= by - 26) { const t = Tl.shift(); L.n += t.v; L.bump = 0.15; }
+        L.bump = Math.max(0, (L.bump || 0) - dt);
       }
+      // upgrades rolling down the side lanes: catch them with the cannon
+      s.ups.forEach(u => {
+        u.y += 110 * dt; if (u.y < s.cy - 24) return; u.done = true;
+        const c = s.cols[u.i], cxm = (c.x0 + c.x1) / 2;
+        if (this.catchAt(s, cxm, (c.x1 - c.x0) / 2 + 18)) {
+          if (u.i) { s.pow *= 2; this.gain(G, 0, "#ffd23f", "BIGGER CANNONS!"); } else { s.more += u.v; this.gain(G, u.v, "#82b1ff", `+${u.v} CANNON${u.v > 1 ? "S" : ""}`); }
+          G.sfx("win");
+        } else s.fx.push({ txt: "MISSED", x: cxm, y: s.cy - 10, t: 0.7, col: "#ff8a80" });
+      });
+      s.ups = s.ups.filter(u => !u.done);
       // boss gold drops fall down the road
-      s.drops.forEach(d => { d.y += 95 * dt; if (d.y >= s.cy - 24) { d.done = true; if (this.catchAt(s, d.x, 38)) { s.bank[0] += d.v; this.gain(G, d.v, "#ffd23f"); s.msg = { txt: `+${d.v} CANNONS!`, t: 1.2 }; G.sfx("win"); } else s.fx.push({ txt: "MISSED", x: d.x, y: s.cy - 10, t: 0.7, col: "#ff8a80" }); } });
+      s.drops.forEach(d => { d.y += 95 * dt; if (d.y >= s.cy - 24) { d.done = true; if (this.catchAt(s, d.x, 38)) { s.more += d.v; this.gain(G, d.v, "#ffd23f"); s.msg = { txt: `+${d.v} CANNONS!`, t: 1.2 }; G.sfx("win"); } else s.fx.push({ txt: "MISSED", x: d.x, y: s.cy - 10, t: 0.7, col: "#ff8a80" }); } });
       s.drops = s.drops.filter(d => !d.done);
       // the horde marches; bosses join every so often
       s.front += this.march(s) * dt;
@@ -126,12 +131,15 @@
           for (let i = 1; i < k; i++) s.pups.push({ x: p.x + (Math.random() - 0.5) * 24, y: p.y - Math.random() * 10, w: p.w, vx: (Math.random() - 0.5) * 50, vy: -230 });
           s.gflash = 0.1;
         }
-        // side crates
+        // side blocks: every pup knocks one off the number; at 0 the upgrade breaks free and rolls down to you
         for (let i = 0; i < 2; i++) {
-          const c = s.cols[i], L = s.lock[i], by = this.blockY(s); if (p.x < c.x0 || p.x > c.x1 || L.open) continue;
-          if (p.y <= by + 16 && py > by - 16) {
-            p.dead = true; L.hp -= p.w; L.flash = 0.06;
-            if (L.hp <= 0) { L.hp = 0; L.open = true; s.fx.push({ txt: "OPEN!", x: (c.x0 + c.x1) / 2, y: by, t: 0.8, col: "#80ff9c" }); G.sfx("win"); }
+          const c = s.cols[i], L = s.lock[i], by = this.blockY(s); if (p.x < c.x0 || p.x > c.x1) continue;
+          if (p.y <= by + 22 && py > by - 22) {
+            p.dead = true; L.n -= p.w; L.flash = 0.06;
+            if (L.n <= 0) {
+              s.ups.push({ i, y: by + 24, v: 1 }); this.resetBlock(s, i);
+              s.fx.push({ txt: "BROKE FREE!", x: (c.x0 + c.x1) / 2, y: by - 30, t: 0.9, col: "#80ff9c" }); G.sfx("win");
+            }
           }
         }
         if (p.dead) continue;
@@ -140,7 +148,7 @@
         if (b && p.y <= s.front + 8 && Math.abs(p.x - b.x) < b.r) {
           const k = Math.min(b.hp, p.w); b.hp -= k; p.w -= k; b.flash = 0.06; s.kills += k;
           if (b.hp <= 0) {
-            const v = 5 + 5 * s.bossN; s.bossN++; s.boss = null; s.nextBoss = s.t + T.bossEvery;
+            const v = 2 + s.bossN; s.bossN++; s.boss = null; s.nextBoss = s.t + T.bossEvery;
             s.drops.push({ x: Math.max(s.cx - 60, Math.min(s.cx + 60, b.x)), y: s.front, v });
             s.msg = { txt: "BOSS DOWN! CATCH THE GOLD!", t: 1.8 }; G.sfx("win");
           }
@@ -189,23 +197,30 @@
       c.fillStyle = dk ? "#323944" : "#e3e7ec"; c.fillRect(s.cols[0].x1 + 3, s.gy + 30, s.cols[1].x0 - s.cols[0].x1 - 6, H);
       s.cols.forEach(cl => { c.fillStyle = dk ? "#3b434f" : "#c3c9d2"; c.fillRect(cl.x0 - 3, 0, cl.x1 - cl.x0 + 6, H); c.fillStyle = dk ? "#4a5361" : "#f7f9fb"; c.fillRect(cl.x0 - 3, 0, 3, H); c.fillRect(cl.x1, 0, 3, H);
         c.fillStyle = dk ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"; for (let y = (G.t * 40) % 24 - 24; y < H; y += 24) c.fillRect(cl.x0 + 2, y, cl.x1 - cl.x0 - 4, 2); });
-      // tiles
+      // conveyor tiles
       s.cols.forEach((cl, i) => s.tiles[i].forEach(t => {
         const w = cl.x1 - cl.x0 - 4, x = cl.x0 + 2;
         c.fillStyle = i ? "#c99a00" : "#1e5fc2"; rr(c, x, t.y - 11, w, 24, 4); c.fill();
         c.fillStyle = i ? "#ffd23f" : "#2f80ed"; rr(c, x, t.y - 13, w, 22, 4); c.fill();
         G.text(c, "+" + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
       }));
-      // crates
+      // the blocks: a stack of cannon barrels with the shots-needed number under it
       s.cols.forEach((cl, i) => {
-        const L = s.lock[i]; if (!L || L.open) return;
-        const x = cl.x0 - 1, w = cl.x1 - cl.x0 + 2, by = this.blockY(s), h = 32;
-        c.fillStyle = "#5d3a1a"; rr(c, x, by - h / 2 + 3, w, h, 4); c.fill();
-        c.fillStyle = L.flash ? "#d7a86e" : "#a0682f"; rr(c, x, by - h / 2, w, h, 4); c.fill();
-        c.fillStyle = "#7a4a1f"; c.fillRect(x + 3, by - 6, w - 6, 2); c.fillRect(x + 3, by + 5, w - 6, 2);
-        c.fillStyle = "#4e342e"; [x + 5, x + w - 5].forEach(px => { c.beginPath(); c.arc(px, by - 10, 2, 0, 7); c.arc(px, by + 10, 2, 0, 7); c.fill(); });
-        G.text(c, fmtN(Math.ceil(L.hp)), x + w / 2, by + 1, Math.min(13, w / 4), "#fff");
+        const L = s.lock[i], x = cl.x0 - 1, w = cl.x1 - cl.x0 + 2, by = this.blockY(s), cxm = x + w / 2, bump = (L.bump || 0) * 20;
+        c.fillStyle = dk ? "#59606b" : "#9aa1ab"; rr(c, x, by + 6, w, 22, 5); c.fill();
+        G.text(c, fmtN(Math.ceil(L.n)), cxm, by + 18, Math.min(11, w / 4), "#fff");
+        const HEX = i ? [[0, 0], [-1, 0], [1, 0], [-0.5, -0.85], [0.5, -0.85], [-0.5, 0.85], [0.5, 0.85]] : [[0, 0], [-1, 0], [1, 0]], rad = Math.min(i ? 6.5 : 7, w / 7) + bump * 0.05;
+        HEX.forEach(([hx, hy]) => { const px = cxm + hx * rad * 2.05, py = by - 10 + hy * rad * 2.05;
+          c.fillStyle = L.flash ? "#ffffff" : dk ? "#cfd8dc" : "#fafafa"; c.beginPath(); c.arc(px, py, rad, 0, 7); c.fill();
+          c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.arc(px, py, rad * 0.5, 0, 7); c.fill(); });
+        G.text(c, i ? "BIGGER" : "MORE", cxm, by - 30 - bump, 7, dk ? "#fff" : "#37474f");
       });
+      // upgrades rolling down to you
+      s.ups.forEach(u => { const cl = s.cols[u.i], cxm = (cl.x0 + cl.x1) / 2;
+        c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.ellipse(cxm, u.y + 14, 22, 5, 0, 0, 7); c.fill();
+        c.fillStyle = u.i ? "#ffb300" : "#1e88e5"; c.beginPath(); c.arc(cxm, u.y, 17, 0, 7); c.fill();
+        c.fillStyle = "#fff"; c.beginPath(); c.arc(cxm, u.y, 13, 0, 7); c.fill();
+        G.text(c, u.i ? "x2" : "+" + u.v, cxm, u.y + 1, 9, u.i ? "#b26a00" : "#1565c0"); });
       // the x99 gate
       { const x = s.ax0, w = s.ax1 - s.ax0, y = s.gy - 13, on = s.gateOn;
         c.globalAlpha = on ? 1 : 0.35;
@@ -242,12 +257,12 @@
         else G.text(c, e.txt, e.x, e.y - (0.7 - e.t) * 30, 10, e.col);
       });
       // cannon
-      const C = this.cannons(s), cx = s.cx, cy = s.cy, rc = s.recoil * 4, n = Math.min(6, C), bsp = Math.min(14, 64 / n), bw = Math.min(14, bsp + 1);
+      const C = this.cannons(s), cx = s.cx, cy = s.cy, rc = s.recoil * 4, n = Math.min(6, C), big = Math.min(6, Math.log2(s.pow)), bsp = Math.min(14 + big, (64 + big * 6) / n), bw = Math.min(14 + big, bsp + 1);
       c.fillStyle = "rgba(0,0,0,0.18)"; c.beginPath(); c.ellipse(cx, cy + 18, 30, 7, 0, 0, 7); c.fill();
       c.fillStyle = "#8d5a3b"; rr(c, cx - 22, cy + 2, 44, 14, 4); c.fill();
       [-15, 15].forEach(o => { c.fillStyle = "#3e2723"; c.beginPath(); c.arc(cx + o, cy + 15, 6, 0, 7); c.fill(); });
       for (let i = 0; i < n; i++) { const bx = cx + (i - (n - 1) / 2) * bsp; c.fillStyle = "#78909c"; rr(c, bx - bw / 2, cy - 28 + rc, bw, 34, 5); c.fill(); c.fillStyle = "#b0bec5"; rr(c, bx - bw / 4, cy - 26 + rc, bw / 4, 28, 2); c.fill(); c.fillStyle = "#37474f"; rr(c, bx - bw / 2 - 1, cy - 30 + rc, bw + 2, 6, 3); c.fill(); }
-      const lx = Math.max(48, Math.min(W - 48, cx)); c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, lx - 46, cy + 24, 92, 18, 9); c.fill(); G.text(c, `🔫 x${fmtN(C)}`, lx, cy + 33, 9, "#fff");
+      const lx = Math.max(48, Math.min(W - 48, cx)); c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, lx - 58, cy + 24, 116, 18, 9); c.fill(); G.text(c, `🔫${fmtN(C)}  💪x${fmtN(s.pow)}`, lx, cy + 33, 9, "#fff");
       G.img(c, ":dawgW:", cx, cy + 4, 22);
       // HUD + danger bar (how close the horde is to your cannon)
       G.hud(c, `⏱${fmtT(s.t)}`, fmtN(s.score), `BEST ${fmtT(s.meta.bestT || 0)}`);
@@ -255,7 +270,7 @@
       c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 34, W, 5); c.fillStyle = dng > 0.6 ? "#e53935" : "#ffb300"; c.fillRect(0, 34, W * dng, 5);
       if (dng > 0.7) { c.fillStyle = `rgba(229,57,53,${0.1 + 0.07 * Math.sin(G.t * 8)})`; c.fillRect(0, 0, W, H); }
       if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 13 : 18);
-      G.hint(c, "BREAK SIDE CRATES, THEN CATCH THE TILES", 5, s.cy - 60);
+      G.hint(c, "SHOOT THE SIDES TO BREAK UPGRADES FREE", 5, s.cy - 60);
     },
     drawCamp(G, c) {
       const s = G.s, W = G.W, H = G.H, m = s.meta, L = this.campLayout(G), dk = G.dark();
