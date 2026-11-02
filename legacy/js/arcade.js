@@ -2895,8 +2895,8 @@ defGameMeta([{
   "key": "lords",
   "name": "Dawg Lords",
   "icon": "👑",
-  "blurb": "Defend the castle. Level up. Go again.",
-  "how": "Hordes charge your castle wall. Your Lord throws bones by himself; drag anywhere to slide him along the wall. Every kill drops XP, and each level you pick 1 of 3 power-ups: more bones, lightning, tennis bombs, spinning bones, archer pups and more. Max out a skill to unlock its EVOLUTION. Hordes hit every 40 seconds and a boss every 90 (beating one gives a free pick). When the wall falls you earn 👑 crowns, and at camp you spend them on permanent upgrades so every run goes further. First battle each day pays double crowns. Score is points from kills (keep a combo going for a bigger multiplier).",
+  "blurb": "Cannon vs a cat army. Gates multiply your pups.",
+  "how": "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Pups that pass through a gate multiply (x3 means three times as many, +20 adds twenty). Every pup that reaches the army knocks out a cat. On the sides, shoot the stone block down to 0 to unlock a side cannon: it blasts the +N tiles above it and every tile sends N more pups at the cats. If the army reaches the gates they get smashed, and if it reaches your cannon it's over. Clear a wave to pick an upgrade. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
   "max": 999999
 }, {
   "file": "g_tennis.js",
