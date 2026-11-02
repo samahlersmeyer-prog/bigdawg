@@ -1,8 +1,9 @@
 // ---------- Dawg Lords (crowd cannon) ----------
 // A giant red cat army marches down the road. Your cannon at the bottom fires a stream of blue pups; drag to aim it.
 // Pups that pass through a gate get multiplied (x3, +20...). Each pup that reaches the army takes out a cat.
-// Side columns are conveyor belts: +N tiles slide down toward you, and each one that arrives adds N cannons
-// (more cannons = bigger shots). Shoot a tile on its way down to double it. Clear a wave, pick an upgrade.
+// The cannon fires one pup per shot per cannon. Aim at the big x gate in the middle to multiply them, or swing
+// left/right to shoot the +N tiles sliding down the side belts: every tile you hit adds N cannons. Tiles you
+// ignore slide past and are gone. Clear a wave and the next, bigger one starts right away.
 (function () {
   const UPS = [
     { k: "rate", n: "FAST CANNON", e: "⚡", max: 6, d: "+15% fire rate" },
@@ -17,7 +18,7 @@
   const PERKS = [
     { k: "rate", n: "BIG CANNON", e: "⚡", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "+8% fire rate" },
     { k: "lucky", n: "LUCKY SHOTS", e: "🍀", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "6% shots are x3" },
-    { k: "gate", n: "GATE MASTER", e: "🚪", max: 5, c: l => Math.round(80 * Math.pow(1.8, l)), d: "+1 on every gate" },
+    { k: "gate", n: "GATE MASTER", e: "🚪", max: 5, c: l => Math.round(80 * Math.pow(1.8, l)), d: "+20% gate multiplier" },
     { k: "side", n: "ARMORY", e: "🏰", max: 5, c: l => Math.round(50 * Math.pow(1.6, l)), d: "Start with +2 cannons" },
     { k: "treas", n: "TREASURY", e: "🪙", max: 10, c: l => Math.round(35 * Math.pow(1.4, l)), d: "+10% coins" }
   ];
@@ -33,7 +34,7 @@
   defGame({
     key: "lords", name: "Dawg Lords", icon: "👑", max: 9999999,
     blurb: "Cannon vs a cat army. Gates multiply your pups.",
-    how: "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Pups that pass through a gate multiply (x3 means three times as many, +20 adds twenty). Every pup that reaches the army knocks out a cat. The side belts slide +N tiles down toward you: every tile that reaches the bottom adds N cannons, and more cannons means bigger shots. Shoot a tile on its way down to double it. If the army reaches the gates they get smashed, and if it reaches your cannon it's over. Clear a wave to pick an upgrade. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the +N tiles sliding down the side belts: each tile you hit adds N cannons, so you fire more pups every shot. Tiles you don't shoot slide past and are lost. If the army reaches the gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
@@ -46,24 +47,17 @@
       this.startWave(G, 1); this.fillBelts(s);
     },
     startWave(G, n) {
-      const s = G.s, W = s.W, gb = (s.ups.gate || 0) + (s.meta.gate || 0);
-      s.wave = n; s.R0 = s.R = armyOf(n); s.front = 46; s.pups = [];
-      const xv = 2 + Math.floor(n / 6) + gb, pv = 3 * n + 2 * gb, a = s.ax0, b = s.ax1, m = (a + b) / 2;
-      const L = [
-        [{ x0: m - (b - a) * 0.2, x1: m + (b - a) * 0.2, op: "x", v: xv }],
-        [{ x0: a, x1: m - 3, op: "+", v: pv }, { x0: m + 3, x1: b, op: "x", v: xv }],
-        [{ x0: a, x1: m - 3, op: "x", v: xv }, { x0: m + 3, x1: b, op: "+", v: pv }],
-        [{ x0: a, x1: a + (b - a) * 0.3, op: "x", v: Math.max(2, xv - 1) }, { x0: b - (b - a) * 0.3, x1: b, op: "x", v: xv + 1 }]
-      ];
-      s.gates = (n === 1 ? L[0] : L[Math.floor(Math.random() * L.length)]).map(g => Object.assign({ alive: true, id: Math.random() }, g));
+      const s = G.s, gm = 1 + 0.2 * (s.meta.gate || 0);
+      s.wave = n; s.R0 = s.R = armyOf(n); s.front = 46; s.pups = []; s.clearT = 0;
+      s.gates = [{ x0: s.ax0, x1: s.ax1, op: "x", v: Math.round((4 + (n - 1)) * gm), alive: true }];
       s.msg = { txt: n === 1 && s.daily ? "DAILY 2X COINS!" : `WAVE ${n}: ${fmtN(s.R)} CATS`, t: 1.8 };
     },
     GAP: [30, 60],
-    tval(s, side) { const tm = 1 + (s.ups.tile || 0); return (side ? 3 : 1) * tm; },
+    tval(s, side) { return side ? 5 : 1; },
     cannons(s) { return 1 + (s.start || 0) + s.bank[0] + s.bank[1]; },
-    fillBelts(s) { s.tiles = [0, 1].map(i => { const t = []; for (let y = s.gy - 70; y >= 48; y -= this.GAP[i]) t.push({ y, v: this.tval(s, i) }); return t; }); },
+    fillBelts(s) { s.beltD = [0, 0]; s.tiles = [0, 1].map(i => { const t = []; for (let y = s.gy - 70; y >= 48; y -= this.GAP[i]) t.push({ y, v: this.tval(s, i) }); return t; }); },
     save(G) {
-      const s = G.s; if (s.mode !== "play" || s.choice || s.wave < 2) return null;
+      const s = G.s; if (s.mode !== "play" || s.choice || s.clearT > 0 || s.wave < 2) return null;
       return { label: `Wave ${s.wave}`, wave: s.wave, ups: s.ups, score: s.score, daily: s.daily, bank: s.bank, start: s.start };
     },
     load(G, v) {
@@ -87,31 +81,28 @@
       const s = G.s; if (s.mode !== "play") return;
       if (s.msg) { s.msg.t -= dt; if (s.msg.t <= 0) s.msg = null; }
       if (s.choice) return;
+      if (s.clearT > 0) { s.clearT -= dt; if (s.clearT <= 0) this.startWave(G, s.wave + 1); return; }
       const W = s.W, u = s.ups, m = s.meta; s.sfxT -= dt; s.recoil = Math.max(0, s.recoil - dt * 6);
       // cannon
       const dx = s.tx - s.cx; s.cx += Math.sign(dx) * Math.min(Math.abs(dx), 900 * dt);
       s.cd -= dt;
       if (s.cd <= 0) {
         s.cd = 1 / (6 * (1 + 0.15 * (u.rate || 0)) * (1 + 0.08 * (m.rate || 0)));
-        const C = this.cannons(s), tw = 1 + (u.twin || 0), k = Math.min(6, C) * tw;
-        const w = C * (tw > 1 ? 1.6 : 1) * (1 + 0.2 * (u.power || 0)) * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
+        const C = this.cannons(s), k = Math.min(6, C); // one pup per cannon; past 6 cannons each dot carries several
+        const w = C * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
         for (let i = 0; i < k; i++) this.add(s, s.cx + (i - (k - 1) / 2) * sp, s.cy - 26, w, (Math.random() - 0.5) * 18);
         s.recoil = 1;
       }
-      // side belts slide tiles toward you; each one that arrives adds cannons
+      // side belts slide tiles toward you; shoot them to collect, or they slide past and are gone
       const bs = 13 * (1 + 0.3 * (u.belt || 0));
       for (let i = 0; i < 2; i++) {
         const T = s.tiles[i], c = s.cols[i];
         T.forEach(t => t.y += bs * dt);
-        if (!T.length || T[T.length - 1].y >= 48 + this.GAP[i]) T.push({ y: 48, v: this.tval(s, i) });
-        while (T.length && T[0].y >= s.gy - 30) {
-          const t = T.shift(); s.bank[i] += t.v; s.peds[i].flash = 0.2;
-          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: s.gy - 30, t: 0.8, col: i ? "#ffd23f" : "#82b1ff" });
-          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
-        }
+        s.beltD[i] = (s.beltD[i] || 0) + bs * dt; if (s.beltD[i] >= this.GAP[i]) { s.beltD[i] -= this.GAP[i]; T.push({ y: 48, v: this.tval(s, i) }); }
+        while (T.length && T[0].y >= s.gy - 30) T.shift();
       }
       // march
-      s.front += (12 + 1.3 * s.wave) * Math.pow(0.88, u.slow || 0) * dt;
+      s.front += (12 + 1.3 * s.wave) * dt;
       s.gates.forEach(g => { if (g.alive && s.front >= s.gy - 13) { g.alive = false; s.fx.push({ txt: "SMASHED!", x: (g.x0 + g.x1) / 2, y: s.gy, t: 0.9, col: "#ff8a80" }); G.buzz(); } });
       // pups
       const ped = [], ty = s.gy - 24;
@@ -125,12 +116,13 @@
           else if (full) p.w += g.v; else s.pups.push({ x: p.x + (Math.random() - 0.5) * 16, y: p.y - 4, w: g.v, vx: (Math.random() - 0.5) * 30, vy: -330 });
           g.flash = 0.12; break;
         }
-        // side belts: shooting a tile on its way down doubles it (once)
+        // side belts: each pup that hits a tile collects it, adding that many cannons
         for (let i = 0; i < 2; i++) {
           const c = s.cols[i]; if (p.x < c.x0 || p.x > c.x1) continue;
-          const t = s.tiles[i].find(t => !t.boost && p.y <= t.y + 12 && p.y >= t.y - 14);
-          if (t) { p.dead = true; t.boost = true; t.v *= 2; s.fx.push({ txt: "x2!", x: (c.x0 + c.x1) / 2, y: t.y, t: 0.5, col: "#80ff9c" }); }
-          else if (s.tiles[i].some(t => p.y <= t.y + 12 && p.y >= t.y - 14)) p.dead = true;
+          const T = s.tiles[i], j = T.findIndex(t => p.y <= t.y + 12 && p.y >= t.y - 14); if (j < 0) continue;
+          const t = T.splice(j, 1)[0]; p.dead = true; s.bank[i] += t.v; s.peds[i].flash = 0.2;
+          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: t.y, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
+          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
         }
         if (p.dead) continue;
         // the army
@@ -145,7 +137,7 @@
       s.pups = s.pups.filter(p => !p.dead);
       s.gates.forEach(g => { if (g.flash) g.flash = Math.max(0, g.flash - dt); });
       s.fx.forEach(e => e.t -= dt); s.fx = s.fx.filter(e => e.t > 0);
-      if (s.R <= 0) { s.R = 0; s.score = Math.round(s.score); s.pups = []; s.choice = this.offer(s); s.msg = { txt: `WAVE ${s.wave} CLEARED!`, t: 99 }; G.sfx("win"); return; }
+      if (s.R <= 0) { s.R = 0; s.score = Math.round(s.score); s.pups = []; s.clearT = 1.4; s.msg = { txt: `WAVE ${s.wave} CLEARED!`, t: 1.4 }; G.sfx("win"); return; }
       if (s.front >= s.cy - 36) this.end(G);
     },
     end(G) {
@@ -248,7 +240,7 @@
       c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 34, W, 5); c.fillStyle = "#e53935"; c.fillRect(0, 34, W * (1 - s.R / Math.max(1, s.R0)), 5);
       if (s.front > s.gy + 40 && s.R > 0) { c.fillStyle = `rgba(229,57,53,${0.1 + 0.07 * Math.sin(G.t * 8)})`; c.fillRect(0, 0, W, H); }
       if (s.choice) this.drawCards(G, c);
-      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "DRAG TO AIM THROUGH THE GATES", 4, s.cy - 60); }
+      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "MIDDLE: MULTIPLY · SIDES: MORE CANNONS", 5, s.cy - 60); }
     },
     drawCards(G, c) {
       const s = G.s, W = G.W, H = G.H, L = this.cardLayout(G);
