@@ -29,12 +29,12 @@
   const saveMeta = m => store.set(mkey(), m);
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   const inR = (r, x, y) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-  const armyOf = n => Math.round(1200 * Math.pow(1.45, n - 1));
+  const armyOf = n => Math.round(60.0 * Math.pow(1.28, n - 1));
 
   defGame({
     key: "lords", name: "Dawg Lords", icon: "👑", max: 9999999,
     blurb: "Cannon vs a cat army. Gates multiply your pups.",
-    how: "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down to you and each one adds N cannons, so you fire more pups every shot. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x2 doubles them, and the gate gets stronger every few waves), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down to you and each one adds N cannons, so you fire more pups every shot. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
@@ -49,14 +49,14 @@
     startWave(G, n) {
       const s = G.s, gm = 1 + 0.2 * (s.meta.gate || 0);
       s.wave = n; s.R0 = s.R = armyOf(n); s.front = 46; s.pups = []; s.clearT = 0;
-      s.gates = [{ x0: s.ax0, x1: s.ax1, op: "x", v: Math.round((4 + (n - 1)) * gm), alive: true }];
+      s.gates = [{ x0: s.ax0, x1: s.ax1, op: "x", v: Math.round((2 + Math.floor((n - 1) / 4)) * gm), alive: true }];
       s.msg = { txt: n === 1 && s.daily ? "DAILY 2X COINS!" : `WAVE ${n}: ${fmtN(s.R)} CATS`, t: 1.8 };
     },
     // Each side belt: a crate gate (hp = pups needed) with a batch of tiles stacked behind it.
     newSeg(s, i) {
-      const old = s.lock[i], lvl = old ? old.lvl + 1 : 0, hp = Math.round((i ? 30 : 4) * Math.pow(2.3, lvl));
+      const old = s.lock[i], lvl = old ? old.lvl + 1 : 0, hp = Math.round((i ? 15 : 3) * Math.pow(2.5, lvl));
       s.lock[i] = { hp, hp0: hp, lvl, open: false, flash: 0 };
-      const n = i ? 5 : 8, v = i ? 5 + 3 * lvl : 1 + Math.floor(lvl / 3), by = this.blockY(s);
+      const n = i ? 4 : 6, v = i ? 3 + lvl : 1, by = this.blockY(s);
       s.tiles[i] = []; for (let k = 0; k < n; k++) { const ty = by - 34 - k * 29; if (ty < 50) break; s.tiles[i].push({ ty, y: ty - 260, v }); }
     },
     blockY(s) { return s.gy - 64; },
@@ -82,7 +82,7 @@
     add(s, x, y, w, vx, o) {
       if (w <= 0) return;
       if (s.pups.length > 700) { s.pups[s.pups.length - 1].w += w; return; } // merge into the newest (still behind the gates)
-      s.pups.push(Object.assign({ x, y, w, vx: vx || 0, vy: -330, g: [] }, o || {}));
+      s.pups.push(Object.assign({ x, y, w, vx: vx || 0, vy: -230, g: [] }, o || {}));
     },
     update(G, dt) {
       const s = G.s; if (s.mode !== "play") return;
@@ -91,10 +91,10 @@
       if (s.clearT > 0) { s.clearT -= dt; if (s.clearT <= 0) this.startWave(G, s.wave + 1); return; }
       const W = s.W, u = s.ups, m = s.meta; s.sfxT -= dt; s.recoil = Math.max(0, s.recoil - dt * 6);
       // cannon
-      const dx = s.tx - s.cx; s.cx += Math.sign(dx) * Math.min(Math.abs(dx), 900 * dt);
+      const dx = s.tx - s.cx; s.cx += Math.sign(dx) * Math.min(Math.abs(dx), 520 * dt);
       s.cd -= dt;
       if (s.cd <= 0) {
-        s.cd = 1 / (6 * (1 + 0.15 * (u.rate || 0)) * (1 + 0.08 * (m.rate || 0)));
+        s.cd = 1 / (1.5 * (1 + 0.15 * (u.rate || 0)) * (1 + 0.08 * (m.rate || 0)));
         const C = this.cannons(s), k = Math.min(6, C); // one pup per cannon; past 6 cannons each dot carries several
         const w = C * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
         for (let i = 0; i < k; i++) this.add(s, s.cx + (i - (k - 1) / 2) * sp, s.cy - 26, w, (Math.random() - 0.5) * 18);
@@ -103,8 +103,8 @@
       // side belts: locked tiles settle behind the crate; once it breaks they roll down and add cannons
       for (let i = 0; i < 2; i++) {
         const T = s.tiles[i], c = s.cols[i], L = s.lock[i]; L.flash = Math.max(0, L.flash - dt);
-        if (!L.open) { T.forEach(t => t.y = Math.min(t.ty, t.y + 240 * dt)); continue; }
-        T.forEach(t => t.y += 170 * dt);
+        if (!L.open) { T.forEach(t => t.y = Math.min(t.ty, t.y + 130 * dt)); continue; }
+        T.forEach(t => t.y += 80 * dt);
         while (T.length && T[0].y >= s.gy - 26) {
           const t = T.shift(); s.bank[i] += t.v; s.peds[i].flash = 0.2;
           s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: s.gy - 34, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
@@ -113,7 +113,7 @@
         if (!T.length) this.newSeg(s, i);
       }
       // march
-      s.front += (12 + 1.3 * s.wave) * dt;
+      s.front += (10.0 + 0.35 * s.wave) * dt;
       s.gates.forEach(g => { if (g.alive && s.front >= s.gy - 13) { g.alive = false; s.fx.push({ txt: "SMASHED!", x: (g.x0 + g.x1) / 2, y: s.gy, t: 0.9, col: "#ff8a80" }); G.buzz(); } });
       // pups
       const ped = [], ty = s.gy - 24;
@@ -123,8 +123,8 @@
         // gates
         if (!p.col && py > s.gy && p.y <= s.gy) for (const g of s.gates) if (g.alive && p.x >= g.x0 && p.x <= g.x1) {
           const full = s.pups.length > 600;
-          if (g.op === "x") { const tot = p.w * g.v, k = full ? 1 : Math.min(4, g.v); p.w = tot / k; for (let i = 1; i < k; i++) s.pups.push({ x: p.x + (Math.random() - 0.5) * 22, y: p.y - Math.random() * 8, w: p.w, vx: (Math.random() - 0.5) * 40, vy: -330 }); }
-          else if (full) p.w += g.v; else s.pups.push({ x: p.x + (Math.random() - 0.5) * 16, y: p.y - 4, w: g.v, vx: (Math.random() - 0.5) * 30, vy: -330 });
+          if (g.op === "x") { const tot = p.w * g.v, k = full ? 1 : Math.min(4, g.v); p.w = tot / k; for (let i = 1; i < k; i++) s.pups.push({ x: p.x + (Math.random() - 0.5) * 22, y: p.y - Math.random() * 8, w: p.w, vx: (Math.random() - 0.5) * 40, vy: -230 }); }
+          else if (full) p.w += g.v; else s.pups.push({ x: p.x + (Math.random() - 0.5) * 16, y: p.y - 4, w: g.v, vx: (Math.random() - 0.5) * 30, vy: -230 });
           g.flash = 0.12; break;
         }
         // side belts: pups chip away at the crate gate
@@ -153,7 +153,7 @@
     },
     end(G) {
       const s = G.s, m = s.meta, score = Math.round(s.score);
-      const coins = Math.round((Math.sqrt(score) * 0.12 + s.wave * 4) * (1 + 0.1 * (m.treas || 0)) * (s.daily ? 2 : 1));
+      const coins = Math.round((Math.sqrt(score) * 0.6 + s.wave * 5) * (1 + 0.1 * (m.treas || 0)) * (s.daily ? 2 : 1));
       const nb = s.wave > (m.bestWave || 0);
       m.coins += coins; m.runs = (m.runs || 0) + 1; m.bestWave = Math.max(m.bestWave || 0, s.wave); if (s.daily) m.lastDay = today(); saveMeta(m);
       G.over(Math.min(9999999, score), `${nb ? "NEW BEST! " : ""}Overrun on wave ${s.wave}. +${coins} 🪙 for camp`);
