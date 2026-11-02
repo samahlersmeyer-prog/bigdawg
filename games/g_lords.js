@@ -34,7 +34,7 @@
   defGame({
     key: "lords", name: "Dawg Lords", icon: "👑", max: 9999999,
     blurb: "Cannon vs a cat army. Gates multiply your pups.",
-    how: "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x2 doubles them, and the gate gets stronger every few waves), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down to you and each one adds N cannons, so you fire more pups every shot. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x2 doubles them, and the gate gets stronger every few waves), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down the side lane toward you: slide the cannon under them to catch them, and each one you catch adds N cannons. Tiles you miss are gone. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
@@ -105,10 +105,14 @@
         const T = s.tiles[i], c = s.cols[i], L = s.lock[i]; L.flash = Math.max(0, L.flash - dt);
         if (!L.open) { T.forEach(t => t.y = Math.min(t.ty, t.y + 130 * dt)); continue; }
         T.forEach(t => t.y += 80 * dt);
-        while (T.length && T[0].y >= s.gy - 26) {
-          const t = T.shift(); s.bank[i] += t.v; s.peds[i].flash = 0.2;
-          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: s.gy - 34, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
-          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
+        // tiles roll all the way down the lane: slide the cannon under them to catch, or they're gone
+        while (T.length && T[0].y >= s.cy - 24) {
+          const t = T.shift(), cxm = (c.x0 + c.x1) / 2;
+          if (Math.abs(s.cx - cxm) < (c.x1 - c.x0) / 2 + 16) {
+            s.bank[i] += t.v; s.recoil = 0.6;
+            s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: s.cx, y: s.cy - 40, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
+            if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
+          } else s.fx.push({ txt: "MISSED", x: cxm, y: s.cy - 10, t: 0.6, col: "#ff8a80" });
         }
         if (!T.length) this.newSeg(s, i);
       }
@@ -166,7 +170,7 @@
       const W = G.W, H = G.H, ch = Math.min(84, (H - 240) / 3), y0 = Math.max(130, H / 2 - (ch * 3 + 20) / 2);
       return [0, 1, 2].map(i => ({ x: 22, y: y0 + i * (ch + 10), w: W - 44, h: ch }));
     },
-    down(G, x) { const s = G.s; if (s.mode === "play" && !s.choice) s.tx = Math.max(s.W * 0.06, Math.min(s.W * 0.94, x)); },
+    down(G, x) { const s = G.s; if (s.mode === "play" && !s.choice) s.tx = Math.max(s.W * 0.1, Math.min(s.W * 0.9, x)); },
     move(G, x) { this.down(G, x); },
     tap(G, x, y) {
       const s = G.s;
@@ -188,8 +192,9 @@
       // snowy ground, road, walls
       c.fillStyle = dk ? "#1d2229" : "#eef3f8"; c.fillRect(0, 0, W, H);
       c.fillStyle = dk ? "#2a3039" : "#d5dae1"; c.fillRect(s.ax0 - 8, 0, s.ax1 - s.ax0 + 16, H);
-      c.fillStyle = dk ? "#323944" : "#e3e7ec"; c.fillRect(s.cols[0].x1 + 2, s.gy + 30, s.cols[1].x0 - s.cols[0].x1 - 4, H);
-      s.cols.forEach(cl => { c.fillStyle = dk ? "#3b434f" : "#c3c9d2"; c.fillRect(cl.x0 - 3, 0, cl.x1 - cl.x0 + 6, s.gy + 30); c.fillStyle = dk ? "#4a5361" : "#f7f9fb"; c.fillRect(cl.x0 - 3, 0, 3, s.gy + 30); c.fillRect(cl.x1, 0, 3, s.gy + 30); });
+      c.fillStyle = dk ? "#323944" : "#e3e7ec"; c.fillRect(s.cols[0].x1 + 3, s.gy + 30, s.cols[1].x0 - s.cols[0].x1 - 6, H);
+      s.cols.forEach(cl => { c.fillStyle = dk ? "#3b434f" : "#c3c9d2"; c.fillRect(cl.x0 - 3, 0, cl.x1 - cl.x0 + 6, H); c.fillStyle = dk ? "#4a5361" : "#f7f9fb"; c.fillRect(cl.x0 - 3, 0, 3, H); c.fillRect(cl.x1, 0, 3, H);
+        c.fillStyle = dk ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"; for (let y = (G.t * 40) % 24 - 24; y < H; y += 24) c.fillRect(cl.x0 + 2, y, cl.x1 - cl.x0 - 4, 2); });
       // tiles
       s.cols.forEach((cl, i) => s.tiles[i].forEach(t => {
         const w = cl.x1 - cl.x0 - 4, x = cl.x0 + 2;
@@ -206,17 +211,6 @@
         c.fillStyle = "#7a4a1f"; c.fillRect(x + 3, by - 6, w - 6, 2); c.fillRect(x + 3, by + 5, w - 6, 2);
         c.fillStyle = "#4e342e"; [x + 5, x + w - 5].forEach(px => { c.beginPath(); c.arc(px, by - 10, 2, 0, 7); c.arc(px, by + 10, 2, 0, 7); c.fill(); });
         G.text(c, fmtN(Math.ceil(L.hp)), x + w / 2, by + 1, Math.min(13, w / 4), "#fff");
-      });
-      // cannon piles at the bottom of each belt: the number is how many cannons that belt has given you
-      s.cols.forEach((cl, i) => {
-        const x = cl.x0, w = cl.x1 - cl.x0, y = s.gy - 22, cxm = x + w / 2, n = s.bank[i], fl = s.peds[i].flash || 0;
-        c.fillStyle = dk ? "#59606b" : "#9aa1ab"; rr(c, x, y + 26, w, 22, 4); c.fill();
-        G.text(c, fmtN(n), cxm, y + 38, 9, "#fff");
-        const k = Math.min(7, 1 + Math.floor(Math.log2(1 + n))), HEX = [[0, 0], [-1, 0], [1, 0], [-0.5, -0.85], [0.5, -0.85], [-0.5, 0.85], [0.5, 0.85]], rad = Math.min(7, w / 7);
-        for (let j = 0; j < k; j++) { const px = cxm + HEX[j][0] * rad * 2.05, py = y + 12 + HEX[j][1] * rad * 2.05;
-          c.fillStyle = fl > 0 ? "#fffde7" : dk ? "#cfd8dc" : "#fafafa"; c.beginPath(); c.arc(px, py, rad, 0, 7); c.fill();
-          c.fillStyle = "rgba(0,0,0,0.22)"; c.beginPath(); c.arc(px, py, rad * 0.5, 0, 7); c.fill(); }
-        s.peds[i].flash = Math.max(0, fl - 1 / 60);
       });
       // gates
       s.gates.forEach(g => {
@@ -253,14 +247,14 @@
       c.fillStyle = "#8d5a3b"; rr(c, cx - 22, cy + 2, 44, 14, 4); c.fill();
       [-15, 15].forEach(o => { c.fillStyle = "#3e2723"; c.beginPath(); c.arc(cx + o, cy + 15, 6, 0, 7); c.fill(); });
       for (let i = 0; i < n; i++) { const bx = cx + (i - (n - 1) / 2) * bsp; c.fillStyle = "#78909c"; rr(c, bx - bw / 2, cy - 28 + rc, bw, 34, 5); c.fill(); c.fillStyle = "#b0bec5"; rr(c, bx - bw / 4, cy - 26 + rc, bw / 4, 28, 2); c.fill(); c.fillStyle = "#37474f"; rr(c, bx - bw / 2 - 1, cy - 30 + rc, bw + 2, 6, 3); c.fill(); }
-      c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, cx - 46, cy + 24, 92, 18, 9); c.fill(); G.text(c, `🔫 x${fmtN(C)}`, cx, cy + 33, 9, "#fff");
+      const lx = Math.max(48, Math.min(W - 48, cx)); c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, lx - 46, cy + 24, 92, 18, 9); c.fill(); G.text(c, `🔫 x${fmtN(C)}`, lx, cy + 33, 9, "#fff");
       G.img(c, ":dawgW:", cx, cy + 4, 22);
       // HUD
       G.hud(c, `WAVE ${s.wave}`, fmtN(s.score), `BEST ${s.meta.bestWave || 0}`);
       c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 34, W, 5); c.fillStyle = "#e53935"; c.fillRect(0, 34, W * (1 - s.R / Math.max(1, s.R0)), 5);
       if (s.front > s.gy + 40 && s.R > 0) { c.fillStyle = `rgba(229,57,53,${0.1 + 0.07 * Math.sin(G.t * 8)})`; c.fillRect(0, 0, W, H); }
       if (s.choice) this.drawCards(G, c);
-      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "BREAK THE SIDE CRATES FOR CANNONS", 5, s.cy - 60); }
+      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "BREAK SIDE CRATES, THEN CATCH THE TILES", 5, s.cy - 60); }
     },
     drawCards(G, c) {
       const s = G.s, W = G.W, H = G.H, L = this.cardLayout(G);
