@@ -861,7 +861,7 @@ var ARC_GROUPS = {
     icon: "💥",
     name: "Blast & Battle",
     sub: "Shoot, smash, defend.",
-    keys: ["pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"]
+    keys: ["lords", "pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"]
   }, {
     icon: "🧠",
     name: "Chill & Think",
@@ -2890,6 +2890,14 @@ defGameMeta([{
   "blurb": "Tower defense. Post pups, guard the yard.",
   "how": "Critters march down the path. Pick a dog at the bottom, then tap a round pad to post it. Tap a posted dog to see its range and UPGRADE it (up to ★3) or SELL it back for 75% of what you spent. Rack up points to unlock better dogs (Tennis Cannon, Sprinkler, Howler, then Frisbee Ace, Hydrant, Thunder Woof): tap a ★3 dog to swap it for the new model. A boss shows up every 5 waves, and every wave gets tougher. 10 lives; bosses take 4 if they get through.",
   "max": 99999
+}, {
+  "file": "g_lords.js",
+  "key": "lords",
+  "name": "Dawg Lords",
+  "icon": "👑",
+  "blurb": "Defend the castle. Level up. Go again.",
+  "how": "Hordes charge your castle wall. Your Lord throws bones by himself; drag anywhere to slide him along the wall. Every kill drops XP, and each level you pick 1 of 3 power-ups: more bones, lightning, tennis bombs, spinning bones, archer pups and more. Max out a skill to unlock its EVOLUTION. Hordes hit every 40 seconds and a boss every 90 (beating one gives a free pick). When the wall falls you earn 👑 crowns, and at camp you spend them on permanent upgrades so every run goes further. First battle each day pays double crowns. Score is points from kills (keep a combo going for a bigger multiplier).",
+  "max": 999999
 }, {
   "file": "g_tennis.js",
   "key": "tennis",
