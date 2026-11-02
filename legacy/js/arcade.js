@@ -2895,9 +2895,9 @@ defGameMeta([{
   "key": "lords",
   "name": "Dawg Lords",
   "icon": "👑",
-  "blurb": "Cannon vs a cat army. Gates multiply your pups.",
-  "how": "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x2 doubles them, and the gate gets stronger every few waves), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down the side lane toward you: slide the cannon under them to catch them, and each one you catch adds N cannons. Tiles you miss are gone. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
-  "max": 9999999
+  "blurb": "Hold back an endless cat horde. x99 gate. Bosses.",
+  "how": "An endless cat horde marches down the road, and it keeps getting bigger. Drag to move your cannon; every cannon fires one pup at a time. Pups that go through the x99 gate in the middle become 99 pups, and every pup that hits the horde knocks out a cat and pushes the front back. To power up, move to a side and shoot the crate until its number hits 0. The +N tiles behind it then roll down that side lane: slide your cannon under them to catch them, and each one adds N cannons. Missed tiles are gone, and a new crate restocks right away. Every so often a boss marches in with the horde. Knock it out and it drops a gold tile worth a lot of cannons: catch it! If the horde reaches the gate, the gate stops working until you push them back, and if it reaches your cannon it's over. Score is 10 points a second you hold the road plus 250 for every boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+  "max": 99999
 }, {
   "file": "g_tennis.js",
   "key": "tennis",
