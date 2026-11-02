@@ -1,15 +1,17 @@
-// ---------- Dawg Ball (Doodle Baseball-style: you bat, the Alley Cats pitch and field) ----------
-// One long inning: tap to swing and score as many runs as you can before 3 outs. No balls or walks -
-// every pitch is hittable. Swing early to pull it to left, late to go the other way; nail the timing to
-// launch it over the fence. The cats in the field chase down whatever you hit. Every 3 runs a nastier
-// cat takes the mound (curves, knuckleballs, stop-and-go). Score = runs x10 (cap 999).
+// ---------- Dawg Ball (Doodle Baseball-style: you bat, the Alley Cats pitch) ----------
+// Tap to swing. Like the Doodle, a fair ball is never an out - how far it goes decides single / double /
+// triple / homer, and the cats just chase it down. The only way to strike out is to swing and miss:
+// 3 whiffs and the game's over (taking a pitch or fouling it off costs nothing). Swing early to pull it to
+// left, late to go the other way; nail it to launch one. Every 3 runs a nastier cat takes the mound and the
+// timing window tightens. Score = runs x10 (cap 999).
 (function () {
   const rnd = (a, b) => a + Math.random() * (b - a);
   const D2R = Math.PI / 180;
   function pickW(pairs) { let t = 0; for (const p of pairs) t += p[1]; let r = Math.random() * t; for (const p of pairs) { r -= p[1]; if (r <= 0) return p[0]; } return pairs[pairs.length - 1][0]; }
   const HITS = ["", "SINGLE!", "DOUBLE!", "TRIPLE!", "HOME RUN!"];
   const RPP = 3;                                  // runs before the next pitcher comes in
-  const LAG = 0.05, WIN = 0.1, PERF = 0.014;      // bat reaches the plate LAG s after the tap; contact window; barrel window (s)
+  const LAG = 0.05, WIN0 = 0.1, PERF0 = 0.014;    // bat reaches the plate LAG s after the tap; contact window; barrel window (s)
+  const winOf = s => WIN0 * Math.max(0.55, Math.pow(0.93, s.lvl));   // tightens every new pitcher
   const PITCHERS = [
     { name: "TABBY", ico: "🐱", spd: 1.0, mix: [["fast", 65], ["change", 35]], says: "NICE AND EASY" },
     { name: "MITTENS", ico: "🐈", spd: 0.9, mix: [["fast", 50], ["change", 25], ["curve", 25]], says: "THROWS A CURVE" },
@@ -74,15 +76,16 @@
   function swing(G) {
     const s = G.s, b = s.ball;
     if (s.phase !== "pitch" || s.sw || !b) return;
+    const WIN = winOf(s), PERF = PERF0 * WIN / WIN0;
     const e = b.ft + LAG - b.dur, a = Math.abs(e);
     s.sw = { t: 0, e, hit: a < WIN };
-    if (s.sw.hit) { s.sw.res = judge(e, b); s.fb = a < PERF ? ["PERFECT!", "#7dff8a"] : [e < 0 ? "EARLY" : "LATE", a < WIN * 0.5 ? "#ffd23f" : "#ff8a6b"]; }
+    if (s.sw.hit) { s.sw.res = judge(e / WIN, a < PERF, b); s.fb = a < PERF ? ["PERFECT!", "#7dff8a"] : [e < 0 ? "EARLY" : "LATE", a < WIN * 0.5 ? "#ffd23f" : "#ff8a6b"]; }
     else s.fb = [e < 0 ? "TOO EARLY" : "TOO LATE", "#ff6b6b"];
   }
-  // Where the ball goes is decided at contact: timing sets the direction and how hard it's hit,
-  // then we check whether any cat can get there in time.
-  function judge(e, b) {
-    const a = e / WIN, q = 1 - Math.abs(a), perfect = Math.abs(e) < PERF;
+  // Where the ball goes is decided at contact: timing (a = -1 early .. +1 late) sets the direction and how hard
+  // it's hit. A fair ball is always a hit; distance decides how many bases.
+  function judge(a, perfect, b) {
+    const q = 1 - Math.abs(a);
     const ang = a * 62 + rnd(-7, 7);                                            // early = pull (left), late = opposite field
     if (Math.abs(ang) > 45) return { type: "fly", foul: true, ang: (ang < 0 ? -1 : 1) * rnd(52, 78), r: rnd(0.45, 0.9), T: rnd(0.7, 1), peak: rnd(0.12, 0.3), reveal: 0.35 };
     const pf = b.kind === "fast" || b.kind === "stop" ? 1.05 : b.kind === "change" ? 0.93 : 1;
@@ -92,110 +95,54 @@
       : pickW([["ground", 40], ["pop", 16], ["liner", 26], ["fly", 18]]);
     let r = (0.18 + 0.85 * Math.pow(q, 1.8)) * rnd(0.88, 1.08) * pf;
     if (perfect) r = Math.max(r, rnd(0.98, 1.16));                              // barreled it: usually gone
-    if (type === "pop") r = rnd(0.12, 0.42);
-    const res = { type, ang, r, out: false, fi: -1, bases: 0, rbi: 0 };
-    if (type === "ground") return ground(res);
-    if (r > fenceR(ang) + 0.01) { res.bases = 4; res.r = r = Math.max(r, fenceR(ang) + 0.08); }
-    res.T = type === "liner" ? 0.3 + 0.5 * r : type === "pop" ? rnd(1.3, 1.7) : 0.55 + 0.75 * r;
-    res.peak = type === "liner" ? 0.03 + 0.04 * r : type === "pop" ? rnd(0.45, 0.6) : 0.2 + 0.22 * r;
-    res.reveal = res.T;
-    if (res.bases === 4) return res;
-    const [lu, lv] = polar(ang, r);
-    let bd = 9;
-    FIELD.forEach((f, i) => {
-      const d = Math.hypot(lu - HOME_F[i][0], lv - HOME_F[i][1]);
-      if (d - f[4] <= f[3] * Math.max(0, res.T - 0.15) && d < bd) { bd = d; res.fi = i; }
-    });
-    if (res.fi >= 0) { res.out = true; res.tu = lu; res.tv = lv; return res; }
-    res.bases = r < 0.62 ? 1 : r < 0.86 ? 2 : (Math.abs(ang) > 18 && Math.random() < 0.4 ? 3 : 2);
-    return res;
-  }
-  function ground(res) {
-    const rg = Math.min(0.85, res.r * 0.82), ang = res.ang;
-    res.r = rg; res.T = 0.25 + 0.9 * rg; res.peak = 0;
-    let bt = 9;
-    for (let i = 0; i < 5; i++) {   // infielders + pitcher
-      const f = FIELD[i]; let t, pt;
-      if (rg <= f[2] + 0.02) { pt = polar(ang, rg); t = res.T + 0.25; }      // dies before reaching him: he charges it
-      else { t = (1 - Math.sqrt(1 - f[2] / rg)) * res.T; pt = polar(ang, f[2]); }
-      const d = Math.hypot(pt[0] - HOME_F[i][0], pt[1] - HOME_F[i][1]);
-      if (d - f[4] <= f[3] * Math.max(0, t - 0.16) && t < bt) { bt = t; res.fi = i; res.tu = pt[0]; res.tv = pt[1]; }
-    }
-    if (res.fi >= 0) {
-      res.out = true; res.ti = bt;
-      res.throwT = 0.18 + Math.hypot(res.tu - BASES[1][0], res.tv - BASES[1][1]) * 1.3;
-      res.reveal = bt + res.throwT;
+    if (type === "pop") r = rnd(0.15, 0.4);
+    const res = { type, ang, r, bases: 0, rbi: 0 };
+    if (type === "ground") {
+      res.r = Math.min(0.85, r * 0.82); res.T = 0.25 + 0.9 * res.r; res.peak = 0; res.reveal = Math.min(res.T, 0.6);
+      res.bases = res.r > 0.62 && Math.abs(ang) > 30 ? 2 : 1;                   // down the line = double
       return res;
     }
-    res.reveal = Math.min(res.T, 0.6);
-    res.bases = Math.abs(ang) > 34 && rg > 0.6 ? 2 : 1;
+    if (r > fenceR(ang) + 0.01) { res.bases = 4; res.r = r = Math.max(r, fenceR(ang) + 0.08); }
+    else res.bases = r < 0.5 ? 1 : r < 0.76 ? 2 : 3;
+    res.T = type === "liner" ? 0.3 + 0.5 * r : type === "pop" ? rnd(1.1, 1.4) : 0.55 + 0.75 * r;
+    res.peak = type === "liner" ? 0.03 + 0.04 * r : type === "pop" ? rnd(0.45, 0.6) : 0.2 + 0.22 * r;
+    res.reveal = res.T;
     return res;
   }
 
   // ---------- the play ----------
-  const spriteOn = (s, base) => s.runners.find(r => r.to === base && !r.bat);
   function launch(G) {
-    const s = G.s, res = s.sw.res;
+    const s = G.s, h = s.hit = Object.assign({ t: 0 }, s.sw.res);
     s.sw.launched = true; s.pitches++;
-    s.hit = Object.assign({ t: 0 }, res); s.phase = "play"; s.pt = 0; s.msg = ""; s.sub = "";
+    s.phase = "play"; s.pt = 0; s.msg = ""; s.sub = "";
     G.sfx("pop");
-    if (res.foul) return;
-    s.strikes = 0;
-    const h = s.hit, bat = { at: 0, to: 1, spd: 1.7, counts: false, bat: true };
-    if (h.out) {
-      const before = s.outs; s.outs++;
-      bat.outAt = h.reveal;
-      if (h.type === "ground") {
-        const b = s.bases;
-        const mv = i => { const sp = spriteOn(s, i); if (sp) { sp.to = i + 1; sp.spd = 1.5; sp.counts = i === 3; } };
-        if (s.outs < 3 && b[0]) {     // force play at first: runners who have to move, move
-          if (b[1]) { if (b[2]) { s.runs++; h.rbi = 1; mv(3); } b[2] = 1; mv(2); }
-          b[1] = 1; mv(1); b[0] = 0;
-        }
-      } else if (before < 2 && s.bases[2] && h.type === "fly" && h.r > 0.55 && Math.random() < 0.6) {
-        s.bases[2] = 0; s.runs++; h.rbi = 1; h.sac = true;              // tag up from third
-        const sp = spriteOn(s, 3); if (sp) { sp.to = 4; sp.wait = h.reveal; sp.counts = true; sp.spd = 1.8; }
-      }
-      s.runners.push(bat);
-      const f = s.fl[h.fi]; f.tu = h.tu; f.tv = h.tv;
-      if (h.type === "ground" && h.fi !== 1) { s.fl[1].tu = BASES[1][0] - 0.015; s.fl[1].tv = BASES[1][1] + 0.01; }
-    } else {
-      const n = h.bases, b = s.bases, nb = [0, 0, 0];
-      let r = 0;
-      const spd = n === 4 ? 1.9 : 1.7, dest = {};
-      for (let i = 2; i >= 0; i--) if (b[i]) {   // runners take the extra base: 2nd scores on a single, 1st usually scores on a double
-        const extra = (n === 1 && i >= 1) || (n === 2 && i === 0 && Math.random() < 0.7) ? 1 : 0;
-        const to = Math.min(4, i + 1 + n + extra); dest[i + 1] = to;
-        if (to >= 4) r++; else nb[to - 1] = 1;
-      }
-      if (n >= 4) r++; else nb[n - 1] = 1;
-      s.bases = nb; s.runs += r; h.rbi = r;
-      s.runners.forEach(sp => { sp.to = dest[sp.to] || Math.min(4, sp.to + n); sp.counts = true; sp.spd = spd; });
-      bat.to = n; bat.counts = true; bat.spd = spd;
-      s.runners.push(bat);
-      if (n < 4) {   // nearest cat chases it down
-        const [lu, lv] = polar(h.ang, h.r + (h.type === "ground" ? 0 : 0.05));
-        let bi = 1, bd = 9;
-        for (let i = 1; i < FIELD.length; i++) { const d = Math.hypot(lu - s.fl[i].u, lv - s.fl[i].v); if (d < bd) { bd = d; bi = i; } }
-        s.fl[bi].tu = lu; s.fl[bi].tv = lv;
-      }
+    if (h.foul) return;
+    const n = h.bases, b = s.bases, nb = [0, 0, 0], spd = n === 4 ? 1.9 : 1.7, dest = {};
+    let r = 0;
+    for (let i = 2; i >= 0; i--) if (b[i]) {   // runners take the extra base: 2nd scores on a single, 1st usually scores on a double
+      const extra = (n === 1 && i >= 1) || (n === 2 && i === 0 && Math.random() < 0.7) ? 1 : 0;
+      const to = Math.min(4, i + 1 + n + extra); dest[i + 1] = to;
+      if (to >= 4) r++; else nb[to - 1] = 1;
+    }
+    if (n >= 4) r++; else nb[n - 1] = 1;
+    s.bases = nb; s.runs += r; h.rbi = r;
+    s.runners.forEach(sp => { sp.to = dest[sp.to] || Math.min(4, sp.to + n); sp.spd = spd; });
+    s.runners.push({ at: 0, to: n, spd, bat: true });
+    if (n < 4) {   // nearest cat chases it down
+      const [lu, lv] = polar(h.ang, h.r + (h.type === "ground" ? 0 : 0.05));
+      let bi = 1, bd = 9;
+      for (let i = 1; i < FIELD.length; i++) { const d = Math.hypot(lu - s.fl[i].u, lv - s.fl[i].v); if (d < bd) { bd = d; bi = i; } }
+      s.fl[bi].tu = lu; s.fl[bi].tv = lv;
     }
   }
   function reveal(G) {
     const s = G.s, h = s.hit; h.shown = true;
-    if (h.foul) { if (s.strikes < 2) s.strikes++; setMsg(s, "FOUL BALL", "#fff", ""); s.face = ":dawgsus:"; return; }
-    if (h.out) {
-      s.shOuts = s.outs;
-      setMsg(s, { ground: "GROUND OUT", pop: "POP OUT", liner: "LINE OUT", fly: "FLY OUT" }[h.type], "#ff8a6b",
-        h.sac ? "SAC FLY - 1 RUN" : h.rbi ? "1 RUN SCORES" : s.outs >= 3 ? "3 OUTS" : "");
-      s.face = ":dawgcope:"; G.sfx("lose");
-    } else {
-      s.hits++; if (h.bases === 4) s.hrs++;
-      setMsg(s, h.bases === 4 && h.rbi === 4 ? "GRAND SLAM!" : HITS[h.bases], h.bases === 4 ? "#ffd23f" : "#7dff8a",
-        h.rbi ? (h.rbi === 1 ? "1 RUN SCORES" : h.rbi + " RUNS SCORE") : "");
-      s.face = h.bases >= 2 ? ":dawgpog:" : ":dawgW:";
-      G.sfx(h.bases === 4 ? "win" : "pop"); if (h.bases === 4) G.buzz();
-    }
+    if (h.foul) { setMsg(s, "FOUL BALL", "#fff", "NO STRIKE"); s.face = ":dawgsus:"; return; }
+    s.hits++; if (h.bases === 4) s.hrs++;
+    setMsg(s, h.bases === 4 && h.rbi === 4 ? "GRAND SLAM!" : HITS[h.bases], h.bases === 4 ? "#ffd23f" : "#7dff8a",
+      h.rbi ? (h.rbi === 1 ? "1 RUN SCORES" : h.rbi + " RUNS SCORE") : "");
+    s.face = h.bases >= 2 ? ":dawgpog:" : ":dawgW:";
+    G.sfx(h.bases === 4 ? "win" : "pop"); if (h.bases === 4) G.buzz();
   }
   function setMsg(s, txt, col, sub) { s.msg = txt; s.msgC = col; s.sub = sub || ""; }
   function endPlay(G) {
@@ -204,15 +151,17 @@
     s.fl.forEach(f => { f.tu = null; f.tv = null; });
     next(G);
   }
-  function strike(G) {   // pitch got by with no contact
-    const s = G.s, swung = !!s.sw; s.strikes++; s.pitches++;
-    if (s.strikes >= 3) { s.outs++; s.shOuts = s.outs; s.strikes = 0; setMsg(s, "STRIKE OUT!", "#ff6b6b", swung ? "SWINGING" : "LOOKING"); s.face = ":dawgsweat:"; G.sfx("lose"); G.buzz(); }
-    else { setMsg(s, "STRIKE " + s.strikes, "#ff8a6b", swung ? "" : "SWING AWAY!"); s.face = ":dawgsus:"; }
+  function strike(G) {   // pitch got by with no contact: only a swing and a miss counts
+    const s = G.s; s.pitches++;
+    if (!s.sw) { setMsg(s, "TAKE", "#9ad7ff", "NO SWING, NO STRIKE"); s.phase = "result"; s.pt = 0.4; return; }
+    s.strikes++;
+    if (s.strikes >= 3) { setMsg(s, "STRIKE THREE!", "#ff6b6b", "YOU'RE OUT"); s.face = ":dawgsweat:"; G.sfx("lose"); G.buzz(); }
+    else { setMsg(s, "STRIKE " + s.strikes, "#ff8a6b", s.strikes === 2 ? "ONE MORE AND YOU'RE OUT" : ""); s.face = ":dawgsus:"; }
     s.phase = "result"; s.pt = 0;
   }
   function next(G) {
     const s = G.s; s.ball = null; s.sw = null;
-    if (s.outs >= 3) return finish(G);
+    if (s.strikes >= 3) return finish(G);
     const lvl = Math.floor(s.runs / RPP);
     if (lvl > s.lvl) {
       s.lvl = lvl; const st = Math.min(PITCHERS.length - 1, lvl);
@@ -233,26 +182,20 @@
     });
   }
   function moveRunners(G, dt) {
-    const s = G.s, t = s.hit ? s.hit.t : 99;
+    const s = G.s;
     s.runners.forEach(r => {
-      if (r.outAt != null && t >= r.outAt) { r.gone = true; return; }
-      if (r.wait && t < r.wait) return;
       if (r.at < r.to) {
         r.at = Math.min(r.to, r.at + r.spd * dt);
-        if (r.at >= 4) { r.gone = true; if (r.counts) { s.shown++; s.pops.push({ t: 0 }); G.sfx("pass"); } }
+        if (r.at >= 4) { r.gone = true; s.shown++; s.pops.push({ t: 0 }); G.sfx("pass"); }
       }
     });
     s.runners = s.runners.filter(r => !r.gone);
   }
   function hitPos(h) {
-    if (h.out && h.type === "ground" && h.t >= h.ti) {   // the throw to first
-      const k = Math.min(1, (h.t - h.ti) / h.throwT);
-      return [h.tu + (BASES[1][0] - h.tu) * k, h.tv + (BASES[1][1] - h.tv) * k, 0.02 + 0.05 * Math.sin(k * Math.PI)];
-    }
     const tau = Math.min(1, h.t / h.T);
     let r, z;
     if (h.type === "ground") { r = h.r * (1 - (1 - tau) * (1 - tau)); z = 0.015 * Math.abs(Math.sin(tau * 10)) * (1 - tau); }
-    else { r = h.r * tau; z = 0.02 + 4 * h.peak * tau * (1 - tau); if (tau >= 1 && !h.out) r += Math.min(0.06, (h.t - h.T) * 0.12); }
+    else { r = h.r * tau; z = 0.02 + 4 * h.peak * tau * (1 - tau); if (tau >= 1) r += Math.min(0.06, (h.t - h.T) * 0.12); }
     const [u, v] = polar(h.ang, r); return [u, v + 0.02 * (1 - tau), z];
   }
 
@@ -265,9 +208,9 @@
   defGame({
     key: "dawgball", name: "Dawg Ball", icon: "🧢", max: 999, cat: "sports",
     blurb: "Doodle-style batting vs the Cats.",
-    how: "You bat, the Alley Cats pitch. Tap anywhere to swing - score as many runs as you can before 3 outs. Every pitch is a strike, so swing away. Timing is everything: early pulls it to left, late goes to right, right on time crushes it to center. Cats in the field chase down fly balls and grounders. Every 3 runs a nastier pitcher comes in. Score: runs x10.",
+    how: "You bat, the Alley Cats pitch. Tap anywhere to swing. Any fair ball is a hit - the farther it goes, the more bases. The only way out is swinging and missing: 3 whiffs and the game is over (taking a pitch or fouling one off is free). Early pulls it to left, late goes to right, right on time crushes it. Every 3 runs a nastier pitcher comes in and the timing gets tighter. Score: runs x10.",
     reset(G) {
-      G.s = { runs: 0, shown: 0, outs: 0, shOuts: 0, strikes: 0, bases: [0, 0, 0], stage: 0, lvl: 0, phase: "intro", pt: 0,
+      G.s = { runs: 0, shown: 0, strikes: 0, bases: [0, 0, 0], stage: 0, lvl: 0, phase: "intro", pt: 0,
         ball: null, sw: null, fb: null, hit: null, runners: [], pops: [], pitches: 0, hits: 0, hrs: 0, wdur: 1,
         fl: HOME_F.map(p => ({ u: p[0], v: p[1], tu: null, tv: null })), msg: "", msgC: "#fff", sub: "", newTxt: "", face: ":dawgW:" };
     },
@@ -290,7 +233,7 @@
           const h = s.hit; h.t += dt;
           if (!h.shown && h.t >= h.reveal) reveal(G);
           moveRunners(G, dt);
-          const endT = h.foul ? 1.1 : Math.max(h.reveal + 1, h.out ? 0 : h.T + 0.3);
+          const endT = h.foul ? 1.1 : Math.max(h.reveal + 1, h.T + 0.3);
           if (h.shown && h.t >= endT && s.runners.every(r => r.at >= r.to)) endPlay(G);
           break;
         }
@@ -332,10 +275,9 @@
       const top = G.hud(c, `RUNS ${s.shown}`, pc.name, `HR ${s.hrs}`, { color: "#9ad7ff" });
       const rh = 22, ry = top + rh / 2;
       c.fillStyle = "rgba(10,10,20,0.62)"; c.fillRect(0, top, W, rh);
-      G.text(c, "STRIKES", 10, ry, 9, "#fff", "left");
-      for (let i = 0; i < 3; i++) { c.fillStyle = i < s.strikes ? "#ffd23f" : "rgba(255,255,255,0.25)"; c.beginPath(); c.arc(84 + i * 14, ry, 5, 0, 7); c.fill(); }
-      G.text(c, "OUTS", W - 54, ry, 9, "#fff", "right");
-      for (let i = 0; i < 3; i++) { c.fillStyle = i < s.shOuts ? "#ff5a4f" : "rgba(255,255,255,0.25)"; c.beginPath(); c.arc(W - 44 + i * 14, ry, 5, 0, 7); c.fill(); }
+      G.text(c, `HITS ${s.hits}`, 10, ry, 9, "#fff", "left");
+      G.text(c, "STRIKES", W - 54, ry, 9, "#fff", "right");
+      for (let i = 0; i < 3; i++) { c.fillStyle = i < s.strikes ? "#ff5a4f" : "rgba(255,255,255,0.25)"; c.beginPath(); c.arc(W - 44 + i * 14, ry, 5, 0, 7); c.fill(); }
 
       // --- swing feedback + "+1" pops ---
       const [px, py] = P(L, 0, 0);
@@ -361,8 +303,8 @@
         c.fillStyle = "#ffd23f"; c.fillRect(0, by, W, 3); c.fillRect(0, by + 109, W, 3);
         if (s.phase === "intro") {
           G.banner(c, "PLAY BALL!", "#ffd23f", by + 32, 22);
-          G.text(c, "TAP TO SWING · 3 OUTS", W / 2, by + 64, 10, "#fff");
-          G.text(c, "EVERY PITCH IS A STRIKE", W / 2, by + 86, 9, "#9ad7ff");
+          G.text(c, "TAP TO SWING", W / 2, by + 64, 10, "#fff");
+          G.text(c, "3 WHIFFS AND YOU'RE OUT", W / 2, by + 86, 9, "#9ad7ff");
         } else if (s.phase === "newp") {
           G.emoji(c, pc.ico, W / 2, by - 30, 56);
           G.text(c, s.newTxt, W / 2, by + 24, 10, "#9ad7ff");

@@ -108,7 +108,7 @@ var MEDALS = {
   smash: [300, 700, 1200],
   duck: [20000, 50000, 85000],
   derby: [2000, 6000, 10000],
-  dawgball: [40, 100, 160],
+  dawgball: [50, 150, 300],
   kickret: [20, 45, 80],
   hoops: [60, 110, 160],
   pks: [500, 1000, 1600],
@@ -2523,7 +2523,7 @@ defGameMeta([{
   "name": "Dawg Ball",
   "icon": "🧢",
   "blurb": "Doodle-style batting vs the Cats.",
-  "how": "You bat, the Alley Cats pitch. Tap anywhere to swing - score as many runs as you can before 3 outs. Every pitch is a strike, so swing away. Timing is everything: early pulls it to left, late goes to right, right on time crushes it to center. Cats in the field chase down fly balls and grounders. Every 3 runs a nastier pitcher comes in. Score: runs x10.",
+  "how": "You bat, the Alley Cats pitch. Tap anywhere to swing. Any fair ball is a hit - the farther it goes, the more bases. The only way out is swinging and missing: 3 whiffs and the game is over (taking a pitch or fouling one off is free). Early pulls it to left, late goes to right, right on time crushes it. Every 3 runs a nastier pitcher comes in and the timing gets tighter. Score: runs x10.",
   "cat": "sports",
   "max": 999
 }, {
