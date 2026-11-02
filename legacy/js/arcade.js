@@ -108,7 +108,7 @@ var MEDALS = {
   smash: [300, 700, 1200],
   duck: [20000, 50000, 85000],
   derby: [2000, 6000, 10000],
-  dawgball: [50, 150, 300],
+  dawgball: [40, 100, 160],
   kickret: [20, 45, 80],
   hoops: [60, 110, 160],
   pks: [500, 1000, 1600],
@@ -2522,8 +2522,8 @@ defGameMeta([{
   "key": "dawgball",
   "name": "Dawg Ball",
   "icon": "🧢",
-  "blurb": "3-inning baseball vs the Cats.",
-  "how": "3 innings vs the Alley Cats. When you PITCH: pick Fastball, Curve or Changeup, then tap to stop the aim circle. Paint the corners and mix your pitches - the same pitch twice gets hit harder. When you BAT: a ring shows where the pitch will cross - tap anywhere when the shrinking ring closes on it (green = swing now). A RED ring is a ball: let it go. Score: runs x10, +50 for a win, +10 per strikeout.",
+  "blurb": "Doodle-style batting vs the Cats.",
+  "how": "You bat, the Alley Cats pitch. Tap anywhere to swing - score as many runs as you can before 3 outs. Every pitch is a strike, so swing away. Timing is everything: early pulls it to left, late goes to right, right on time crushes it to center. Cats in the field chase down fly balls and grounders. Every 3 runs a nastier pitcher comes in. Score: runs x10.",
   "cat": "sports",
   "max": 999
 }, {
