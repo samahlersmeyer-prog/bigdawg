@@ -861,7 +861,7 @@ var ARC_GROUPS = {
     icon: "💥",
     name: "Blast & Battle",
     sub: "Shoot, smash, defend.",
-    keys: ["lords", "pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"]
+    keys: ["dlords", "pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"]
   }, {
     icon: "🧠",
     name: "Chill & Think",
@@ -2892,7 +2892,7 @@ defGameMeta([{
   "max": 99999
 }, {
   "file": "g_lords.js",
-  "key": "lords",
+  "key": "dlords",
   "name": "Dawg Lords",
   "icon": "👑",
   "blurb": "Hold back an endless cat horde. x99 gate. Bosses.",

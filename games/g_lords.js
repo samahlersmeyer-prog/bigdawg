@@ -27,7 +27,7 @@
   const inR = (r, x, y) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 
   defGame({
-    key: "lords", name: "Dawg Lords", icon: "👑", max: 99999, T,
+    key: "dlords", name: "Dawg Lords", icon: "👑", max: 99999, T,
     blurb: "Hold back an endless cat horde. x99 gate. Bosses.",
     how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. The side conveyors never stop rolling: +1s on the left and +99s on the right pile into the block at the bottom, and its number is how many pups it takes to break it. Break the left block for MORE cannons and the right block for BIGGER cannons (each shot counts double). The upgrade rolls down the lane toward you, so slide over and catch it. The catch: time spent shooting the sides is time not feeding the x99, and the blocks get bigger the longer you wait. Every so often a boss marches in with the horde; knock it out and catch its gold drop for extra cannons. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
