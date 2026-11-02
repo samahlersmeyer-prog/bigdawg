@@ -1,16 +1,16 @@
 // ---------- Dawg Lords (crowd cannon) ----------
 // A giant red cat army marches down the road. Your cannon at the bottom fires a stream of blue pups; drag to aim it.
 // Pups that pass through a gate get multiplied (x3, +20...). Each pup that reaches the army takes out a cat.
-// Side columns: shoot down the stone block (its number is the hits it needs) to unlock a side cannon, which
-// then blasts the +N tiles above it, each tile sending N more pups into the fight. Clear a wave, pick an upgrade.
+// Side columns are conveyor belts: +N tiles slide down toward you, and each one that arrives adds N cannons
+// (more cannons = bigger shots). Shoot a tile on its way down to double it. Clear a wave, pick an upgrade.
 (function () {
   const UPS = [
-    { k: "rate", n: "FAST CANNON", e: "⚡", max: 8, d: "+25% fire rate" },
-    { k: "power", n: "BIG SHOTS", e: "🐶", max: 6, d: "+1 pup every shot" },
-    { k: "twin", n: "TWIN BARREL", e: "🔫", max: 2, d: "Fire another stream" },
-    { k: "gate", n: "GATE POWER", e: "🚪", max: 6, d: "+1 on every gate" },
-    { k: "side", n: "SIDE GUNS", e: "🏰", max: 3, d: "Side cannons fire 2x" },
-    { k: "tile", n: "RICH TILES", e: "💎", max: 3, d: "Tiles send 2x pups" },
+    { k: "rate", n: "FAST CANNON", e: "⚡", max: 6, d: "+15% fire rate" },
+    { k: "power", n: "BIG SHOTS", e: "🐶", max: 6, d: "+20% pups per shot" },
+    { k: "twin", n: "TWIN BARREL", e: "🔫", max: 1, d: "Fire a second stream" },
+    { k: "gate", n: "GATE POWER", e: "🚪", max: 3, d: "+1 on every gate" },
+    { k: "belt", n: "FAST BELTS", e: "⏩", max: 3, d: "Side tiles slide 30% faster" },
+    { k: "tile", n: "RICH TILES", e: "💎", max: 3, d: "New tiles worth +100%" },
     { k: "slow", n: "MUD ROAD", e: "🟫", max: 3, d: "Cats march 12% slower" }
   ];
   const UPM = {}; UPS.forEach(u => UPM[u.k] = u);
@@ -18,7 +18,7 @@
     { k: "rate", n: "BIG CANNON", e: "⚡", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "+8% fire rate" },
     { k: "lucky", n: "LUCKY SHOTS", e: "🍀", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "6% shots are x3" },
     { k: "gate", n: "GATE MASTER", e: "🚪", max: 5, c: l => Math.round(80 * Math.pow(1.8, l)), d: "+1 on every gate" },
-    { k: "side", n: "SIDE GUNS", e: "🏰", max: 5, c: l => Math.round(50 * Math.pow(1.6, l)), d: "Blocks need 15% fewer" },
+    { k: "side", n: "ARMORY", e: "🏰", max: 5, c: l => Math.round(50 * Math.pow(1.6, l)), d: "Start with +2 cannons" },
     { k: "treas", n: "TREASURY", e: "🪙", max: 10, c: l => Math.round(35 * Math.pow(1.4, l)), d: "+10% coins" }
   ];
   const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
@@ -28,28 +28,27 @@
   const saveMeta = m => store.set(mkey(), m);
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   const inR = (r, x, y) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-  const armyOf = n => Math.round(100 * Math.pow(1.5, n - 1));
+  const armyOf = n => Math.round(1200 * Math.pow(1.45, n - 1));
 
   defGame({
-    key: "lords", name: "Dawg Lords", icon: "👑", max: 999999,
+    key: "lords", name: "Dawg Lords", icon: "👑", max: 9999999,
     blurb: "Cannon vs a cat army. Gates multiply your pups.",
-    how: "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Pups that pass through a gate multiply (x3 means three times as many, +20 adds twenty). Every pup that reaches the army knocks out a cat. On the sides, shoot the stone block down to 0 to unlock a side cannon: it blasts the +N tiles above it and every tile sends N more pups at the cats. If the army reaches the gates they get smashed, and if it reaches your cannon it's over. Clear a wave to pick an upgrade. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Pups that pass through a gate multiply (x3 means three times as many, +20 adds twenty). Every pup that reaches the army knocks out a cat. The side belts slide +N tiles down toward you: every tile that reaches the bottom adds N cannons, and more cannons means bigger shots. Shoot a tile on its way down to double it. If the army reaches the gates they get smashed, and if it reaches your cannon it's over. Clear a wave to pick an upgrade. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
         cols: [{ x0: W * 0.035, x1: W * 0.2, side: 0 }, { x0: W * 0.8, x1: W * 0.965, side: 1 }],
-        wave: 0, ups: {}, score: 0, cx: W / 2, tx: W / 2, cd: 0, pups: [], fx: [], peds: [null, null], tiles: [[], []], gates: [], R: 0, R0: 0, front: 50, choice: null, msg: null, sfxT: 0, recoil: 0 };
+        wave: 0, ups: {}, score: 0, cx: W / 2, tx: W / 2, cd: 0, pups: [], fx: [], peds: [{}, {}], bank: [0, 0], start: 0, tiles: [[], []], gates: [], R: 0, R0: 0, front: 50, choice: null, msg: null, sfxT: 0, recoil: 0 };
     },
     begin(G) {
       const s = G.s; s.mode = "play"; s.daily = s.meta.lastDay !== today(); G.t = 0;
-      const sf = 1 - 0.15 * (s.meta.side || 0);
-      s.peds = [{ n: Math.round(20 * sf), n0: Math.round(20 * sf), on: false, cd: 0 }, { n: Math.round(400 * sf), n0: Math.round(400 * sf), on: false, cd: 0 }];
-      this.startWave(G, 1);
+      s.bank = [0, 0]; s.start = 2 * (s.meta.side || 0); s.peds = [{}, {}];
+      this.startWave(G, 1); this.fillBelts(s);
     },
     startWave(G, n) {
       const s = G.s, W = s.W, gb = (s.ups.gate || 0) + (s.meta.gate || 0);
       s.wave = n; s.R0 = s.R = armyOf(n); s.front = 46; s.pups = [];
-      const xv = 2 + Math.floor(n / 3) + gb, pv = 5 * n + 2 * gb, a = s.ax0, b = s.ax1, m = (a + b) / 2;
+      const xv = 2 + Math.floor(n / 6) + gb, pv = 3 * n + 2 * gb, a = s.ax0, b = s.ax1, m = (a + b) / 2;
       const L = [
         [{ x0: m - (b - a) * 0.2, x1: m + (b - a) * 0.2, op: "x", v: xv }],
         [{ x0: a, x1: m - 3, op: "+", v: pv }, { x0: m + 3, x1: b, op: "x", v: xv }],
@@ -57,18 +56,20 @@
         [{ x0: a, x1: a + (b - a) * 0.3, op: "x", v: Math.max(2, xv - 1) }, { x0: b - (b - a) * 0.3, x1: b, op: "x", v: xv + 1 }]
       ];
       s.gates = (n === 1 ? L[0] : L[Math.floor(Math.random() * L.length)]).map(g => Object.assign({ alive: true, id: Math.random() }, g));
-      const th = 26, tm = 1 + (s.ups.tile || 0);
-      s.tiles = [0, 1].map(side => { const t = []; for (let y = s.gy - 40; y > 56; y -= th + 3) t.push({ y, v: (side ? 8 * n : n) * tm }); return t; });
       s.msg = { txt: n === 1 && s.daily ? "DAILY 2X COINS!" : `WAVE ${n}: ${fmtN(s.R)} CATS`, t: 1.8 };
     },
+    GAP: [30, 60],
+    tval(s, side) { const tm = 1 + (s.ups.tile || 0); return (side ? 3 : 1) * tm; },
+    cannons(s) { return 1 + (s.start || 0) + s.bank[0] + s.bank[1]; },
+    fillBelts(s) { s.tiles = [0, 1].map(i => { const t = []; for (let y = s.gy - 70; y >= 48; y -= this.GAP[i]) t.push({ y, v: this.tval(s, i) }); return t; }); },
     save(G) {
       const s = G.s; if (s.mode !== "play" || s.choice || s.wave < 2) return null;
-      return { label: `Wave ${s.wave}`, wave: s.wave, ups: s.ups, score: s.score, daily: s.daily, peds: s.peds };
+      return { label: `Wave ${s.wave}`, wave: s.wave, ups: s.ups, score: s.score, daily: s.daily, bank: s.bank, start: s.start };
     },
     load(G, v) {
-      if (!v.peds || !v.wave) throw new Error("old save");
+      if (!v.bank || !v.wave) throw new Error("old save");
       const s = G.s; s.mode = "play"; s.ups = Object.assign({}, v.ups); s.score = v.score; s.daily = v.daily;
-      s.peds = v.peds.map(p => Object.assign({}, p, { cd: 0 })); this.startWave(G, v.wave);
+      s.bank = v.bank.slice(); s.start = v.start || 0; s.peds = [{}, {}]; this.startWave(G, v.wave); this.fillBelts(s);
     },
     offer(s) {
       const pool = UPS.filter(u => (s.ups[u.k] || 0) < u.max), out = [];
@@ -79,7 +80,7 @@
     // A clump of pups. One dot can stand for many pups (w) so huge multipliers stay smooth on a phone.
     add(s, x, y, w, vx, o) {
       if (w <= 0) return;
-      if (s.pups.length > 650) { const p = s.pups[Math.floor(Math.random() * s.pups.length)]; p.w += w; return; }
+      if (s.pups.length > 700) { s.pups[s.pups.length - 1].w += w; return; } // merge into the newest (still behind the gates)
       s.pups.push(Object.assign({ x, y, w, vx: vx || 0, vy: -330, g: [] }, o || {}));
     },
     update(G, dt) {
@@ -91,17 +92,24 @@
       const dx = s.tx - s.cx; s.cx += Math.sign(dx) * Math.min(Math.abs(dx), 900 * dt);
       s.cd -= dt;
       if (s.cd <= 0) {
-        s.cd = 1 / (6 * (1 + 0.25 * (u.rate || 0)) * (1 + 0.08 * (m.rate || 0)));
-        const w = (1 + (u.power || 0)) * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1), n = 1 + (u.twin || 0);
-        for (let i = 0; i < n; i++) this.add(s, s.cx + (i - (n - 1) / 2) * 14, s.cy - 26, w, (Math.random() - 0.5) * 18);
+        s.cd = 1 / (6 * (1 + 0.15 * (u.rate || 0)) * (1 + 0.08 * (m.rate || 0)));
+        const C = this.cannons(s), tw = 1 + (u.twin || 0), k = Math.min(6, C) * tw;
+        const w = C * (tw > 1 ? 1.6 : 1) * (1 + 0.2 * (u.power || 0)) * (Math.random() < 0.06 * (m.lucky || 0) ? 3 : 1) / k, sp = Math.min(12, 64 / k);
+        for (let i = 0; i < k; i++) this.add(s, s.cx + (i - (k - 1) / 2) * sp, s.cy - 26, w, (Math.random() - 0.5) * 18);
         s.recoil = 1;
       }
-      // side cannons
-      s.peds.forEach((p, i) => {
-        if (!p.on) return; p.cd -= dt; if (p.cd > 0) return;
-        p.cd = (i ? 0.5 : 0.3) / (1 + (u.side || 0)); const c = s.cols[i];
-        this.add(s, (c.x0 + c.x1) / 2 + (Math.random() - 0.5) * 10, s.gy - 26, (1 + (u.power || 0)) * (i ? 5 : 1), 0, { col: i });
-      });
+      // side belts slide tiles toward you; each one that arrives adds cannons
+      const bs = 13 * (1 + 0.3 * (u.belt || 0));
+      for (let i = 0; i < 2; i++) {
+        const T = s.tiles[i], c = s.cols[i];
+        T.forEach(t => t.y += bs * dt);
+        if (!T.length || T[T.length - 1].y >= 48 + this.GAP[i]) T.push({ y: 48, v: this.tval(s, i) });
+        while (T.length && T[0].y >= s.gy - 30) {
+          const t = T.shift(); s.bank[i] += t.v; s.peds[i].flash = 0.2;
+          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: s.gy - 30, t: 0.8, col: i ? "#ffd23f" : "#82b1ff" });
+          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
+        }
+      }
       // march
       s.front += (12 + 1.3 * s.wave) * Math.pow(0.88, u.slow || 0) * dt;
       s.gates.forEach(g => { if (g.alive && s.front >= s.gy - 13) { g.alive = false; s.fx.push({ txt: "SMASHED!", x: (g.x0 + g.x1) / 2, y: s.gy, t: 0.9, col: "#ff8a80" }); G.buzz(); } });
@@ -112,21 +120,17 @@
         if (p.bonus) { p.vx *= Math.pow(0.2, dt); }
         // gates
         if (!p.col && py > s.gy && p.y <= s.gy) for (const g of s.gates) if (g.alive && p.x >= g.x0 && p.x <= g.x1) {
-          if (g.op === "x") { const tot = p.w * g.v, k = Math.min(4, g.v); p.w = tot / k; for (let i = 1; i < k; i++) this.add(s, p.x + (Math.random() - 0.5) * 22, p.y - Math.random() * 8, p.w, (Math.random() - 0.5) * 40, { g: [] }); }
-          else this.add(s, p.x + (Math.random() - 0.5) * 16, p.y - 4, g.v, (Math.random() - 0.5) * 30);
+          const full = s.pups.length > 600;
+          if (g.op === "x") { const tot = p.w * g.v, k = full ? 1 : Math.min(4, g.v); p.w = tot / k; for (let i = 1; i < k; i++) s.pups.push({ x: p.x + (Math.random() - 0.5) * 22, y: p.y - Math.random() * 8, w: p.w, vx: (Math.random() - 0.5) * 40, vy: -330 }); }
+          else if (full) p.w += g.v; else s.pups.push({ x: p.x + (Math.random() - 0.5) * 16, y: p.y - 4, w: g.v, vx: (Math.random() - 0.5) * 30, vy: -330 });
           g.flash = 0.12; break;
         }
-        // side columns: blocks, then tiles
+        // side belts: shooting a tile on its way down doubles it (once)
         for (let i = 0; i < 2; i++) {
-          const c = s.cols[i]; if (p.bonus || p.x < c.x0 || p.x > c.x1) continue; const pd = s.peds[i];
-          if (!pd.on && !p.col && p.y <= s.gy + 22 && py > s.gy - 22) {
-            pd.n -= p.w; p.dead = true; pd.flash = 0.08;
-            if (pd.n <= 0) { pd.on = true; pd.n = 0; s.msg = { txt: i ? "BIG CANNON UNLOCKED!" : "SIDE CANNON UNLOCKED!", t: 1.6 }; G.sfx("win"); }
-          } else if (s.tiles[i].length && p.y <= s.tiles[i][0].y + 13) {
-            const t = s.tiles[i].shift(); p.dead = true;
-            this.add(s, (c.x0 + c.x1) / 2, t.y, t.v, i ? -150 : 150, { bonus: 1, vy: -220 });
-            s.fx.push({ txt: "+" + fmtN(t.v), x: (c.x0 + c.x1) / 2, y: t.y, t: 0.6, col: i ? "#ffd23f" : "#82b1ff" });
-          }
+          const c = s.cols[i]; if (p.x < c.x0 || p.x > c.x1) continue;
+          const t = s.tiles[i].find(t => !t.boost && p.y <= t.y + 12 && p.y >= t.y - 14);
+          if (t) { p.dead = true; t.boost = true; t.v *= 2; s.fx.push({ txt: "x2!", x: (c.x0 + c.x1) / 2, y: t.y, t: 0.5, col: "#80ff9c" }); }
+          else if (s.tiles[i].some(t => p.y <= t.y + 12 && p.y >= t.y - 14)) p.dead = true;
         }
         if (p.dead) continue;
         // the army
@@ -140,17 +144,16 @@
       }
       s.pups = s.pups.filter(p => !p.dead);
       s.gates.forEach(g => { if (g.flash) g.flash = Math.max(0, g.flash - dt); });
-      s.peds.forEach(p => { if (p.flash) p.flash = Math.max(0, p.flash - dt); });
       s.fx.forEach(e => e.t -= dt); s.fx = s.fx.filter(e => e.t > 0);
       if (s.R <= 0) { s.R = 0; s.score = Math.round(s.score); s.pups = []; s.choice = this.offer(s); s.msg = { txt: `WAVE ${s.wave} CLEARED!`, t: 99 }; G.sfx("win"); return; }
       if (s.front >= s.cy - 36) this.end(G);
     },
     end(G) {
       const s = G.s, m = s.meta, score = Math.round(s.score);
-      const coins = Math.round((Math.sqrt(score) * 0.35 + s.wave * 5) * (1 + 0.1 * (m.treas || 0)) * (s.daily ? 2 : 1));
+      const coins = Math.round((Math.sqrt(score) * 0.12 + s.wave * 4) * (1 + 0.1 * (m.treas || 0)) * (s.daily ? 2 : 1));
       const nb = s.wave > (m.bestWave || 0);
       m.coins += coins; m.runs = (m.runs || 0) + 1; m.bestWave = Math.max(m.bestWave || 0, s.wave); if (s.daily) m.lastDay = today(); saveMeta(m);
-      G.over(Math.min(999999, score), `${nb ? "NEW BEST! " : ""}Overrun on wave ${s.wave}. +${coins} 🪙 for camp`);
+      G.over(Math.min(9999999, score), `${nb ? "NEW BEST! " : ""}Overrun on wave ${s.wave}. +${coins} 🪙 for camp`);
     },
     campLayout(G) {
       const W = G.W, H = G.H, top = 132, btnH = 56, rh = Math.min(56, Math.max(40, (H - top - btnH - 30) / PERKS.length));
@@ -189,21 +192,19 @@
         const w = cl.x1 - cl.x0 - 4, x = cl.x0 + 2;
         c.fillStyle = i ? "#c99a00" : "#1e5fc2"; rr(c, x, t.y - 11, w, 24, 4); c.fill();
         c.fillStyle = i ? "#ffd23f" : "#2f80ed"; rr(c, x, t.y - 13, w, 22, 4); c.fill();
+        if (t.boost) { c.strokeStyle = "#80ff9c"; c.lineWidth = 2; rr(c, x, t.y - 13, w, 22, 4); c.stroke(); }
         G.text(c, "+" + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
       }));
-      // side blocks / side cannons
-      s.peds.forEach((p, i) => {
-        const cl = s.cols[i], x = cl.x0, w = cl.x1 - cl.x0, y = s.gy - 22, cxm = x + w / 2;
+      // cannon piles at the bottom of each belt: the number is how many cannons that belt has given you
+      s.cols.forEach((cl, i) => {
+        const x = cl.x0, w = cl.x1 - cl.x0, y = s.gy - 22, cxm = x + w / 2, n = s.bank[i], fl = s.peds[i].flash || 0;
         c.fillStyle = dk ? "#59606b" : "#9aa1ab"; rr(c, x, y + 26, w, 22, 4); c.fill();
-        G.text(c, p.on ? "ON" : fmtN(Math.ceil(p.n)), cxm, y + 38, 9, p.on ? "#80ff9c" : "#fff");
-        if (!p.on) {
-          c.fillStyle = p.flash ? "#ffffff" : dk ? "#cfd8dc" : "#fafafa"; rr(c, x + 2, y - 4, w - 4, 30, 8); c.fill();
-          c.strokeStyle = "rgba(0,0,0,0.15)"; c.lineWidth = 1; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(cxm - 8 + k * 8, y + 11, 5, 0, 7); c.stroke(); }
-          c.fillStyle = "rgba(0,0,0,0.12)"; c.fillRect(x + 6, y + 21, (w - 12) * (1 - p.n / p.n0), 3);
-        } else {
-          const n = i ? 3 : 1; for (let k = 0; k < n; k++) { const bx = cxm + (k - (n - 1) / 2) * 9; c.fillStyle = "#546e7a"; rr(c, bx - 4, y - 6 + Math.sin(G.t * 30 + k) * 1.5, 8, 26, 3); c.fill(); }
-          c.fillStyle = "#795548"; rr(c, x + 4, y + 16, w - 8, 10, 3); c.fill();
-        }
+        G.text(c, fmtN(n), cxm, y + 38, 9, "#fff");
+        const k = Math.min(7, 1 + Math.floor(Math.log2(1 + n))), HEX = [[0, 0], [-1, 0], [1, 0], [-0.5, -0.85], [0.5, -0.85], [-0.5, 0.85], [0.5, 0.85]], rad = Math.min(7, w / 7);
+        for (let j = 0; j < k; j++) { const px = cxm + HEX[j][0] * rad * 2.05, py = y + 12 + HEX[j][1] * rad * 2.05;
+          c.fillStyle = fl > 0 ? "#fffde7" : dk ? "#cfd8dc" : "#fafafa"; c.beginPath(); c.arc(px, py, rad, 0, 7); c.fill();
+          c.fillStyle = "rgba(0,0,0,0.22)"; c.beginPath(); c.arc(px, py, rad * 0.5, 0, 7); c.fill(); }
+        s.peds[i].flash = Math.max(0, fl - 1 / 60);
       });
       // gates
       s.gates.forEach(g => {
@@ -235,11 +236,12 @@
         else G.text(c, e.txt, e.x, e.y - (0.7 - e.t) * 30, 10, e.col);
       });
       // cannon
-      const cx = s.cx, cy = s.cy, rc = s.recoil * 4, n = 1 + (s.ups.twin || 0);
+      const C = this.cannons(s), cx = s.cx, cy = s.cy, rc = s.recoil * 4, n = Math.min(6, C) * (1 + (s.ups.twin || 0)), bsp = Math.min(14, 64 / n), bw = Math.min(14, bsp + 1);
       c.fillStyle = "rgba(0,0,0,0.18)"; c.beginPath(); c.ellipse(cx, cy + 18, 30, 7, 0, 0, 7); c.fill();
       c.fillStyle = "#8d5a3b"; rr(c, cx - 22, cy + 2, 44, 14, 4); c.fill();
       [-15, 15].forEach(o => { c.fillStyle = "#3e2723"; c.beginPath(); c.arc(cx + o, cy + 15, 6, 0, 7); c.fill(); });
-      for (let i = 0; i < n; i++) { const bx = cx + (i - (n - 1) / 2) * 14; c.fillStyle = "#78909c"; rr(c, bx - 7, cy - 28 + rc, 14, 34, 6); c.fill(); c.fillStyle = "#b0bec5"; rr(c, bx - 4, cy - 26 + rc, 4, 28, 2); c.fill(); c.fillStyle = "#37474f"; rr(c, bx - 8, cy - 30 + rc, 16, 6, 3); c.fill(); }
+      for (let i = 0; i < n; i++) { const bx = cx + (i - (n - 1) / 2) * bsp; c.fillStyle = "#78909c"; rr(c, bx - bw / 2, cy - 28 + rc, bw, 34, 5); c.fill(); c.fillStyle = "#b0bec5"; rr(c, bx - bw / 4, cy - 26 + rc, bw / 4, 28, 2); c.fill(); c.fillStyle = "#37474f"; rr(c, bx - bw / 2 - 1, cy - 30 + rc, bw + 2, 6, 3); c.fill(); }
+      c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, cx - 46, cy + 24, 92, 18, 9); c.fill(); G.text(c, `🔫 x${fmtN(C)}`, cx, cy + 33, 9, "#fff");
       G.img(c, ":dawgW:", cx, cy + 4, 22);
       // HUD
       G.hud(c, `WAVE ${s.wave}`, fmtN(s.score), `BEST ${s.meta.bestWave || 0}`);
