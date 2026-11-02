@@ -2896,7 +2896,7 @@ defGameMeta([{
   "name": "Dawg Lords",
   "icon": "👑",
   "blurb": "Cannon vs a cat army. Gates multiply your pups.",
-  "how": "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the +N tiles sliding down the side belts: each tile you hit adds N cannons, so you fire more pups every shot. Tiles you don't shoot slide past and are lost. If the army reaches the gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
+  "how": "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down to you and each one adds N cannons, so you fire more pups every shot. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
   "max": 9999999
 }, {
   "file": "g_tennis.js",

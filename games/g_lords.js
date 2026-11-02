@@ -2,8 +2,8 @@
 // A giant red cat army marches down the road. Your cannon at the bottom fires a stream of blue pups; drag to aim it.
 // Pups that pass through a gate get multiplied (x3, +20...). Each pup that reaches the army takes out a cat.
 // The cannon fires one pup per shot per cannon. Aim at the big x gate in the middle to multiply them, or swing
-// left/right to shoot the +N tiles sliding down the side belts: every tile you hit adds N cannons. Tiles you
-// ignore slide past and are gone. Clear a wave and the next, bigger one starts right away.
+// left/right to break the crate gate on a side belt (its number = pups it takes). Once it breaks, the +N tiles
+// behind it roll down to you and each one adds N cannons; then a tougher crate locks the next batch.
 (function () {
   const UPS = [
     { k: "rate", n: "FAST CANNON", e: "⚡", max: 6, d: "+15% fire rate" },
@@ -34,7 +34,7 @@
   defGame({
     key: "lords", name: "Dawg Lords", icon: "👑", max: 9999999,
     blurb: "Cannon vs a cat army. Gates multiply your pups.",
-    how: "A huge cat army marches down the road. Drag to aim your cannon; it fires a stream of pups. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the +N tiles sliding down the side belts: each tile you hit adds N cannons, so you fire more pups every shot. Tiles you don't shoot slide past and are lost. If the army reaches the gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins you earn buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "A huge cat army marches down the road. Drag to aim your cannon. Each cannon fires one pup at a time. Pups that go through the big gate in the middle get multiplied (x8 turns one pup into eight), and every pup that reaches the army knocks out a cat. To power up, swing left or right and shoot the crate gate on that side: its number is how many pups it takes to break. When it breaks, the +N tiles behind it roll down to you and each one adds N cannons, so you fire more pups every shot. Then a tougher crate locks the next batch. If the army reaches the middle gate it gets smashed, and if it reaches your cannon it's over. Your score is cats knocked out; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
@@ -52,18 +52,25 @@
       s.gates = [{ x0: s.ax0, x1: s.ax1, op: "x", v: Math.round((4 + (n - 1)) * gm), alive: true }];
       s.msg = { txt: n === 1 && s.daily ? "DAILY 2X COINS!" : `WAVE ${n}: ${fmtN(s.R)} CATS`, t: 1.8 };
     },
-    GAP: [30, 60],
-    tval(s, side) { return side ? 5 : 1; },
+    // Each side belt: a crate gate (hp = pups needed) with a batch of tiles stacked behind it.
+    newSeg(s, i) {
+      const old = s.lock[i], lvl = old ? old.lvl + 1 : 0, hp = Math.round((i ? 30 : 4) * Math.pow(2.3, lvl));
+      s.lock[i] = { hp, hp0: hp, lvl, open: false, flash: 0 };
+      const n = i ? 5 : 8, v = i ? 5 + 3 * lvl : 1 + Math.floor(lvl / 3), by = this.blockY(s);
+      s.tiles[i] = []; for (let k = 0; k < n; k++) { const ty = by - 34 - k * 29; if (ty < 50) break; s.tiles[i].push({ ty, y: ty - 260, v }); }
+    },
+    blockY(s) { return s.gy - 64; },
     cannons(s) { return 1 + (s.start || 0) + s.bank[0] + s.bank[1]; },
-    fillBelts(s) { s.beltD = [0, 0]; s.tiles = [0, 1].map(i => { const t = []; for (let y = s.gy - 70; y >= 48; y -= this.GAP[i]) t.push({ y, v: this.tval(s, i) }); return t; }); },
+    fillBelts(s) { s.lock = [null, null]; s.tiles = [[], []]; this.newSeg(s, 0); this.newSeg(s, 1); },
     save(G) {
       const s = G.s; if (s.mode !== "play" || s.choice || s.clearT > 0 || s.wave < 2) return null;
-      return { label: `Wave ${s.wave}`, wave: s.wave, ups: s.ups, score: s.score, daily: s.daily, bank: s.bank, start: s.start };
+      return { label: `Wave ${s.wave}`, wave: s.wave, ups: s.ups, score: s.score, daily: s.daily, bank: s.bank, start: s.start, lv: s.lock.map(l => l.lvl) };
     },
     load(G, v) {
       if (!v.bank || !v.wave) throw new Error("old save");
       const s = G.s; s.mode = "play"; s.ups = Object.assign({}, v.ups); s.score = v.score; s.daily = v.daily;
       s.bank = v.bank.slice(); s.start = v.start || 0; s.peds = [{}, {}]; this.startWave(G, v.wave); this.fillBelts(s);
+      if (v.lv) [0, 1].forEach(i => { s.lock[i].lvl = v.lv[i] - 1; this.newSeg(s, i); });
     },
     offer(s) {
       const pool = UPS.filter(u => (s.ups[u.k] || 0) < u.max), out = [];
@@ -93,13 +100,17 @@
         for (let i = 0; i < k; i++) this.add(s, s.cx + (i - (k - 1) / 2) * sp, s.cy - 26, w, (Math.random() - 0.5) * 18);
         s.recoil = 1;
       }
-      // side belts slide tiles toward you; shoot them to collect, or they slide past and are gone
-      const bs = 13 * (1 + 0.3 * (u.belt || 0));
+      // side belts: locked tiles settle behind the crate; once it breaks they roll down and add cannons
       for (let i = 0; i < 2; i++) {
-        const T = s.tiles[i], c = s.cols[i];
-        T.forEach(t => t.y += bs * dt);
-        s.beltD[i] = (s.beltD[i] || 0) + bs * dt; if (s.beltD[i] >= this.GAP[i]) { s.beltD[i] -= this.GAP[i]; T.push({ y: 48, v: this.tval(s, i) }); }
-        while (T.length && T[0].y >= s.gy - 30) T.shift();
+        const T = s.tiles[i], c = s.cols[i], L = s.lock[i]; L.flash = Math.max(0, L.flash - dt);
+        if (!L.open) { T.forEach(t => t.y = Math.min(t.ty, t.y + 240 * dt)); continue; }
+        T.forEach(t => t.y += 170 * dt);
+        while (T.length && T[0].y >= s.gy - 26) {
+          const t = T.shift(); s.bank[i] += t.v; s.peds[i].flash = 0.2;
+          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: s.gy - 34, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
+          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
+        }
+        if (!T.length) this.newSeg(s, i);
       }
       // march
       s.front += (12 + 1.3 * s.wave) * dt;
@@ -116,13 +127,13 @@
           else if (full) p.w += g.v; else s.pups.push({ x: p.x + (Math.random() - 0.5) * 16, y: p.y - 4, w: g.v, vx: (Math.random() - 0.5) * 30, vy: -330 });
           g.flash = 0.12; break;
         }
-        // side belts: each pup that hits a tile collects it, adding that many cannons
+        // side belts: pups chip away at the crate gate
         for (let i = 0; i < 2; i++) {
-          const c = s.cols[i]; if (p.x < c.x0 || p.x > c.x1) continue;
-          const T = s.tiles[i], j = T.findIndex(t => p.y <= t.y + 12 && p.y >= t.y - 14); if (j < 0) continue;
-          const t = T.splice(j, 1)[0]; p.dead = true; s.bank[i] += t.v; s.peds[i].flash = 0.2;
-          s.fx.push({ txt: `+${fmtN(t.v)} 🔫`, x: (c.x0 + c.x1) / 2, y: t.y, t: 0.7, col: i ? "#ffd23f" : "#82b1ff" });
-          if (s.sfxT <= 0) { s.sfxT = 0.07; G.sfx("pop"); }
+          const c = s.cols[i], L = s.lock[i], by = this.blockY(s); if (p.x < c.x0 || p.x > c.x1 || L.open) continue;
+          if (p.y <= by + 16 && py > by - 16) {
+            p.dead = true; L.hp -= p.w; L.flash = 0.06;
+            if (L.hp <= 0) { L.hp = 0; L.open = true; s.fx.push({ txt: "OPEN!", x: (c.x0 + c.x1) / 2, y: by, t: 0.8, col: "#80ff9c" }); G.sfx("win"); }
+          }
         }
         if (p.dead) continue;
         // the army
@@ -184,9 +195,18 @@
         const w = cl.x1 - cl.x0 - 4, x = cl.x0 + 2;
         c.fillStyle = i ? "#c99a00" : "#1e5fc2"; rr(c, x, t.y - 11, w, 24, 4); c.fill();
         c.fillStyle = i ? "#ffd23f" : "#2f80ed"; rr(c, x, t.y - 13, w, 22, 4); c.fill();
-        if (t.boost) { c.strokeStyle = "#80ff9c"; c.lineWidth = 2; rr(c, x, t.y - 13, w, 22, 4); c.stroke(); }
         G.text(c, "+" + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
       }));
+      // crate gates
+      s.cols.forEach((cl, i) => {
+        const L = s.lock[i]; if (!L || L.open) return;
+        const x = cl.x0 - 1, w = cl.x1 - cl.x0 + 2, by = this.blockY(s), h = 32;
+        c.fillStyle = "#5d3a1a"; rr(c, x, by - h / 2 + 3, w, h, 4); c.fill();
+        c.fillStyle = L.flash ? "#d7a86e" : "#a0682f"; rr(c, x, by - h / 2, w, h, 4); c.fill();
+        c.fillStyle = "#7a4a1f"; c.fillRect(x + 3, by - 6, w - 6, 2); c.fillRect(x + 3, by + 5, w - 6, 2);
+        c.fillStyle = "#4e342e"; [x + 5, x + w - 5].forEach(px => { c.beginPath(); c.arc(px, by - 10, 2, 0, 7); c.arc(px, by + 10, 2, 0, 7); c.fill(); });
+        G.text(c, fmtN(Math.ceil(L.hp)), x + w / 2, by + 1, Math.min(13, w / 4), "#fff");
+      });
       // cannon piles at the bottom of each belt: the number is how many cannons that belt has given you
       s.cols.forEach((cl, i) => {
         const x = cl.x0, w = cl.x1 - cl.x0, y = s.gy - 22, cxm = x + w / 2, n = s.bank[i], fl = s.peds[i].flash || 0;
@@ -240,7 +260,7 @@
       c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 34, W, 5); c.fillStyle = "#e53935"; c.fillRect(0, 34, W * (1 - s.R / Math.max(1, s.R0)), 5);
       if (s.front > s.gy + 40 && s.R > 0) { c.fillStyle = `rgba(229,57,53,${0.1 + 0.07 * Math.sin(G.t * 8)})`; c.fillRect(0, 0, W, H); }
       if (s.choice) this.drawCards(G, c);
-      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "MIDDLE: MULTIPLY · SIDES: MORE CANNONS", 5, s.cy - 60); }
+      else { if (s.msg) G.banner(c, s.msg.txt, "#fff", H * 0.62, s.msg.txt.length > 14 ? 14 : 18); G.hint(c, "BREAK THE SIDE CRATES FOR CANNONS", 5, s.cy - 60); }
     },
     drawCards(G, c) {
       const s = G.s, W = G.W, H = G.H, L = this.cardLayout(G);
