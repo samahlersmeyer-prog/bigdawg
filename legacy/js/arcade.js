@@ -738,7 +738,47 @@ function renderArcade() {
     box.appendChild(el("p", "note", "Play any arcade or sports game and your bests show up here."));
     return;
   }
-  keys.forEach(function (k) {
+  var secs = function secs(c) {
+    return c === "den" ? DEN_SECTIONS.concat([{
+      icon: "🃏",
+      name: "Card games & more",
+      sub: "Play anytime.",
+      keys: []
+    }]) : ARC_GROUPS[c] || [];
+  };
+  var parts = (hofCat === "mine" ? ["arcade", "sports", "den"] : [hofCat]).flatMap(function (c) {
+    var gs = secs(c),
+      placed = new Set(gs.flatMap(function (g) {
+        return g.keys;
+      })),
+      inCat = keys.filter(function (k) {
+        return arcCat(k) === c;
+      });
+    if (!gs.length) return [[null, inCat]];
+    return gs.map(function (g, i) {
+      return [g, (c === "den" ? g.keys.filter(function (k) {
+        return inCat.includes(k);
+      }) : inCat.filter(function (k) {
+        return g.keys.includes(k);
+      })).concat(i === gs.length - 1 ? inCat.filter(function (k) {
+        return !placed.has(k);
+      }) : [])];
+    });
+  }).filter(function (x) {
+    return x[1].length;
+  });
+  parts.forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+      g = _ref2[0],
+      ks = _ref2[1];
+    if (g) {
+      var h = el("div", "arc-sec arc-grp");
+      h.append(el("span", null, g.icon), el("b", null, g.name), el("small", null, g.sub));
+      box.appendChild(h);
+    }
+    ks.forEach(hofItem);
+  });
+  function hofItem(k) {
     if (games && games[k] && games[k].daily) return box.appendChild(dailyHof(k, games[k]));
     var g = games && games[k],
       list = g && g.all || [],
@@ -781,7 +821,7 @@ function renderArcade() {
       d.append(ol, play);
       box.appendChild(d);
     }
-  });
+  }
 }
 function dailyHof(k, g) {
   var wrap = el("div"),
@@ -1022,10 +1062,10 @@ function renderDenPuz() {
       return !r.st[1];
     }).concat(rows.filter(function (r) {
       return r.st[1];
-    })).forEach(function (_ref) {
-      var k = _ref.k,
-        st = _ref.st,
-        ci = _ref.ci;
+    })).forEach(function (_ref3) {
+      var k = _ref3.k,
+        st = _ref3.st,
+        ci = _ref3.ci;
       var _st = _slicedToArray(st, 3),
         label = _st[0],
         done = _st[1],

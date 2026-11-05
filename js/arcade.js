@@ -287,7 +287,18 @@ function renderArcade() {
   const games = arcade && arcade.games;
   let keys = arcOrder().filter(k => hofCat === "mine" ? aBest[k] > 0 : arcCat(k) === hofCat);
   if (hofCat === "mine" && !keys.length) { box.appendChild(el("p", "note", "Play any arcade or sports game and your bests show up here.")); return; }
-  keys.forEach(k => {
+  // Same sections as the Arcade / Sports / Den screens. Anything unlisted lands in its category's last section.
+  const secs = c => c === "den" ? DEN_SECTIONS.concat([{ icon: "🃏", name: "Card games & more", sub: "Play anytime.", keys: [] }]) : ARC_GROUPS[c] || [];
+  const parts = (hofCat === "mine" ? ["arcade", "sports", "den"] : [hofCat]).flatMap(c => {
+    const gs = secs(c), placed = new Set(gs.flatMap(g => g.keys)), inCat = keys.filter(k => arcCat(k) === c);
+    if (!gs.length) return [[null, inCat]];
+    return gs.map((g, i) => [g, (c === "den" ? g.keys.filter(k => inCat.includes(k)) : inCat.filter(k => g.keys.includes(k))).concat(i === gs.length - 1 ? inCat.filter(k => !placed.has(k)) : [])]);
+  }).filter(x => x[1].length);
+  parts.forEach(([g, ks]) => {
+    if (g) { const h = el("div", "arc-sec arc-grp"); h.append(el("span", null, g.icon), el("b", null, g.name), el("small", null, g.sub)); box.appendChild(h); }
+    ks.forEach(hofItem);
+  });
+  function hofItem(k) {
     if (games && games[k] && games[k].daily) return box.appendChild(dailyHof(k, games[k]));
     const g = games && games[k], list = (g && g.all) || [], top = list[0];
     const row = el("button", "hof-row" + (hofOpen === k ? " open" : ""));
@@ -308,7 +319,7 @@ function renderArcade() {
       const play = el("button", "pill solid", `🐶 Play ${ARC[k].name}`); play.dataset.play = k;
       d.append(ol, play); box.appendChild(d);
     }
-  });
+  }
 }
 // Daily Den puzzles: Today · This week (best 5 days) · All time (average day, 5+ days to rank).
 function dailyHof(k, g) {
