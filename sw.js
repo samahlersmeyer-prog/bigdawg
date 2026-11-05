@@ -1,5 +1,5 @@
 // Big Dawg Daily service worker: opens instantly from the phone, updates quietly in the background.
-const V = "bdd-23d1e484e1";
+const V = "bdd-162a864f3d";
 const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./styles.css?v=74d09d4478", "./js/data.js?v=cab3648a9b", "./js/core.js?v=3ee27789e6", "./js/daily.js?v=ca02ee892d", "./js/social.js?v=af2b2bdf0a", "./js/arcade.js?v=2e03fbd587", "./js/boot.js?v=e72a27d2cc"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== V + "-fonts" && !k.endsWith("-fonts")).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

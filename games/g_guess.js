@@ -23,12 +23,35 @@
   const parse = s => s.split(";").map(r => r.split("|"));
   const yr = (a, b, span, w) => w * Math.max(0, 1 - Math.abs(a - b) / span);
   const km = (a, b) => { const R = Math.PI / 180, x = (b[3] - a[3]) * R * Math.cos((+a[2] + +b[2]) / 2 * R), y = (b[2] - a[2]) * R; return 6371 * Math.hypot(x, y); };
+  // Each category's clues: what a guess shares with the answer. Closeness (and so the #rank) is built from the same
+  // clues, so what you see under a guess explains its number. A clue is [label, guess's value, matches?, sim points].
+  const G_LBL = { scifi: "sci-fi", game: "game show" }, gl = v => G_LBL[v] || v;
+  const yrClue = (a, b, span, w) => { const d = a - b; const m = Math.abs(d), dir = d > 0 ? "later" : "earlier";
+    return ["year", m === 0 ? "same year" : m <= 3 ? `1–3 yrs ${dir}` : m <= 9 ? `4–9 yrs ${dir}` : `10+ yrs ${dir}`, m === 0, w * Math.max(0, 1 - m / span)]; };
+  const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const zone = lon => lon > -86.5 ? "the Eastern time zone" : lon > -101 ? "the Central time zone" : lon > -114.5 ? "the Mountain time zone" : "the Pacific time zone";
   const CATS = [
-    { name: "TV Shows", items: parse(TV), sim: (a, b) => (a[2] === b[2] ? 5 : 0) + (a[3] === b[3] ? 2 : 0) + (a[4] === b[4] ? 1.5 : 0) + yr(+a[1], +b[1], 20, 4) },
-    { name: "Movies", items: parse(MOV), sim: (a, b) => (a[2] === b[2] ? 5 : 0) + (a[3] === b[3] ? 2 : 0) + yr(+a[1], +b[1], 25, 4) },
-    { name: "Animals", items: parse(ANI), sim: (a, b) => (a[1] === b[1] ? 4 : 0) + (a[2] === b[2] ? 4 : 0) + (a[4] === b[4] ? 1.5 : 0) + 2 * Math.max(0, 1 - Math.abs(a[3] - b[3]) / 3) },
-    { name: "Pro Teams", items: parse(TEAMS), sim: (a, b) => (a[1] === b[1] ? 3 : 0) + 6 * Math.max(0, 1 - km(a, b) / 2500) }
+    { name: "TV Shows", items: parse(TV), clues: (A, x) => {
+        const g = A[2] === x[2], n = A[3] === x[3];
+        return [["genre", gl(x[2]), g, g ? 5 : 0], ["network", x[3], n, n ? (g ? 2 : 0.5) : 0], yrClue(+A[1], +x[1], 20, 3)]; },
+      hints: A => [`it's a ${gl(A[2])}`, `it aired on ${A[3]}`, `it started in the ${Math.floor(A[1] / 10) * 10}s`] },
+    { name: "Movies", items: parse(MOV), clues: (A, x) => {
+        const g = A[2] === x[2], f = A[3] === x[3];
+        return [["genre", gl(x[2]), g, g ? 5 : 0], ["audience", x[3] === "f" ? "family" : "grown-up", f, f ? 2 : 0], yrClue(+A[1], +x[1], 25, 4)]; },
+      hints: A => [`it's ${/^[aeiou]/.test(gl(A[2])) ? "an" : "a"} ${gl(A[2])} movie`, `it's a ${A[3] === "f" ? "family" : "grown-up"} movie`, `it came out in the ${Math.floor(A[1] / 10) * 10}s`] },
+    { name: "Animals", items: parse(ANI), clues: (A, x) => {
+        const c = A[1] === x[1], h = A[2] === x[2], d = A[4] === x[4], z = A[3] - x[3];
+        return [["class", x[1], c, c ? 4 : 0], ["habitat", x[2], h, h ? 4 : 0], ["diet", { c: "meat eater", h: "plant eater", o: "eats both" }[x[4]], d, d ? 1.5 : 0],
+          ["size", z === 0 ? "same size" : z > 0 ? "bigger" : "smaller", z === 0, 2 * Math.max(0, 1 - Math.abs(z) / 3)]]; },
+      hints: A => [`it's ${/^[aeiou]/.test(A[1]) ? "an" : "a"} ${A[1]}`, `its habitat is ${A[2]}`, { c: "it's a meat eater", h: "it's a plant eater", o: "it eats both plants and meat" }[A[4]]] },
+    { name: "Pro Teams", items: parse(TEAMS), clues: (A, x) => {
+        const l = A[1] === x[1], d = km(x, A), mi = d * 0.621 < 500 ? Math.round(d * 0.621 / 50) * 50 || 50 : Math.round(d * 0.621 / 100) * 100;
+        const brg = Math.atan2((A[3] - x[3]) * Math.cos(A[2] * Math.PI / 180), A[2] - x[2]) * 180 / Math.PI;
+        const where = d < 60 ? "same city" : `~${mi} mi ${DIRS[Math.round(((brg + 360) % 360) / 45) % 8]}`;
+        return [["league", x[1], l, l ? 6 : 0], ["distance", where, d < 60, 4 * Math.max(0, 1 - d / 2500)]]; },
+      hints: A => [`it's ${A[1] === "NFL" || A[1] === "NBA" || A[1] === "NHL" ? "an" : "a"} ${A[1]} team`, `it plays in ${zone(+A[3])}`] }
   ];
+  CATS.forEach(c => { c.sim = (a, b) => c.clues(a, b).reduce((t, k) => t + k[3], 0); });
   const MAXG = 15;
   const dayN = () => { const [y, m, d] = KEY.split("-").map(Number); return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2026, 10, 4)) / 864e5); };
   // Category rotates daily; within a category the answers follow a fixed shuffled order so nothing repeats for a long time.
@@ -42,8 +65,19 @@
   const cmpName = (a, b) => norm(a) < norm(b) ? -1 : norm(a) > norm(b) ? 1 : 0;
   function ranks(cat, ans) {
     const A = cat.items.find(x => x[0] === ans), R = {};
-    cat.items.map(x => [x[0], x[0] === ans ? 1e9 : cat.sim(A, x)]).sort((p, q) => q[1] - p[1] || cmpName(p[0], q[0])).forEach((p, i) => { R[p[0]] = i + 1; });
+    // Things exactly as close share a rank (two #4s, then #6), so the number never claims more than the clues show.
+    const sc = cat.items.map(x => [x[0], x[0] === ans ? 1e9 : Math.round(cat.sim(A, x) * 100)]);
+    sc.forEach(p => { R[p[0]] = 1 + sc.filter(q => q[1] > p[1]).length; });
     return R;
+  }
+  const HINT_AT = 7; // one free hint shows after this many misses
+  const rowOf = (s, n) => s.cat.items.find(x => x[0] === n);
+  // The hint names something about the answer that none of your guesses has matched yet.
+  function hintOf(s) {
+    if (s.done || s.guesses.length < HINT_AT) return "";
+    const A = rowOf(s, s.ans), hs = s.cat.hints(A), got = i => s.guesses.some(g => s.cat.clues(A, rowOf(s, g))[i][2]);
+    const i = hs.findIndex((h, i) => !got(i));
+    return hs[i < 0 ? hs.length - 1 : i];
   }
   const rk = () => "bdd:den:guess:" + KEY + ":" + (me ? me.id : "");
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
@@ -54,7 +88,7 @@
   defGame({
     key: "guess", name: "Dawg Guess", icon: "🔍", max: 1000, cat: "den", puzzle: true,
     blurb: "Daily: guess today's pick. Hot or cold?",
-    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess gets a number: how similar it is to the answer, ranked against everything in the list. #1 is the answer, #2 is the most similar thing, and something like #80 is way off. Lower is warmer. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your latest guess shows on top, and all your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
+    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Under each guess are its clues: ✓ means the answer shares it (same genre, same network, same league), ✗ means it doesn't, and things like \"4–9 yrs later\", \"bigger\" or \"~300 mi NE\" tell you which way the answer is from that guess. The number is how close the guess is, ranked against everything in the list: #1 is the answer, and lower is warmer. Things that are exactly as close share a number. Miss 7 and you get one free hint. All your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset(G) {
       const t = today(), s = G.s = { cat: t.cat, ans: t.ans, R: ranks(t.cat, t.ans), typed: "", msg: "", msgT: 0, btns: [], postT: 0, scroll: 0 };
       const r = store.get(rk());
@@ -106,7 +140,7 @@
       // Contexto-style: every guess sorted closest first, latest one outlined. If they don't all fit, the latest is
       // pinned on top and the farthest ones are trimmed with a "+N more" line.
       const top = 66, listBot = s.done ? H - 90 : by - 8, n0 = s.guesses.length;
-      const rh = Math.max(26, Math.min(34, (listBot - top - 26) / Math.max(n0, 1) - 4)), fit = Math.max(1, Math.floor((listBot - top - 26) / (rh + 4)));
+      const rh = Math.max(40, Math.min(48, (listBot - top - 26) / Math.max(n0, 1) - 4)), fit = Math.max(1, Math.floor((listBot - top - 26) / (rh + 4)));
       const last = s.guesses[n0 - 1];
       let rows = s.guesses.slice().sort((a, b) => s.R[a] - s.R[b]), more = 0;
       if (rows.length > fit) {
@@ -114,17 +148,33 @@
         rows = s.done || idx < fit - 1 ? rows.slice(0, fit - 1) : [last].concat(rows.slice(0, fit - 2));
         more = n0 - rows.length;
       }
-      c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
-      c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left";
-      c.fillText(n0 ? "Your guesses, closest first" : "Lower number = closer. #1 is the answer.", 18, top + 11);
-      if (n0) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
+      const hint = hintOf(s);
+      if (hint) {
+        c.fillStyle = dk ? "#4a3d12" : "#fdf1c7"; rr(c, 12, top, W - 24, 22, 6); c.fill();
+        c.fillStyle = dk ? "#ffe08a" : "#6b5200"; c.font = `700 12.5px ${G.UI}`; c.textAlign = "center"; c.fillText(`💡 Free hint: ${hint}`, W / 2, top + 11, W - 36);
+      } else {
+        c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
+        c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left";
+        c.fillText(n0 ? "Closest first · ✓ = the answer shares it" : "Lower number = closer. #1 is the answer.", 18, top + 11);
+        if (n0) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
+      }
+      const A = rowOf(s, s.ans);
       let y = top + 26;
       rows.forEach(g => {
         const bw = 92, n = s.R[g], hit = g === s.ans, isLast = g === last && !s.done;
         c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = isLast ? ink : (dk ? "#3a3a3c" : "#ddd"); c.lineWidth = isLast ? 2 : 1; rr(c, 12, y, W - 24, rh, 6); c.fill(); c.stroke();
         c.fillStyle = ink; c.textAlign = "left"; let sz = Math.min(16, rh * 0.5); c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`;
         while (sz > 10 && c.measureText(g).width > W - 48 - bw) { sz--; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`; }
-        c.fillText(g, 20, y + rh / 2 + 1);
+        c.fillText(g, 20, y + rh * 0.34);
+        // the clue line: ✓ shared with the answer, ✗ not; year/size/distance say which way the answer is
+        const parts = hit ? [["That's it! 🎉", true]] : s.cat.clues(A, rowOf(s, g)).map(k => [k[0] === "year" || k[0] === "size" || k[0] === "distance" ? (k[2] ? "✓ " : "") + k[1] : (k[2] ? "✓ " : "✗ ") + k[1], k[2]]);
+        let fs = 12.5; const sep = " · ", wOf = () => { c.font = `600 ${fs}px ${G.UI}`; return parts.reduce((t, q, i) => t + c.measureText(q[0] + (i ? sep : "")).width, 0); };
+        while (fs > 9 && wOf() > W - 48 - bw) fs -= 0.5;
+        let cx = 20;
+        parts.forEach((q, i) => {
+          if (i) { c.fillStyle = dk ? "#666" : "#bbb"; c.fillText(sep, cx, y + rh * 0.73); cx += c.measureText(sep).width; }
+          c.fillStyle = q[1] ? (dk ? "#7fd27a" : "#3f8a3b") : (dk ? "#9aa0a6" : "#80868b"); c.fillText(q[0], cx, y + rh * 0.73); cx += c.measureText(q[0]).width;
+        });
         c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
         c.fillStyle = "#fff"; c.font = `800 ${Math.min(17, rh * 0.52)}px ${G.UI}`; c.textAlign = "center";
         c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
