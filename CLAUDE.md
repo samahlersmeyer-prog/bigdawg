@@ -25,6 +25,9 @@ Sam's daily puzzle app for his friends. Live at https://samahlersmeyer-prog.gith
 
 The `js/` files are classic scripts sharing one global scope, loaded in order data → core → daily → social → arcade → boot. Code that runs at load time can only use things from its own file or earlier files; functions called later (from clicks or `boot()`) can live anywhere.
 
+## The Den
+`DEN_SECTIONS` in `js/arcade.js` sets the daily puzzles: Words (big cards) and Logic (compact rows), in a fixed order. Re-rank that order by hand every month or so from play counts (distinct players per week), not live. NEW games (`FRESH`) pin to the top of their section for 7 days; finished puzzles sink to a slim ✓ row.
+
 ## Stale / leftover
 - `offline.html` — old offline edition from Oct 25; out of date and not linked from the app. Don't edit or read it.
 - `server/*_more.json` — puzzle top-up sources, already merged into `js/data.js`.

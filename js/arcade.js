@@ -376,7 +376,14 @@ function renderArcSub() {
   });
 }
 // ---- The Den's daily puzzles: home-style cards with today's status, and a NYT-style results card ----
-const DEN_PUZ = ["midi", "links", "waffle", "guess", "sgroups", "hive", "pips", "sudoku"];
+// The Den's dailies, in two sections, in a fixed order (re-ranked by hand every month or so from play counts, so the
+// order doesn't shift under people's thumbs day to day). NEW games are pinned first for their first week.
+// Finished puzzles sink to the bottom of their section as a slim row.
+const DEN_SECTIONS = [
+  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: ["midi", "links", "waffle", "hive", "guess", "sgroups"] },
+  { icon: "🧩", name: "Logic", sub: "Numbers, grids and paths.", compact: true, keys: ["sudoku", "pips", "topdogs", "leash", "boneball", "mahjong"] }
+];
+const DEN_PUZ = DEN_SECTIONS.flatMap(g => g.keys);
 function denRec(k, d) { return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null; }
 function denStatus(k) {
   if (k === "sgroups") { const r = denRec(k); return r && r.done ? ["Done", true, r.score ? `Solved · ${r.score} pts` : "Done for today"] : r && r.order ? ["Continue", false, "In progress"] : ["Play", false, null]; }
@@ -385,18 +392,26 @@ function denStatus(k) {
   if (k === "guess") { const r = denRec(k); return r && r.done ? ["Done", true, r.score ? `${r.won ? "Got it" : "Missed"} · ${r.score} pts` : "Done for today"] : r && r.guesses && r.guesses.length ? ["Continue", false, `${r.guesses.length} of 8 guesses`] : ["Play", false, null]; }
   if (k === "links") { const r = denRec(k); return r && r.done ? ["Done", true, r.score ? `Linked · ${r.score} pts` : "Done for today"] : r && r.rev ? ["Continue", false, "In progress"] : ["Play", false, null]; }
   if (k === "hive") { const r = denRec(k); return r && r.found && r.found.length ? ["Continue", false, `${r.score} pts · ${r.found.length} words`] : ["Play", false, null]; }
+  if (k !== "pips" && k !== "sudoku") { const r = denRec(k); return r && r.done ? ["Done", true, r.score ? `Solved · ${r.score} pts` : "Done for today"] : r && r.el ? ["Continue", false, "In progress"] : ["Play", false, null]; }
   const n = [0, 1, 2].filter(d => { const r = denRec(k, d); return r && r.done; }).length;
   return n === 3 ? ["Done", true, "All 3 solved"] : n ? ["Continue", false, `${n} of 3 solved`] : ["Play", false, null];
 }
 function renderDenPuz() {
   const box = $("den-puz"); if (!box) return; box.innerHTML = "";
-  DEN_PUZ.filter(k => ARC[k]).forEach((k, i) => {
-    const [st, done, line] = denStatus(k), td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
-    const b = el("button", "gcard c-den" + i); b.dataset.play = k;
-    const ic = el("span", "gicon den"); ic.appendChild(emo(ARC[k].icon, 36));
-    const tx = el("span", "gtext"); const nm = el("b", null, ARC[k].name), fr = freshEl(k, "inline"); if (fr) nm.appendChild(fr);
-    tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, (m, ch) => ch.toUpperCase()), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
-    b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st)); box.appendChild(b);
+  let ci = 0;
+  DEN_SECTIONS.forEach(sec => {
+    const keys = sec.keys.filter(k => ARC[k]); if (!keys.length) return;
+    const h = el("div", "arc-sec arc-grp den-sec"); h.append(el("span", null, sec.icon), el("b", null, sec.name), el("small", null, sec.sub)); box.appendChild(h);
+    const rows = keys.map((k, i) => ({ k, i, st: denStatus(k), ci: ci++, hot: freshTag(k) === "new" ? 1 : 0 }))
+      .sort((x, y) => y.hot - x.hot || x.i - y.i);
+    rows.filter(r => !r.st[1]).concat(rows.filter(r => r.st[1])).forEach(({ k, st, ci }) => {
+      const [label, done, line] = st, td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
+      const b = el("button", "gcard c-den" + (ci % 7) + (done ? " gdone" : sec.compact ? " gcompact" : "")); b.dataset.play = k;
+      const ic = el("span", "gicon den"); ic.appendChild(emo(ARC[k].icon, done || sec.compact ? 24 : 36));
+      const tx = el("span", "gtext"); const nm = el("b", null, ARC[k].name), fr = freshEl(k, "inline"); if (fr && !done) nm.appendChild(fr);
+      tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, (m, ch) => ch.toUpperCase()), !done && td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
+      b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), done ? "✓" : label)); box.appendChild(b);
+    });
   });
 }
 function puzzleResults(game, info) {

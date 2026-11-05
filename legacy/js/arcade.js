@@ -941,7 +941,21 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
   });
 }
-var DEN_PUZ = ["midi", "links", "waffle", "guess", "sgroups", "hive", "pips", "sudoku"];
+var DEN_SECTIONS = [{
+  icon: "✏️",
+  name: "Words",
+  sub: "Crosswords, chains and word hunts.",
+  keys: ["midi", "links", "waffle", "hive", "guess", "sgroups"]
+}, {
+  icon: "🧩",
+  name: "Logic",
+  sub: "Numbers, grids and paths.",
+  compact: true,
+  keys: ["sudoku", "pips", "topdogs", "leash", "boneball", "mahjong"]
+}];
+var DEN_PUZ = DEN_SECTIONS.flatMap(function (g) {
+  return g.keys;
+});
 function denRec(k, d) {
   return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null;
 }
@@ -970,6 +984,10 @@ function denStatus(k) {
     var _r5 = denRec(k);
     return _r5 && _r5.found && _r5.found.length ? ["Continue", false, "".concat(_r5.score, " pts \xB7 ").concat(_r5.found.length, " words")] : ["Play", false, null];
   }
+  if (k !== "pips" && k !== "sudoku") {
+    var _r6 = denRec(k);
+    return _r6 && _r6.done ? ["Done", true, _r6.score ? "Solved \xB7 ".concat(_r6.score, " pts") : "Done for today"] : _r6 && _r6.el ? ["Continue", false, "In progress"] : ["Play", false, null];
+  }
   var n = [0, 1, 2].filter(function (d) {
     var r = denRec(k, d);
     return r && r.done;
@@ -980,28 +998,53 @@ function renderDenPuz() {
   var box = $("den-puz");
   if (!box) return;
   box.innerHTML = "";
-  DEN_PUZ.filter(function (k) {
-    return ARC[k];
-  }).forEach(function (k, i) {
-    var _denStatus = denStatus(k),
-      _denStatus2 = _slicedToArray(_denStatus, 3),
-      st = _denStatus2[0],
-      done = _denStatus2[1],
-      line = _denStatus2[2],
-      td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
-    var b = el("button", "gcard c-den" + i);
-    b.dataset.play = k;
-    var ic = el("span", "gicon den");
-    ic.appendChild(emo(ARC[k].icon, 36));
-    var tx = el("span", "gtext");
-    var nm = el("b", null, ARC[k].name),
-      fr = freshEl(k, "inline");
-    if (fr) nm.appendChild(fr);
-    tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
-      return ch.toUpperCase();
-    }), td && td[0] ? "\uD83D\uDC51 ".concat(td[0].name) : ""].filter(Boolean).join(" · ")));
-    b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st));
-    box.appendChild(b);
+  var ci = 0;
+  DEN_SECTIONS.forEach(function (sec) {
+    var keys = sec.keys.filter(function (k) {
+      return ARC[k];
+    });
+    if (!keys.length) return;
+    var h = el("div", "arc-sec arc-grp den-sec");
+    h.append(el("span", null, sec.icon), el("b", null, sec.name), el("small", null, sec.sub));
+    box.appendChild(h);
+    var rows = keys.map(function (k, i) {
+      return {
+        k: k,
+        i: i,
+        st: denStatus(k),
+        ci: ci++,
+        hot: freshTag(k) === "new" ? 1 : 0
+      };
+    }).sort(function (x, y) {
+      return y.hot - x.hot || x.i - y.i;
+    });
+    rows.filter(function (r) {
+      return !r.st[1];
+    }).concat(rows.filter(function (r) {
+      return r.st[1];
+    })).forEach(function (_ref) {
+      var k = _ref.k,
+        st = _ref.st,
+        ci = _ref.ci;
+      var _st = _slicedToArray(st, 3),
+        label = _st[0],
+        done = _st[1],
+        line = _st[2],
+        td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
+      var b = el("button", "gcard c-den" + ci % 7 + (done ? " gdone" : sec.compact ? " gcompact" : ""));
+      b.dataset.play = k;
+      var ic = el("span", "gicon den");
+      ic.appendChild(emo(ARC[k].icon, done || sec.compact ? 24 : 36));
+      var tx = el("span", "gtext");
+      var nm = el("b", null, ARC[k].name),
+        fr = freshEl(k, "inline");
+      if (fr && !done) nm.appendChild(fr);
+      tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
+        return ch.toUpperCase();
+      }), !done && td && td[0] ? "\uD83D\uDC51 ".concat(td[0].name) : ""].filter(Boolean).join(" · ")));
+      b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), done ? "✓" : label));
+      box.appendChild(b);
+    });
   });
 }
 function puzzleResults(game, info) {
