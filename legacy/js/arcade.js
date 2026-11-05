@@ -974,7 +974,7 @@ function denStatus(k) {
   }
   if (k === "guess") {
     var _r3 = denRec(k);
-    return _r3 && _r3.done ? ["Done", true, _r3.score ? "".concat(_r3.won ? "Got it" : "Missed", " \xB7 ").concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.guesses && _r3.guesses.length ? ["Continue", false, "".concat(_r3.guesses.length, " of 8 guesses")] : ["Play", false, null];
+    return _r3 && _r3.done ? ["Done", true, _r3.score ? "".concat(_r3.won ? "Got it" : "Missed", " \xB7 ").concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.guesses && _r3.guesses.length ? ["Continue", false, "".concat(_r3.guesses.length, " of 15 guesses")] : ["Play", false, null];
   }
   if (k === "links") {
     var _r4 = denRec(k);
@@ -2724,7 +2724,7 @@ defGameMeta([{
   "name": "Dawg Guess",
   "icon": "🔍",
   "blurb": "Daily: guess today's pick. Hot or cold?",
-  "how": "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. You get two clues. 1) Where it falls in the alphabet: your guesses are listed A to Z, and the \"?\" row shows where the answer fits between them (a leading \"The\" is ignored). 2) How similar it is: the number on the right ranks your guess against everything in the list, so #1 is the answer, #2 is the most similar thing, and #80 is way off. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. It has nothing to do with the alphabet, so a guess right next to the answer alphabetically can still be cold. 8 guesses, one game a day. Score: 1000 for getting it in one, 100 less for each extra guess. Miss it and you get up to 200 for how close you got.",
+  "how": "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess gets a number: how similar it is to the answer, ranked against everything in the list. #1 is the answer, #2 is the most similar thing, and something like #80 is way off. Lower is warmer. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your latest guess shows on top, and all your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
   "cat": "den",
   "max": 1000,
   "puzzle": true

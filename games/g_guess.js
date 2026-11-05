@@ -1,7 +1,7 @@
 // ---------- Dawg Guess (The Den, daily puzzle) ----------
-// Guess today's hidden pick from a category (TV Shows, Movies, Animals, Pro Teams). Each guess shows an arrow for which way
-// the answer sits alphabetically, and a closeness rank: 1 is the answer, 2 is the most similar thing, and so on.
-// Similarity comes from the tags below (genre, decade, network, habitat, a team's city...). 8 guesses, one per day.
+// Contexto-style: guess today's hidden pick from a category (TV Shows, Movies, Animals, Pro Teams). Each guess shows a
+// similarity rank: #1 is the answer, #2 is the most similar thing, and so on.
+// Similarity comes from the tags below (genre, decade, network, habitat, a team's city...). 15 guesses, one per day.
 (function () {
   // TV: name|start year|genre|network|kind (b broadcast, c cable, s streaming, k kids, p PBS/public)
   const TV = `Friends|1994|sitcom|NBC|b;Seinfeld|1989|sitcom|NBC|b;The Office|2005|sitcom|NBC|b;Parks and Recreation|2009|sitcom|NBC|b;Cheers|1982|sitcom|NBC|b;Frasier|1993|sitcom|NBC|b;Full House|1987|sitcom|ABC|b;Family Matters|1989|sitcom|ABC|b;Home Improvement|1991|sitcom|ABC|b;Boy Meets World|1993|sitcom|ABC|b;Saved by the Bell|1989|sitcom|NBC|b;The Fresh Prince of Bel-Air|1990|sitcom|NBC|b;Everybody Loves Raymond|1996|sitcom|CBS|b;The King of Queens|1998|sitcom|CBS|b;Two and a Half Men|2003|sitcom|CBS|b;How I Met Your Mother|2005|sitcom|CBS|b;The Big Bang Theory|2007|sitcom|CBS|b;Modern Family|2009|sitcom|ABC|b;Arrested Development|2003|sitcom|Fox|b;Malcolm in the Middle|2000|sitcom|Fox|b;That '70s Show|1998|sitcom|Fox|b;Scrubs|2001|sitcom|NBC|b;30 Rock|2006|sitcom|NBC|b;Brooklyn Nine-Nine|2013|sitcom|Fox|b;The Wonder Years|1988|sitcom|ABC|b;Growing Pains|1985|sitcom|ABC|b;Step by Step|1991|sitcom|ABC|b;Happy Days|1974|sitcom|ABC|b;M*A*S*H|1972|sitcom|CBS|b;Ted Lasso|2020|sitcom|Apple TV+|s;Curb Your Enthusiasm|2000|sitcom|HBO|c;It's Always Sunny in Philadelphia|2005|sitcom|FX|c;Abbott Elementary|2021|sitcom|ABC|b;New Girl|2011|sitcom|Fox|b;The Middle|2009|sitcom|ABC|b;Last Man Standing|2011|sitcom|ABC|b;` +
@@ -29,7 +29,7 @@
     { name: "Animals", items: parse(ANI), sim: (a, b) => (a[1] === b[1] ? 4 : 0) + (a[2] === b[2] ? 4 : 0) + (a[4] === b[4] ? 1.5 : 0) + 2 * Math.max(0, 1 - Math.abs(a[3] - b[3]) / 3) },
     { name: "Pro Teams", items: parse(TEAMS), sim: (a, b) => (a[1] === b[1] ? 3 : 0) + 6 * Math.max(0, 1 - km(a, b) / 2500) }
   ];
-  const MAXG = 8;
+  const MAXG = 15;
   const dayN = () => { const [y, m, d] = KEY.split("-").map(Number); return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2026, 10, 4)) / 864e5); };
   // Category rotates daily; within a category the answers follow a fixed shuffled order so nothing repeats for a long time.
   const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -48,13 +48,13 @@
   const rk = () => "bdd:den:guess:" + KEY + ":" + (me ? me.id : "");
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   // Win: 1000 on the first guess, down 100 a guess (300 on the 8th). Miss: up to 200 for how close you got.
-  const scoreOf = s => s.won ? 1000 - 100 * (s.guesses.length - 1) : Math.round(200 * Math.max(0, 1 - (Math.min(...s.guesses.map(g => s.R[g])) - 2) / 40));
+  const scoreOf = s => s.won ? 1000 - 50 * (s.guesses.length - 1) : Math.round(200 * Math.max(0, 1 - (Math.min(...s.guesses.map(g => s.R[g])) - 2) / 40));
   const heat = (n, tot) => n === 1 ? "#6aaa64" : n <= Math.max(5, tot * 0.05) ? "#f5793a" : n <= tot * 0.2 ? "#e6b31e" : n <= tot * 0.5 ? "#7fa7d9" : "#9aa0a6";
   const KB = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM<"];
   defGame({
     key: "guess", name: "Dawg Guess", icon: "🔍", max: 1000, cat: "den", puzzle: true,
     blurb: "Daily: guess today's pick. Hot or cold?",
-    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. You get two clues. 1) Where it falls in the alphabet: your guesses are listed A to Z, and the \"?\" row shows where the answer fits between them (a leading \"The\" is ignored). 2) How similar it is: the number on the right ranks your guess against everything in the list, so #1 is the answer, #2 is the most similar thing, and #80 is way off. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. It has nothing to do with the alphabet, so a guess right next to the answer alphabetically can still be cold. 8 guesses, one game a day. Score: 1000 for getting it in one, 100 less for each extra guess. Miss it and you get up to 200 for how close you got.",
+    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess gets a number: how similar it is to the answer, ranked against everything in the list. #1 is the answer, #2 is the most similar thing, and something like #80 is way off. Lower is warmer. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your latest guess shows on top, and all your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset(G) {
       const t = today(), s = G.s = { cat: t.cat, ans: t.ans, R: ranks(t.cat, t.ans), typed: "", msg: "", msgT: 0, btns: [], postT: 0, scroll: 0 };
       const r = store.get(rk());
@@ -103,29 +103,27 @@
       c.font = `500 14px ${G.UI}`; c.fillStyle = dk ? "#aaa" : "#555";
       c.fillText(s.done ? (s.won ? `Solved in ${s.guesses.length}` : `The answer: ${s.ans}`) : `Guesses: ${s.guesses.length}/${MAXG} · ${tot} possible`, W / 2, 50);
       const kbH = s.done ? 0 : Math.min(156, H * 0.24), sugH = s.done ? 0 : 4 * 38 + 46;
-      // rows: guesses in alphabetical order plus a "?" row where the answer sits
-      const rows = s.guesses.slice().sort(cmpName);
-      if (!s.won) { let at = rows.findIndex(g => cmpName(s.ans, g) < 0); if (at < 0) at = rows.length; rows.splice(at, 0, null); }
-      const top = 66, avail = H - kbH - sugH - top - 8, rh = Math.max(26, Math.min(40, avail / Math.max(rows.length, 1) - 4));
-      c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
-      c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left"; c.fillText("Your guesses, A to Z", 18, top + 11); c.textAlign = "right"; c.fillText("How similar (#1 = it)", W - 18, top + 11);
+      // Contexto-style: your latest guess pinned on top, then every guess sorted closest first (as many as fit).
+      const top = 66, avail = H - kbH - sugH - top - 30, rh = 34, fit = Math.max(2, Math.floor(avail / (rh + 4)));
       const last = s.guesses[s.guesses.length - 1];
-      rows.forEach((g, i) => {
-        const y = top + 26 + i * (rh + 4), bw = 92;
-        c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = dk ? "#3a3a3c" : "#ddd"; c.lineWidth = 1; rr(c, 12, y, W - 24, rh, 6); c.fill(); c.stroke();
-        if (g === null) {
-          c.fillStyle = dk ? "#3a3a3c" : "#c8c8c8"; rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
-          c.fillStyle = "#fff"; c.font = `800 ${rh * 0.5}px ${G.UI}`; c.textAlign = "center"; c.fillText("?", W - 12 - bw / 2, y + rh / 2 + 1);
-          c.fillStyle = dk ? "#9aa0a6" : "#777"; c.font = `italic 600 ${Math.min(15, rh * 0.42)}px ${G.UI}`; c.textAlign = "left"; c.fillText("The answer fits here, A to Z", 20, y + rh / 2 + 1);
-          return;
-        }
-        const n = s.R[g], hit = g === s.ans;
-        c.fillStyle = ink; c.textAlign = "left"; let sz = Math.min(17, rh * 0.48); c.font = `${g === last ? 800 : 600} ${sz}px ${G.UI}`;
-        while (sz > 10 && c.measureText(g).width > W - 48 - bw) { sz--; c.font = `${g === last ? 800 : 600} ${sz}px ${G.UI}`; }
+      const sorted = s.guesses.slice().sort((a, b) => s.R[a] - s.R[b]);
+      const rows = last && !s.done ? [last, "|"].concat(sorted.slice(0, fit - 2)) : sorted.slice(0, fit);
+      c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
+      c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left";
+      c.fillText(s.guesses.length ? "Your guesses, closest first" : "Lower number = closer. #1 is the answer.", 18, top + 11);
+      if (s.guesses.length) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
+      let y = top + 26;
+      rows.forEach(g => {
+        if (g === "|") { c.fillStyle = dk ? "#3a3a3c" : "#ddd"; c.fillRect(24, y + 2, W - 48, 1); y += 8; return; }
+        const bw = 92, n = s.R[g], hit = g === s.ans, isLast = g === last && y === top + 26 && !s.done;
+        c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = isLast ? ink : (dk ? "#3a3a3c" : "#ddd"); c.lineWidth = isLast ? 2 : 1; rr(c, 12, y, W - 24, rh, 6); c.fill(); c.stroke();
+        c.fillStyle = ink; c.textAlign = "left"; let sz = 16; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`;
+        while (sz > 10 && c.measureText(g).width > W - 48 - bw) { sz--; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`; }
         c.fillText(g, 20, y + rh / 2 + 1);
         c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
-        c.fillStyle = "#fff"; c.font = `800 ${Math.min(18, rh * 0.5)}px ${G.UI}`; c.textAlign = "center";
+        c.fillStyle = "#fff"; c.font = `800 17px ${G.UI}`; c.textAlign = "center";
         c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
+        y += rh + 4;
       });
       if (!s.done) {
         // search box + suggestions
