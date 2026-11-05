@@ -117,8 +117,10 @@ const freshState = () => ({
   five: { guesses: [] },
   groups: { order: shuffle(PUZ.flatMap(g => g[1]), rng(DAY * 7919 + 13)), solved: [], history: [], tried: [], mistakes: 0 },
   mini: { fill: Array(25).fill(""), el: 0, started: false, done: false, checked: false, wrong: [] },
-  strands: { found: [], hints: [], bonus: [], el: 0, started: false, done: false }
+  strands: { g: SP.g, found: [], hints: [], bonus: [], el: 0, started: false, done: false }
 });
+// Fill in missing games, and start Strands over if its saved progress is from a different board layout.
+function fixGames(st) { const f = freshState(); GAMES.forEach(g => { if (!st[g] || (g === "strands" && st[g].g !== SP.g)) st[g] = f[g]; }); return st; }
 // Every change goes to the server right away (one request at a time, latest state wins), so
 // leaving the app or switching phones never loses progress.
 let syncBusy = false, syncDirty = false, syncRetry = null;
@@ -141,6 +143,7 @@ function gameRank(g, x) {
   if (!x) return -1;
   if (g === "five") return ((x.fin || (x.guesses || []).includes(ANSWER) || (x.guesses || []).length >= 6) ? 2000 : x.locked ? 1000 : 0) + (x.guesses || []).length; // a real finished board beats a colors-only one
   if (g === "groups") return (((x.solved || []).length === 4 || x.mistakes >= 4) ? 1000 : 0) + (x.history || []).length;
+  if (g === "strands" && x.g !== SP.g) return -1; // progress on an old layout of this board
   const done = x.done ? 1e9 : 0, el = Number(x.el) || 0;
   if (g === "mini") return done + (x.fill || []).filter(Boolean).length * 1e5 + (x.started ? 1 : 0) + el / 1e4;
   return done + ((x.found || []).length + (x.hints || []).length) * 1e5 + (x.started ? 1 : 0) + el / 1e4;

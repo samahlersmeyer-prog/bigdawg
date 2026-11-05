@@ -8,9 +8,13 @@
 - sw.js: cache name V = hash of everything served, and SHELL precaches the stamped app files
 Safe to run any number of times; it only changes what actually changed.
 """
-import hashlib, pathlib, re
+import hashlib, pathlib, re, shutil, subprocess, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# Refuse to ship a broken Strands board (overlapping or crossing words, gaps). See tools/strands.mjs.
+if shutil.which("node") and subprocess.run(["node", "tools/strands.mjs", "check"], cwd=ROOT).returncode:
+    sys.exit("stamp: fix the Strands puzzles above first (node tools/strands.mjs fix)")
 h = lambda b: hashlib.sha1(b).hexdigest()[:10]
 
 index = ROOT / "index.html"

@@ -75,7 +75,7 @@ async function loadState() {
   if (me) { try { const r = await API("loadProgress", me.id, KEY); if (r) remote = JSON.parse(r); } catch (e) {} }
   const st = mergeState(local, remote) || freshState();
   const fresh = freshState();
-  GAMES.forEach(g => { if (!st[g]) st[g] = fresh[g]; });
+  fixGames(st);
   return st;
 }
 let started = false;
@@ -85,7 +85,7 @@ async function afterIdentity() {
   if (me) {
     primeBoot();
     const ok = local && local.v === 2 && local.pid === PID;
-    const st = ok ? local : freshState(), fresh = freshState(); GAMES.forEach(g => { if (!st[g]) st[g] = fresh[g]; });
+    const st = fixGames(ok ? local : freshState());
     S = st; store.set(skey(), S);
     const cb = store.get("bdd:board"); if (cb && cb.k === KEY && cb.c === crewSel && !board) board = cb.b;
     const cs = store.get("bdd:stats"); if (cs && cs.k === KEY && cs.c === crewSel && !stats) stats = cs.s;
@@ -98,7 +98,7 @@ async function afterIdentity() {
       const rem = JSON.parse(r), merged = mergeState(S, rem); // merge with whatever you've done since opening
       if (merged && merged.five && merged.five.guesses && merged.five.guesses.length && rem && rem.five && !rem.five.fin && fiveDoneByGuesses()) save(); // put this phone's real board back on the server
       if (!merged || JSON.stringify(merged) === JSON.stringify(S)) return;
-      GAMES.forEach(g => { if (!merged[g]) merged[g] = S[g]; });
+      GAMES.forEach(g => { if (!merged[g]) merged[g] = S[g]; }); fixGames(merged);
       S = merged; store.set(skey(), S); save();
       renderBoard(); colorKeyboard(); renderGroups(); show(active);
     }).catch(() => {});

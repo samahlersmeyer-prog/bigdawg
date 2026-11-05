@@ -395,6 +395,9 @@ function mergeProgress_(oldJson, newJson) {
   if (a.pid !== b.pid) return newJson; // different puzzle set: the new one wins
   const out = { v: 2, pid: b.pid };
   ['five', 'groups', 'mini', 'strands'].forEach(g => { out[g] = gameRank_(g, b[g]) >= gameRank_(g, a[g]) ? b[g] : a[g]; });
+  // Strands board re-laid out mid-day: progress on the old layout is dropped, the new board wins.
+  const ga = a.strands && a.strands.g, gb = b.strands && b.strands.g;
+  if (ga !== gb) out.strands = gb ? b.strands : ga ? a.strands : out.strands;
   return JSON.stringify(out);
 }
 

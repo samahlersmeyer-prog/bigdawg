@@ -187,9 +187,7 @@ function _loadState() {
         case 4:
           st = mergeState(local, remote) || freshState();
           fresh = freshState();
-          GAMES.forEach(function (g) {
-            if (!st[g]) st[g] = fresh[g];
-          });
+          fixGames(st);
           return _context.a(2, st);
       }
     }, _callee, null, [[1, 3]]);
@@ -202,7 +200,7 @@ function afterIdentity() {
 }
 function _afterIdentity() {
   _afterIdentity = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var local, ok, _st, fresh, cb, cs, st;
+    var local, ok, _st, cb, cs, st;
     return _regenerator().w(function (_context2) {
       while (1) switch (_context2.n) {
         case 0:
@@ -213,10 +211,7 @@ function _afterIdentity() {
           }
           primeBoot();
           ok = local && local.v === 2 && local.pid === PID;
-          _st = ok ? local : freshState(), fresh = freshState();
-          GAMES.forEach(function (g) {
-            if (!_st[g]) _st[g] = fresh[g];
-          });
+          _st = fixGames(ok ? local : freshState());
           S = _st;
           store.set(skey(), S);
           cb = store.get("bdd:board");
@@ -242,6 +237,7 @@ function _afterIdentity() {
             GAMES.forEach(function (g) {
               if (!merged[g]) merged[g] = S[g];
             });
+            fixGames(merged);
             S = merged;
             store.set(skey(), S);
             save();

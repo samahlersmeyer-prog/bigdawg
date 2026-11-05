@@ -312,6 +312,7 @@ var freshState = function freshState() {
       wrong: []
     },
     strands: {
+      g: SP.g,
       found: [],
       hints: [],
       bonus: [],
@@ -321,6 +322,13 @@ var freshState = function freshState() {
     }
   };
 };
+function fixGames(st) {
+  var f = freshState();
+  GAMES.forEach(function (g) {
+    if (!st[g] || g === "strands" && st[g].g !== SP.g) st[g] = f[g];
+  });
+  return st;
+}
 var syncBusy = false,
   syncDirty = false,
   syncRetry = null;
@@ -350,6 +358,7 @@ function gameRank(g, x) {
   if (!x) return -1;
   if (g === "five") return (x.fin || (x.guesses || []).includes(ANSWER) || (x.guesses || []).length >= 6 ? 2000 : x.locked ? 1000 : 0) + (x.guesses || []).length;
   if (g === "groups") return ((x.solved || []).length === 4 || x.mistakes >= 4 ? 1000 : 0) + (x.history || []).length;
+  if (g === "strands" && x.g !== SP.g) return -1;
   var done = x.done ? 1e9 : 0,
     el = Number(x.el) || 0;
   if (g === "mini") return done + (x.fill || []).filter(Boolean).length * 1e5 + (x.started ? 1 : 0) + el / 1e4;
