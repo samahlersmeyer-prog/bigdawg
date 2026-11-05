@@ -140,7 +140,7 @@
         if (s.typed && !this.matches(s).length) { c.fillStyle = dk ? "#aaa" : "#777"; c.font = `500 14px ${G.UI}`; c.textAlign = "left"; c.fillText("No matches in the list", 22, by + 60); }
         const ky = H - kbH, kh = (kbH - 12) / 3 - 6, kw = (W - 12) / 10 - 5;
         KB.forEach((row, r) => {
-          const keys = row.split("").concat(r === 2 ? [" "] : []), wide = k => k === "<" ? kw * 1.3 : k === " " ? kw * 1.6 : kw;
+          const keys = (r === 2 ? [" "] : []).concat(row.split("")), wide = k => k === "<" ? kw * 1.3 : k === " " ? kw * 1.6 : kw;
           const tw = keys.reduce((a, k) => a + wide(k) + 5, -5); let x = (W - tw) / 2;
           keys.forEach(k => {
             const ww = wide(k), yy = ky + 4 + r * (kh + 6);

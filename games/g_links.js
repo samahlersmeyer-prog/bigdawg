@@ -29,7 +29,7 @@
   const rk = () => "bdd:den:links:" + KEY + ":" + (me ? me.id : "");
   const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
-  const KB = ["QWERTYUIOP", "ASDFGHJKL", "<ZXCVBNM>"];
+  const KB = ["QWERTYUIOP", "ASDFGHJKL", ">ZXCVBNM<"];
   const HID = [1, 2, 3, 4, 5];
   // 900 for finishing, minus 40 per extra letter shown (floor 100), plus up to 100 for going quick.
   const extra = s => HID.reduce((a, i) => a + s.rev[i] - 1, 0);
