@@ -54,7 +54,7 @@
   defGame({
     key: "guess", name: "Dawg Guess", icon: "🔍", max: 1000, cat: "den", puzzle: true,
     blurb: "Daily: guess today's pick. Hot or cold?",
-    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess shows two clues: the arrow says whether the answer comes before (▲) or after (▼) it alphabetically (a leading \"The\" is ignored), and the number is how close it is: 1 is the answer, 2 is the most similar thing in the list, and so on. Closeness comes from things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your guesses stay in alphabetical order with a ? where the answer fits. 8 guesses, one game a day. Score: 1000 for getting it in one, 100 less for each extra guess. Miss it and you get up to 200 for how close you got.",
+    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. You get two clues. 1) Where it falls in the alphabet: your guesses are listed A to Z, and the \"?\" row shows where the answer fits between them (a leading \"The\" is ignored). 2) How similar it is: the number on the right ranks your guess against everything in the list, so #1 is the answer, #2 is the most similar thing, and #80 is way off. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. It has nothing to do with the alphabet, so a guess right next to the answer alphabetically can still be cold. 8 guesses, one game a day. Score: 1000 for getting it in one, 100 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset(G) {
       const t = today(), s = G.s = { cat: t.cat, ans: t.ans, R: ranks(t.cat, t.ans), typed: "", msg: "", msgT: 0, btns: [], postT: 0, scroll: 0 };
       const r = store.get(rk());
@@ -108,7 +108,7 @@
       if (!s.won) { let at = rows.findIndex(g => cmpName(s.ans, g) < 0); if (at < 0) at = rows.length; rows.splice(at, 0, null); }
       const top = 66, avail = H - kbH - sugH - top - 8, rh = Math.max(26, Math.min(40, avail / Math.max(rows.length, 1) - 4));
       c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
-      c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left"; c.fillText("Guesses (A to Z)", 18, top + 11); c.textAlign = "right"; c.fillText("Closeness", W - 18, top + 11);
+      c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left"; c.fillText("Your guesses, A to Z", 18, top + 11); c.textAlign = "right"; c.fillText("How similar (#1 = it)", W - 18, top + 11);
       const last = s.guesses[s.guesses.length - 1];
       rows.forEach((g, i) => {
         const y = top + 26 + i * (rh + 4), bw = 92;
@@ -116,6 +116,7 @@
         if (g === null) {
           c.fillStyle = dk ? "#3a3a3c" : "#c8c8c8"; rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
           c.fillStyle = "#fff"; c.font = `800 ${rh * 0.5}px ${G.UI}`; c.textAlign = "center"; c.fillText("?", W - 12 - bw / 2, y + rh / 2 + 1);
+          c.fillStyle = dk ? "#9aa0a6" : "#777"; c.font = `italic 600 ${Math.min(15, rh * 0.42)}px ${G.UI}`; c.textAlign = "left"; c.fillText("The answer fits here, A to Z", 20, y + rh / 2 + 1);
           return;
         }
         const n = s.R[g], hit = g === s.ans;
@@ -124,7 +125,7 @@
         c.fillText(g, 20, y + rh / 2 + 1);
         c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
         c.fillStyle = "#fff"; c.font = `800 ${Math.min(18, rh * 0.5)}px ${G.UI}`; c.textAlign = "center";
-        c.fillText(hit ? "✓" : (cmpName(s.ans, g) < 0 ? "▲ " : "▼ ") + n, W - 12 - bw / 2, y + rh / 2 + 1);
+        c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
       });
       if (!s.done) {
         // search box + suggestions
