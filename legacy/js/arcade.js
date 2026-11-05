@@ -852,6 +852,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  midi: ["new", "2026-11-04"],
   links: ["new", "2026-11-04"],
   dlords: ["new", "2026-11-02"],
   dawgball: ["upd", "2026-11-02"]
@@ -938,7 +939,7 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
   });
 }
-var DEN_PUZ = ["links", "sgroups", "hive", "pips", "sudoku"];
+var DEN_PUZ = ["midi", "links", "sgroups", "hive", "pips", "sudoku"];
 function denRec(k, d) {
   return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null;
 }
@@ -947,13 +948,17 @@ function denStatus(k) {
     var r = denRec(k);
     return r && r.done ? ["Done", true, r.score ? "Solved \xB7 ".concat(r.score, " pts") : "Done for today"] : r && r.order ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
-  if (k === "links") {
+  if (k === "midi") {
     var _r = denRec(k);
-    return _r && _r.done ? ["Done", true, _r.score ? "Linked \xB7 ".concat(_r.score, " pts") : "Done for today"] : _r && _r.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
+    return _r && _r.done ? ["Done", true, _r.score ? "Solved \xB7 ".concat(_r.score, " pts") : "Done for today"] : _r && _r.fill && _r.fill.some(Boolean) ? ["Continue", false, "In progress"] : ["Play", false, null];
+  }
+  if (k === "links") {
+    var _r2 = denRec(k);
+    return _r2 && _r2.done ? ["Done", true, _r2.score ? "Linked \xB7 ".concat(_r2.score, " pts") : "Done for today"] : _r2 && _r2.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
   if (k === "hive") {
-    var _r2 = denRec(k);
-    return _r2 && _r2.found && _r2.found.length ? ["Continue", false, "".concat(_r2.score, " pts \xB7 ").concat(_r2.found.length, " words")] : ["Play", false, null];
+    var _r3 = denRec(k);
+    return _r3 && _r3.found && _r3.found.length ? ["Continue", false, "".concat(_r3.score, " pts \xB7 ").concat(_r3.found.length, " words")] : ["Play", false, null];
   }
   var n = [0, 1, 2].filter(function (d) {
     var r = denRec(k, d);
@@ -2741,6 +2746,16 @@ defGameMeta([{
   "how": "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
   "cat": "den",
   "max": 1500,
+  "puzzle": true
+}, {
+  "file": "g_midi.js",
+  "key": "midi",
+  "name": "The Midi",
+  "icon": "📰",
+  "blurb": "Daily: a 7×7 crossword. Bigger than the Mini.",
+  "how": "A 7×7 crossword, a step up from the Mini. Tap a square to pick it; tap it again to switch between Across and Down. The clue shows above the keyboard; tap the arrows on either side to jump between clues. Type to fill in. Check marks any wrong squares red, but it costs 150 points, so only if you're stuck. One puzzle a day, the same for everyone. Score: 700 for solving plus up to 300 for speed (it fades over 15 minutes).",
+  "cat": "den",
+  "max": 1000,
   "puzzle": true
 }, {
   "file": "g_mjrush.js",
