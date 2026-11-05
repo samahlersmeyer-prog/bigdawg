@@ -65,9 +65,9 @@ input { -webkit-user-select: text; user-select: text; }
 .cards { display: flex; flex-direction: column; gap: 9px; }
 .gcard { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 14px; padding: 11px 16px; border-radius: 14px; text-align: left; color: var(--ink); }
 .gcard:active { transform: scale(0.985); }
-.c-den0 { background: #f3e1c7; } .c-den1 { background: #fbe8a6; } .c-den2 { background: #f6d6dc; } .c-den3 { background: #d9e6f5; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .c-den0 { background: #4a3a26; } :root:not([data-theme="light"]) .c-den1 { background: #4a4220; } :root:not([data-theme="light"]) .c-den2 { background: #4a2b33; } :root:not([data-theme="light"]) .c-den3 { background: #24364d; } }
-:root[data-theme="dark"] .c-den0 { background: #4a3a26; } :root[data-theme="dark"] .c-den1 { background: #4a4220; } :root[data-theme="dark"] .c-den2 { background: #4a2b33; } :root[data-theme="dark"] .c-den3 { background: #24364d; }
+.c-den0 { background: #f3e1c7; } .c-den1 { background: #fbe8a6; } .c-den2 { background: #f6d6dc; } .c-den3 { background: #d9e6f5; } .c-den4 { background: #dcefd8; } .c-den5 { background: #e6dcf5; } .c-den6 { background: #fde0c8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .c-den0 { background: #4a3a26; } :root:not([data-theme="light"]) .c-den1 { background: #4a4220; } :root:not([data-theme="light"]) .c-den2 { background: #4a2b33; } :root:not([data-theme="light"]) .c-den3 { background: #24364d; } :root:not([data-theme="light"]) .c-den4 { background: #26402a; } :root:not([data-theme="light"]) .c-den5 { background: #352b4a; } :root:not([data-theme="light"]) .c-den6 { background: #4a3020; } }
+:root[data-theme="dark"] .c-den0 { background: #4a3a26; } :root[data-theme="dark"] .c-den1 { background: #4a4220; } :root[data-theme="dark"] .c-den2 { background: #4a2b33; } :root[data-theme="dark"] .c-den3 { background: #24364d; } :root[data-theme="dark"] .c-den4 { background: #26402a; } :root[data-theme="dark"] .c-den5 { background: #352b4a; } :root[data-theme="dark"] .c-den6 { background: #4a3020; }
 .gcard .gicon.den { background: var(--bg); border-radius: 12px; display: grid; place-items: center; width: 52px; height: 52px; }
 .pboard { width: 100%; text-align: left; }
 .pboard li.me .nm { text-decoration: underline; }

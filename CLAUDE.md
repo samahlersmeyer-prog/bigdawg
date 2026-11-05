@@ -31,7 +31,7 @@ The `js/` files are classic scripts sharing one global scope, loaded in order da
 - The Apps Script `doGet` serves an old copy of the page from Drive ("Big Dawg Daily page (index.html)"). Everyone uses the GitHub Pages link; the split files won't work if `index.html` is re-uploaded there.
 
 ## Puzzle runway (as of Oct 31, 2026)
-Banks repeat after: Minis Dec 4, Strands Dec 12, Groups Dec 17, Five 2028. Top up Minis/Strands/Groups before late November.
+Banks repeat after: Minis Dec 4, Strands Dec 12, Groups Dec 17, Five 2028. Top up Minis/Strands/Groups before late November. Dawg Links (60 chains in `games/g_links.js`, day 1 = Nov 4) repeats Jan 3, 2027.
 
 ## To-do
 - (add items here)

@@ -852,6 +852,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  links: ["new", "2026-11-04"],
   dlords: ["new", "2026-11-02"],
   dawgball: ["upd", "2026-11-02"]
 };
@@ -937,7 +938,7 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
   });
 }
-var DEN_PUZ = ["sgroups", "hive", "pips", "sudoku"];
+var DEN_PUZ = ["links", "sgroups", "hive", "pips", "sudoku"];
 function denRec(k, d) {
   return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null;
 }
@@ -946,9 +947,13 @@ function denStatus(k) {
     var r = denRec(k);
     return r && r.done ? ["Done", true, r.score ? "Solved \xB7 ".concat(r.score, " pts") : "Done for today"] : r && r.order ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
-  if (k === "hive") {
+  if (k === "links") {
     var _r = denRec(k);
-    return _r && _r.found && _r.found.length ? ["Continue", false, "".concat(_r.score, " pts \xB7 ").concat(_r.found.length, " words")] : ["Play", false, null];
+    return _r && _r.done ? ["Done", true, _r.score ? "Linked \xB7 ".concat(_r.score, " pts") : "Done for today"] : _r && _r.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
+  }
+  if (k === "hive") {
+    var _r2 = denRec(k);
+    return _r2 && _r2.found && _r2.found.length ? ["Continue", false, "".concat(_r2.score, " pts \xB7 ").concat(_r2.found.length, " words")] : ["Play", false, null];
   }
   var n = [0, 1, 2].filter(function (d) {
     var r = denRec(k, d);
@@ -2714,6 +2719,16 @@ defGameMeta([{
   "icon": "🦮",
   "blurb": "Daily: one path through every square.",
   "how": "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
+  "cat": "den",
+  "max": 1000,
+  "puzzle": true
+}, {
+  "file": "g_links.js",
+  "key": "links",
+  "name": "Dawg Links",
+  "icon": "🔗",
+  "blurb": "Daily: link the chain, one compound at a time.",
+  "how": "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: 900 for finishing, minus 40 for every extra letter shown, plus up to 100 for going quick. No clock on screen.",
   "cat": "den",
   "max": 1000,
   "puzzle": true
