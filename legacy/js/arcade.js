@@ -852,6 +852,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  waffle: ["new", "2026-11-04"],
   guess: ["new", "2026-11-04"],
   midi: ["new", "2026-11-04"],
   links: ["new", "2026-11-04"],
@@ -940,7 +941,7 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
   });
 }
-var DEN_PUZ = ["midi", "links", "guess", "sgroups", "hive", "pips", "sudoku"];
+var DEN_PUZ = ["midi", "links", "waffle", "guess", "sgroups", "hive", "pips", "sudoku"];
 function denRec(k, d) {
   return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null;
 }
@@ -953,17 +954,21 @@ function denStatus(k) {
     var _r = denRec(k);
     return _r && _r.done ? ["Done", true, _r.score ? "Solved \xB7 ".concat(_r.score, " pts") : "Done for today"] : _r && _r.fill && _r.fill.some(Boolean) ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
-  if (k === "guess") {
+  if (k === "waffle") {
     var _r2 = denRec(k);
-    return _r2 && _r2.done ? ["Done", true, _r2.score ? "".concat(_r2.won ? "Got it" : "Missed", " \xB7 ").concat(_r2.score, " pts") : "Done for today"] : _r2 && _r2.guesses && _r2.guesses.length ? ["Continue", false, "".concat(_r2.guesses.length, " of 8 guesses")] : ["Play", false, null];
+    return _r2 && _r2.done ? ["Done", true, _r2.score ? "".concat(_r2.won ? "Fixed" : "Out of swaps", " \xB7 ").concat(_r2.score, " pts") : "Done for today"] : _r2 && _r2.used ? ["Continue", false, "".concat(15 - _r2.used, " swaps left")] : ["Play", false, null];
+  }
+  if (k === "guess") {
+    var _r3 = denRec(k);
+    return _r3 && _r3.done ? ["Done", true, _r3.score ? "".concat(_r3.won ? "Got it" : "Missed", " \xB7 ").concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.guesses && _r3.guesses.length ? ["Continue", false, "".concat(_r3.guesses.length, " of 8 guesses")] : ["Play", false, null];
   }
   if (k === "links") {
-    var _r3 = denRec(k);
-    return _r3 && _r3.done ? ["Done", true, _r3.score ? "Linked \xB7 ".concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
+    var _r4 = denRec(k);
+    return _r4 && _r4.done ? ["Done", true, _r4.score ? "Linked \xB7 ".concat(_r4.score, " pts") : "Done for today"] : _r4 && _r4.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
   if (k === "hive") {
-    var _r4 = denRec(k);
-    return _r4 && _r4.found && _r4.found.length ? ["Continue", false, "".concat(_r4.score, " pts \xB7 ").concat(_r4.found.length, " words")] : ["Play", false, null];
+    var _r5 = denRec(k);
+    return _r5 && _r5.found && _r5.found.length ? ["Continue", false, "".concat(_r5.score, " pts \xB7 ").concat(_r5.found.length, " words")] : ["Play", false, null];
   }
   var n = [0, 1, 2].filter(function (d) {
     var r = denRec(k, d);
@@ -2890,6 +2895,16 @@ defGameMeta([{
   "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Win: 200 + the tiles left in the pups' racks. Lose: 100 minus what's left in your rack.",
   "cat": "den",
   "max": 800
+}, {
+  "file": "g_waffle.js",
+  "key": "waffle",
+  "name": "Dawg Waffle",
+  "icon": "🧇",
+  "blurb": "Daily: swap letters to fix six words.",
+  "how": "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.",
+  "cat": "den",
+  "max": 1000,
+  "puzzle": true
 }, {
   "file": "g_seven.js",
   "key": "seven",
