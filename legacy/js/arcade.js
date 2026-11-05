@@ -851,6 +851,36 @@ var ARC_BLURB = {
   fetch: "Bounce the ball. Smash the treats."
 };
 var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+var FRESH = {
+  dlords: ["new", "2026-11-02"],
+  dawgball: ["upd", "2026-11-02"]
+};
+function freshTag(k) {
+  var f = FRESH[k];
+  if (!f) return null;
+  var age = (Date.now() - new Date(f[1] + "T00:00:00").getTime()) / 864e5;
+  return age >= 0 && age < 7 ? f[0] : null;
+}
+function freshEl(k, cls) {
+  var t = freshTag(k);
+  return t ? el("span", "fresh " + t + (cls ? " " + cls : ""), t === "new" ? "NEW" : "UPDATED") : null;
+}
+function markFreshHubs() {
+  ["arcade", "sports", "den"].forEach(function (cat) {
+    var b = document.querySelector('.hub-btn[data-go="' + cat + '"]');
+    if (!b) return;
+    var old = b.querySelector(".fresh");
+    if (old) old.remove();
+    var ks = Object.keys(ARC).filter(function (k) {
+      return arcCat(k) === cat && freshTag(k);
+    });
+    if (ks.length) b.appendChild(el("span", "fresh hub " + (ks.some(function (k) {
+      return freshTag(k) === "new";
+    }) ? "new" : "upd"), ks.some(function (k) {
+      return freshTag(k) === "new";
+    }) ? "NEW" : "UPDATED"));
+  });
+}
 var ARC_GROUPS = {
   arcade: [{
     icon: "🏃",
@@ -944,7 +974,10 @@ function renderDenPuz() {
     var ic = el("span", "gicon den");
     ic.appendChild(emo(ARC[k].icon, 36));
     var tx = el("span", "gtext");
-    tx.append(el("b", null, ARC[k].name), el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
+    var nm = el("b", null, ARC[k].name),
+      fr = freshEl(k, "inline");
+    if (fr) nm.appendChild(fr);
+    tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
       return ch.toUpperCase();
     }), td && td[0] ? "\uD83D\uDC51 ".concat(td[0].name) : ""].filter(Boolean).join(" · ")));
     b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st));
@@ -1073,6 +1106,8 @@ function renderArcHub(cat) {
       }).length,
       sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
     if (n) r.appendChild(el("span", "badge", "\uD83C\uDFAF".concat(n)));else if (sv) r.appendChild(el("span", "badge go", "▶"));
+    var fr = freshEl(k);
+    if (fr) r.appendChild(fr);
     return r;
   };
   if (recent.length >= 2 && cat !== "den") {
@@ -2955,5 +2990,6 @@ Object.values(GAMEDEFS).forEach(function (d) {
   ARC_BLURB[d.key] = d.blurb;
   if (aBest[d.key] == null) aBest[d.key] = 0;
 });
+markFreshHubs();
 renderArcSub();
 renderArcade();

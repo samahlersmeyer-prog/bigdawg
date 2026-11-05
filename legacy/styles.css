@@ -252,6 +252,12 @@ input { -webkit-user-select: text; user-select: text; }
 .hub-btn > :not([hidden]) ~ :not([hidden]) {
   margin-top: 4px;
 }
+.hub-btn { position: relative; }
+.fresh { font-size: 9.5px; font-weight: 800; letter-spacing: .04em; border-radius: 999px; padding: 2px 6px; line-height: 1.2; color: #fff; background: #ff5c8a; white-space: nowrap; }
+.fresh.upd { background: #2f80ed; }
+.arc-cell .fresh { position: absolute; top: 6px; left: 6px; }
+.fresh.inline { display: inline-block; vertical-align: middle; margin-left: 6px; font-family: system-ui, sans-serif; }
+.fresh.hub { position: absolute; top: -7px; right: -4px; border: 2px solid #121212; }
 .hub-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #ffd23f; }
 .hub-btn b { font-family: 'Press Start 2P', var(--title); font-size: 11px; color: #ffd23f; line-height: 1.4; text-align: center; }
 .hub-btn small { font-size: 11px; opacity: 0.85; text-align: center; line-height: 1.2; }

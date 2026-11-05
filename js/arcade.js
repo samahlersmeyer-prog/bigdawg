@@ -341,6 +341,19 @@ const ARC_BLURB = { zoomies: "Tap to fly. Dodge the bones.", snake: "Swipe to st
 const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip",
   "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 // Sections inside the Arcade and Sports hubs (max 3 each). Order inside a section follows ARC_ORDER.
+// NEW / UPDATED tags. When a game ships or gets a real upgrade, add a line: key: ["new" or "upd", "YYYY-MM-DD"].
+// The tag shows on its card (and a NEW/UPDATED flag on the home hub button) for 7 days, then drops off on its own.
+const FRESH = { dlords: ["new", "2026-11-02"], dawgball: ["upd", "2026-11-02"] };
+function freshTag(k) { const f = FRESH[k]; if (!f) return null; const age = (Date.now() - new Date(f[1] + "T00:00:00").getTime()) / 864e5; return age >= 0 && age < 7 ? f[0] : null; }
+function freshEl(k, cls) { const t = freshTag(k); return t ? el("span", "fresh " + t + (cls ? " " + cls : ""), t === "new" ? "NEW" : "UPDATED") : null; }
+function markFreshHubs() {
+  ["arcade", "sports", "den"].forEach(cat => {
+    const b = document.querySelector('.hub-btn[data-go="' + cat + '"]'); if (!b) return;
+    const old = b.querySelector(".fresh"); if (old) old.remove();
+    const ks = Object.keys(ARC).filter(k => arcCat(k) === cat && freshTag(k));
+    if (ks.length) b.appendChild(el("span", "fresh hub " + (ks.some(k => freshTag(k) === "new") ? "new" : "upd"), ks.some(k => freshTag(k) === "new") ? "NEW" : "UPDATED"));
+  });
+}
 const ARC_GROUPS = {
   arcade: [
     { icon: "🏃", name: "Run & Jump", sub: "Reflexes. Don't crash.", keys: ["dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"] },
@@ -377,7 +390,8 @@ function renderDenPuz() {
     const [st, done, line] = denStatus(k), td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
     const b = el("button", "gcard c-den" + i); b.dataset.play = k;
     const ic = el("span", "gicon den"); ic.appendChild(emo(ARC[k].icon, 36));
-    const tx = el("span", "gtext"); tx.append(el("b", null, ARC[k].name), el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, (m, ch) => ch.toUpperCase()), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
+    const tx = el("span", "gtext"); const nm = el("b", null, ARC[k].name), fr = freshEl(k, "inline"); if (fr) nm.appendChild(fr);
+    tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, (m, ch) => ch.toUpperCase()), td && td[0] ? `👑 ${td[0].name}` : ""].filter(Boolean).join(" · ")));
     b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), st)); box.appendChild(b);
   });
 }
@@ -437,6 +451,7 @@ function renderArcHub(cat) {
     const td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today; if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", `👑 ${td[0].name}`));
     const n = aDares.filter(d => d.game === k).length, sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
     if (n) r.appendChild(el("span", "badge", `🎯${n}`)); else if (sv) r.appendChild(el("span", "badge go", "▶"));
+    const fr = freshEl(k); if (fr) r.appendChild(fr);
     return r;
   };
   if (recent.length >= 2 && cat !== "den") { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); }
@@ -956,5 +971,6 @@ defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey"
 
 // Register the newer games with the shared arcade lists.
 Object.values(GAMEDEFS).forEach(d => { ARC[d.key] = { name: d.name, icon: d.icon, how: d.how, cat: d.cat || "arcade", puzzle: !!d.puzzle, blurb: d.blurb || "" }; ARC_BLURB[d.key] = d.blurb; if (aBest[d.key] == null) aBest[d.key] = 0; });
+markFreshHubs();
 renderArcSub(); renderArcade();
 
