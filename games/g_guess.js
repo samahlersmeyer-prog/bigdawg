@@ -102,41 +102,51 @@
       c.font = `800 26px ${G.TITLE}`; c.fillText(s.cat.name, W / 2, 26);
       c.font = `500 14px ${G.UI}`; c.fillStyle = dk ? "#aaa" : "#555";
       c.fillText(s.done ? (s.won ? `Solved in ${s.guesses.length}` : `The answer: ${s.ans}`) : `Guesses: ${s.guesses.length}/${MAXG} · ${tot} possible`, W / 2, 50);
-      const kbH = s.done ? 0 : Math.min(156, H * 0.24), sugH = s.done ? 0 : 4 * 38 + 46;
-      // Contexto-style: your latest guess pinned on top, then every guess sorted closest first (as many as fit).
-      const top = 66, avail = H - kbH - sugH - top - 30, rh = 34, fit = Math.max(2, Math.floor(avail / (rh + 4)));
-      const last = s.guesses[s.guesses.length - 1];
-      const sorted = s.guesses.slice().sort((a, b) => s.R[a] - s.R[b]);
-      const rows = last && !s.done ? [last, "|"].concat(sorted.slice(0, fit - 2)) : sorted.slice(0, fit);
+      const kbH = s.done ? 0 : Math.min(156, H * 0.24), by = H - kbH - 46;
+      // Contexto-style: every guess sorted closest first, latest one outlined. If they don't all fit, the latest is
+      // pinned on top and the farthest ones are trimmed with a "+N more" line.
+      const top = 66, listBot = s.done ? H - 90 : by - 8, n0 = s.guesses.length;
+      const rh = Math.max(26, Math.min(34, (listBot - top - 26) / Math.max(n0, 1) - 4)), fit = Math.max(1, Math.floor((listBot - top - 26) / (rh + 4)));
+      const last = s.guesses[n0 - 1];
+      let rows = s.guesses.slice().sort((a, b) => s.R[a] - s.R[b]), more = 0;
+      if (rows.length > fit) {
+        const idx = rows.indexOf(last);
+        rows = s.done || idx < fit - 1 ? rows.slice(0, fit - 1) : [last].concat(rows.slice(0, fit - 2));
+        more = n0 - rows.length;
+      }
       c.fillStyle = dk ? "#2a2a2c" : "#f1f1ee"; c.fillRect(12, top, W - 24, 22);
       c.fillStyle = dk ? "#ccc" : "#444"; c.font = `600 12px ${G.UI}`; c.textAlign = "left";
-      c.fillText(s.guesses.length ? "Your guesses, closest first" : "Lower number = closer. #1 is the answer.", 18, top + 11);
-      if (s.guesses.length) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
+      c.fillText(n0 ? "Your guesses, closest first" : "Lower number = closer. #1 is the answer.", 18, top + 11);
+      if (n0) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
       let y = top + 26;
       rows.forEach(g => {
-        if (g === "|") { c.fillStyle = dk ? "#3a3a3c" : "#ddd"; c.fillRect(24, y + 2, W - 48, 1); y += 8; return; }
-        const bw = 92, n = s.R[g], hit = g === s.ans, isLast = g === last && y === top + 26 && !s.done;
+        const bw = 92, n = s.R[g], hit = g === s.ans, isLast = g === last && !s.done;
         c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = isLast ? ink : (dk ? "#3a3a3c" : "#ddd"); c.lineWidth = isLast ? 2 : 1; rr(c, 12, y, W - 24, rh, 6); c.fill(); c.stroke();
-        c.fillStyle = ink; c.textAlign = "left"; let sz = 16; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`;
+        c.fillStyle = ink; c.textAlign = "left"; let sz = Math.min(16, rh * 0.5); c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`;
         while (sz > 10 && c.measureText(g).width > W - 48 - bw) { sz--; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`; }
         c.fillText(g, 20, y + rh / 2 + 1);
         c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
-        c.fillStyle = "#fff"; c.font = `800 17px ${G.UI}`; c.textAlign = "center";
+        c.fillStyle = "#fff"; c.font = `800 ${Math.min(17, rh * 0.52)}px ${G.UI}`; c.textAlign = "center";
         c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
         y += rh + 4;
       });
+      if (more > 0) { c.fillStyle = dk ? "#9aa0a6" : "#777"; c.font = `600 13px ${G.UI}`; c.textAlign = "center"; c.fillText(`+${more} more, farther away`, W / 2, y + 8); }
       if (!s.done) {
-        // search box + suggestions
-        const by = H - kbH - sugH + 4;
-        c.strokeStyle = ink; c.lineWidth = 2; rr(c, 12, by, W - 24, 38, 8); c.stroke();
+        // search box just above the keyboard; matches pop up above it, over the list
+        const ms = this.matches(s);
+        if (s.typed) {
+          const ph = ms.length ? ms.length * 38 + 6 : 34, py = by - ph - 4;
+          c.fillStyle = dk ? "#121213" : "#fff"; c.fillRect(8, py - 4, W - 16, ph + 8);
+          if (!ms.length) { c.fillStyle = dk ? "#aaa" : "#777"; c.font = `500 14px ${G.UI}`; c.textAlign = "left"; c.fillText("No matches in the list", 22, py + 17); }
+          ms.forEach((m, i) => {
+            const yy = py + 3 + (ms.length - 1 - i) * 38; c.fillStyle = dk ? "#2e4a6b" : "#e6f1fd"; rr(c, 12, yy, W - 24, 34, 8); c.fill();
+            c.fillStyle = ink; c.font = `600 15px ${G.UI}`; c.textAlign = "left"; c.fillText(m, 22, yy + 17, W - 44);
+            s.btns.push({ x: 12, y: yy, w: W - 24, h: 34, pick: m });
+          });
+        }
+        c.strokeStyle = ink; c.lineWidth = 2; c.fillStyle = dk ? "#121213" : "#fff"; rr(c, 12, by, W - 24, 38, 8); c.fill(); c.stroke();
         c.fillStyle = s.typed ? ink : (dk ? "#777" : "#999"); c.font = `600 16px ${G.UI}`; c.textAlign = "left";
         c.fillText(s.typed ? s.typed + "▏" : `Type a ${s.cat.name === "Animals" ? "animal" : s.cat.name === "Movies" ? "movie" : s.cat.name === "Pro Teams" ? "team" : "show"}…`, 22, by + 20);
-        this.matches(s).forEach((m, i) => {
-          const y = by + 44 + i * 38; c.fillStyle = dk ? "#2e4a6b" : "#e6f1fd"; rr(c, 12, y, W - 24, 34, 8); c.fill();
-          c.fillStyle = ink; c.font = `600 15px ${G.UI}`; c.textAlign = "left"; c.fillText(m, 22, y + 17, W - 44);
-          s.btns.push({ x: 12, y, w: W - 24, h: 34, pick: m });
-        });
-        if (s.typed && !this.matches(s).length) { c.fillStyle = dk ? "#aaa" : "#777"; c.font = `500 14px ${G.UI}`; c.textAlign = "left"; c.fillText("No matches in the list", 22, by + 60); }
         const ky = H - kbH, kh = (kbH - 12) / 3 - 6, kw = (W - 12) / 10 - 5;
         KB.forEach((row, r) => {
           const keys = (r === 2 ? [" "] : []).concat(row.split("")), wide = k => k === "<" ? kw * 1.3 : k === " " ? kw * 1.6 : kw;
