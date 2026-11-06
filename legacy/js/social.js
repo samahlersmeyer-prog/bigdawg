@@ -648,7 +648,7 @@ function renderScores() {
     if (x.z) sk.title = "Streak freeze used this week";
     head.appendChild(sk);
     head.appendChild(el("span", "ptot", (RANKPTS[x.id] || 0) + " pts"));
-    if (x.id !== me.id && shadeLoaded && beating(x.id)) head.appendChild(shadeButton(x.id));
+    if (x.id !== me.id && shadeLoaded) head.appendChild(shadeButton(x.id));
     var st = el("div", "stats");
     var tg = autoTags(x.t),
       pb = PTSBY[x.id] || {};
@@ -1020,8 +1020,8 @@ function openShade(targetId) {
     toast("".concat(tgt.name, " has shade muted"), 2200);
     return;
   }
-  if (!opts.fire && !beating(targetId)) {
-    toast("You're not beating ".concat(tgt.name, " today. Shade is earned. \uD83D\uDE24"), 2600);
+  if (!opts.fire && !opts.game && !beating(targetId)) {
+    openShadeLocked(targetId);
     return;
   }
   var used = shade.sentToday[targetId] || 0;
@@ -1039,7 +1039,7 @@ function openShade(targetId) {
   card.maxLength = 300;
   card.setAttribute("aria-label", "Your shade (tap to edit)");
   var roll = function roll() {
-    text = makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, {
+    text = opts.game ? makeGameShade(tgt.name, opts.game, shade.settings.spice || 2, style) : makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, {
       fire: !!opts.fire,
       jokes: jokes,
       dare: opts.dare
@@ -1077,7 +1077,7 @@ function openShade(targetId) {
       status.textContent = "Write something first.";
       return;
     }
-    API("sendShade", me.id, targetId, KEY, text, opts.fire ? "fire" : "shade", opts.replyTo || "").then(function (st) {
+    API("sendShade", me.id, targetId, KEY, text, opts.fire ? "fire" : "shade", opts.replyTo || "", opts.game ? opts.game.key : "").then(function (st) {
       shade = st;
       renderShadeBits();
       closeModal();
@@ -1089,9 +1089,164 @@ function openShade(targetId) {
   });
   var row = el("div", "inrow center");
   row.append(reroll, send);
-  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), card, el("p", "note center", "✏️ Tap the text to edit it"), chips, row, status]);
+  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), opts.game ? el("p", "sub center", "Earned in ".concat(opts.game.name, ": your ").concat(fmtG(opts.game.key, opts.game.mine), " beats their ").concat(fmtG(opts.game.key, opts.game.theirs))) : null, card, el("p", "note center", "✏️ Tap the text to edit it"), chips, row, status]);
 }
 var serving = null;
+function gameBeaten(game, myScore) {
+  var ga = arcade && arcade.games && arcade.games[game];
+  if (!ga || !me || !(myScore > 0)) return [];
+  var mates = {};
+  (shade.players || []).forEach(function (p) {
+    return mates[p.id] = p;
+  });
+  var list = ga.daily ? ga.today || [] : ga.all || [];
+  return list.filter(function (x) {
+    return x.id !== me.id && mates[x.id] && x.n > 0 && betterG(game, myScore, x.n);
+  }).map(function (x) {
+    return {
+      id: x.id,
+      name: x.name || mates[x.id].name,
+      n: x.n
+    };
+  });
+}
+function gameShadeOpts(game, mine, theirs) {
+  return {
+    game: {
+      key: game,
+      name: ARC[game] && ARC[game].name || "that game",
+      mine: mine,
+      theirs: theirs
+    }
+  };
+}
+function shadeUpRow(game, score, posted) {
+  var box = el("div", "shadeup");
+  box.hidden = true;
+  var fill = function fill() {
+    if (!box.isConnected && box.dataset.done) return;
+    var beat = gameBeaten(game, score);
+    box.innerHTML = "";
+    box.dataset.done = 1;
+    if (!beat.length || !shadeLoaded) {
+      box.hidden = true;
+      return;
+    }
+    var names = beat.slice(0, 3).map(function (b) {
+      return b.name;
+    });
+    box.append(el("p", "sub", "\uD83C\uDFAF You beat ".concat(names.length > 2 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names.join(" and ")).concat(beat.length > 3 ? " and more" : "", ". Shade earned.")));
+    var chips = el("div", "chips center");
+    beat.slice(0, 6).forEach(function (b) {
+      var p = playerInfo(b.id),
+        used = shade.sentToday[b.id] || 0;
+      var c = el("button", "chip" + (p.muted || used >= 3 ? " off" : ""), (p.muted ? "🔕 " : "🎯 ") + b.name);
+      c.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openShade(b.id, gameShadeOpts(game, score, b.n));
+      });
+      chips.appendChild(c);
+    });
+    box.append(chips);
+    box.hidden = false;
+  };
+  (posted && posted.then ? posted : Promise.resolve()).then(fill, fill);
+  return box;
+}
+function makeGameShade(name, g, spice, styleKey) {
+  var st = STYLES[styleKey === "chaos" ? pick(STYLE_KEYS) : styleKey];
+  var m = fmtG(g.key, g.mine),
+    t = fmtG(g.key, g.theirs),
+    n = g.name;
+  var line = pick(["".concat(n, ": me ").concat(m, ", ").concat(name, " ").concat(t, ". Read it and weep."), "Just passed your ".concat(t, " in ").concat(n, ". Didn't even break a sweat."), "".concat(t, " in ").concat(n, ", ").concat(name, "? I've seen better from a sleeping pug."), "".concat(m, " to ").concat(t, " in ").concat(n, ". Frame it, ").concat(name, "."), "Hey ".concat(name, ", your ").concat(n, " score called. It wants a rematch."), "".concat(n, " has a new top dawg, and it isn't you, ").concat(name, "."), "Somebody check on ".concat(name, ". ").concat(t, " in ").concat(n, " is a cry for help.")]);
+  var parts = [];
+  if (spice >= 2 || Math.random() < 0.5) parts.push(pick(st.open));
+  parts.push(line);
+  if (spice === 1) parts.push(pick([pick(st.close), "Love you though."]));else if (spice === 2) parts.push(Math.random() < 0.5 ? "You ".concat(pick(st.ins), ".") : pick(st.close));else parts.push("You ".concat(pick(st.ins), ". ").concat(pick(UNHINGED)));
+  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 220);
+}
+function openShadeLocked(id) {
+  var tgt = playerInfo(id),
+    list = todayList(),
+    mine = list.find(function (x) {
+      return x.id === me.id;
+    }),
+    them = list.find(function (x) {
+      return x.id === id;
+    });
+  var played = function played(x) {
+    return x && x.t && (x.t.f || x.t.g || x.t.c || x.t.s);
+  };
+  var nodes = [el("h2", null, "\uD83D\uDD12 Shade at ".concat(tgt.name, " is locked")), el("p", "sub", "Shade is earned: beat them first.")];
+  var ul = el("ul", "rules");
+  var NAMES = {
+    f: "Five",
+    g: "Groups",
+    s: "Strands",
+    c: "the Mini"
+  };
+  var and = function and(a) {
+    return a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
+  };
+  if (!played(mine)) ul.appendChild(el("li", null, "Play today's puzzles. Once you're ahead of them on points, the 🎯 unlocks."));else {
+    var by = {},
+      pts = dayPts(list, by),
+      a = by[me.id] || {},
+      b = by[id] || {};
+    nodes.push(el("p", null, "".concat(tgt.name, " is ahead of you today: ").concat(pts[id] || 0, " points to your ").concat(pts[me.id] || 0, ".")));
+    var left = ["f", "g", "s", "c"].filter(function (k) {
+      return !(mine.t && mine.t[k]);
+    }).map(function (k) {
+      return NAMES[k];
+    });
+    if (left.length) ul.appendChild(el("li", null, "You haven't played ".concat(and(left), " yet. Points there could put you ahead.")));
+    var lost = ["f", "g", "s", "c"].filter(function (k) {
+      return mine.t && mine.t[k] && them && them.t && them.t[k] && (b[k] || 0) > (a[k] || 0);
+    }).map(function (k) {
+      return NAMES[k];
+    });
+    if (lost.length) ul.appendChild(el("li", null, "".concat(tgt.name, " beat you on ").concat(and(lost), " today.")));
+  }
+  var ready = [],
+    todo = [];
+  Object.keys(arcade && arcade.games || {}).forEach(function (g) {
+    var ga = arcade.games[g];
+    if (!ga.daily || !ARC[g]) return;
+    var t = (ga.today || []).find(function (x) {
+        return x.id === id;
+      }),
+      m = (ga.today || []).find(function (x) {
+        return x.id === me.id;
+      });
+    if (t && m && betterG(g, m.n, t.n)) ready.push([g, m.n, t.n]);else if (t && !m) todo.push([g, t.n]);
+  });
+  todo.slice(0, 3).forEach(function (_ref9) {
+    var _ref0 = _slicedToArray(_ref9, 2),
+      g = _ref0[0],
+      n = _ref0[1];
+    return ul.appendChild(el("li", null, "Beat ".concat(tgt.name, "'s ").concat(fmtG(g, n), " in ").concat(ARC[g].name, " (The Den) today.")));
+  });
+  ul.appendChild(el("li", null, "Or pass ".concat(tgt.name, "'s best in any Arcade or Sports game. You'll get a \uD83C\uDFAF right on the results screen.")));
+  nodes.push(ul);
+  if (ready.length && !tgt.muted) {
+    nodes.push(el("p", "sub", "You're already beating them here:"));
+    var chips = el("div", "chips");
+    ready.forEach(function (_ref1) {
+      var _ref10 = _slicedToArray(_ref1, 3),
+        g = _ref10[0],
+        m = _ref10[1],
+        t = _ref10[2];
+      var c = el("button", "chip", "\uD83C\uDFAF ".concat(ARC[g].name));
+      c.addEventListener("click", function () {
+        closeModal();
+        openShade(id, gameShadeOpts(g, m, t));
+      });
+      chips.appendChild(c);
+    });
+    nodes.push(chips);
+  }
+  openModal(nodes);
+}
 var popOn = function popOn(k) {
   return (store.get("bdd:pop") || {})[k] !== false;
 };
@@ -1170,10 +1325,10 @@ function openBell() {
     list.appendChild(r);
   });
   var set = el("div", "col");
-  [["shade", "Pop up when someone throws shade"], ["dares", "Pop up for dares and when someone beats your score"]].forEach(function (_ref9) {
-    var _ref0 = _slicedToArray(_ref9, 2),
-      k = _ref0[0],
-      label = _ref0[1];
+  [["shade", "Pop up when someone throws shade"], ["dares", "Pop up for dares and when someone beats your score"]].forEach(function (_ref11) {
+    var _ref12 = _slicedToArray(_ref11, 2),
+      k = _ref12[0],
+      label = _ref12[1];
     var l = el("label", "toggle"),
       cb = el("input");
     cb.type = "checkbox";
@@ -1377,8 +1532,10 @@ function shadeButton(id) {
   var used = shade.sentToday[id] || 0;
   var b = el("button", "shadebtn", p.muted ? "🔕" : "🎯");
   b.dataset.shade = id;
-  b.setAttribute("aria-label", p.muted ? "".concat(p.name, " has shade muted") : "Throw shade at ".concat(p.name));
+  var locked = !p.muted && !beating(id);
+  b.setAttribute("aria-label", p.muted ? "".concat(p.name, " has shade muted") : locked ? "Shade at ".concat(p.name, " is locked. Tap to see how to earn it") : "Throw shade at ".concat(p.name));
   if (p.muted || used >= 3) b.classList.add("off");
+  if (locked) b.classList.add("locked");
   return b;
 }
 document.addEventListener("click", function (e) {
@@ -2074,10 +2231,10 @@ function statsBlock(s, mine, name) {
   var box = el("div", "pstats");
   box.appendChild(el("h3", "lbl2", "Stats"));
   var top = el("div", "pst-top");
-  [[s.played, "Played"], [s.winPct + "%", "Five win %"], [s.cur || 0, "Streak"], [s.best || 0, "Best streak"]].forEach(function (_ref1) {
-    var _ref10 = _slicedToArray(_ref1, 2),
-      v = _ref10[0],
-      l = _ref10[1];
+  [[s.played, "Played"], [s.winPct + "%", "Five win %"], [s.cur || 0, "Streak"], [s.best || 0, "Best streak"]].forEach(function (_ref13) {
+    var _ref14 = _slicedToArray(_ref13, 2),
+      v = _ref14[0],
+      l = _ref14[1];
     var d = el("div");
     d.append(el("b", null, String(v)), el("small", null, l));
     top.appendChild(d);
@@ -2256,12 +2413,12 @@ function openCard(id) {
     var b = c.badges;
     body.appendChild(el("p", "sub", "".concat(b.played, " day").concat(b.played === 1 ? "" : "s", " played")));
     var grid = el("div", "badges");
-    BADGES.forEach(function (_ref11) {
-      var _ref12 = _slicedToArray(_ref11, 4),
-        k = _ref12[0],
-        icon = _ref12[1],
-        label = _ref12[2],
-        earned = _ref12[3];
+    BADGES.forEach(function (_ref15) {
+      var _ref16 = _slicedToArray(_ref15, 4),
+        k = _ref16[0],
+        icon = _ref16[1],
+        label = _ref16[2],
+        earned = _ref16[3];
       var v = b[k],
         d = el("div", "badge" + (earned(v) ? "" : " off"));
       var txt = el("span", null, label);
@@ -2281,10 +2438,10 @@ function openCard(id) {
       box.appendChild(el("h3", "lbl2", "You vs ".concat(c.name, ", all time")));
       box.appendChild(el("div", "big", "".concat(tot[0], "\u2013").concat(tot[1]) + (tot[2] ? "\u2013".concat(tot[2]) : "")));
       box.appendChild(el("p", "sub", tot[0] + tot[1] + tot[2] === 0 ? "No games head-to-head yet." : tot[0] > tot[1] ? "You own ".concat(c.name, ". For now.") : tot[0] < tot[1] ? "".concat(c.name, " has your number.") : "Dead even. Settle it today."));
-      [["five", "Five"], ["groups", "Groups"], ["strands", "Strands"], ["mini", "Mini"]].forEach(function (_ref13) {
-        var _ref14 = _slicedToArray(_ref13, 2),
-          k = _ref14[0],
-          label = _ref14[1];
+      [["five", "Five"], ["groups", "Groups"], ["strands", "Strands"], ["mini", "Mini"]].forEach(function (_ref17) {
+        var _ref18 = _slicedToArray(_ref17, 2),
+          k = _ref18[0],
+          label = _ref18[1];
         var r = el("div", "row2");
         r.append(el("span", null, label), el("b", null, "".concat(h[k][0], "\u2013").concat(h[k][1]) + (h[k][2] ? "\u2013".concat(h[k][2]) : "")));
         box.appendChild(r);

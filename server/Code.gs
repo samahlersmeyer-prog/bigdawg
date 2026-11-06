@@ -496,7 +496,19 @@ function saveSettings(id, s) {
   return true;
 }
 
-function sendShade(fromId, toId, dateKey, text, kind, replyTo) {
+// Shade earned in one Arcade or Den game (beat them there instead of on the main four).
+// Den daily puzzles: your score today beats theirs today. Arcade: your best today beats their all-time best.
+function gameBeat_(fromId, to, game, dateKey) {
+  if (!ARCADE_GAMES[game]) throw new Error('This game needs the newest server update.');
+  const rows = readArcade_().filter(r => (r.game || 'zoomies') === game && r.best > 0);
+  const best = (id, today) => rows.filter(r => r.id === id && (!today || r.date === dateKey)).reduce((m, r) => !m || arcBetter_(game, r.best, m) ? r.best : m, 0);
+  const mine = best(fromId, true);
+  if (!mine) throw new Error('Play that game today first. Shade is earned.');
+  const theirs = best(to.id, !!DEN_DAILY[game]);
+  if (!theirs) throw new Error(to.name + (DEN_DAILY[game] ? " hasn't played it today." : " hasn't played it yet."));
+  if (!arcBetter_(game, mine, theirs)) throw new Error("You're not beating " + to.name + ' at that one. Shade is earned.');
+}
+function sendShade(fromId, toId, dateKey, text, kind, replyTo, game) {
   fromId = cleanId_(fromId); toId = cleanId_(toId); dateKey = cleanDate_(dateKey);
   text = cleanText_(text, 400);
   kind = kind === 'fire' || kind === 'clap' ? kind : 'shade';
@@ -511,9 +523,12 @@ function sendShade(fromId, toId, dateKey, text, kind, replyTo) {
     const rows = readShade_();
     if (kind === 'shade') {
       if (to.mute) throw new Error(to.name + ' has shade muted.');
-      const day = allScores_()[dateKey] || {};
-      if (!day[fromId]) throw new Error('Play a game first. Shade is earned.');
-      if (day[toId]) { const pts = dayPoints_(day); if (!(pts[fromId] > pts[toId])) throw new Error("You're not beating " + to.name + ' today. Shade is earned.'); }
+      if (game) gameBeat_(fromId, to, String(game), dateKey);
+      else {
+        const day = allScores_()[dateKey] || {};
+        if (!day[fromId]) throw new Error('Play a game first. Shade is earned.');
+        if (day[toId]) { const pts = dayPoints_(day); if (!(pts[fromId] > pts[toId])) throw new Error("You're not beating " + to.name + ' today. Shade is earned.'); }
+      }
       const n = rows.filter(r => r.from === fromId && r.to === toId && r.date === dateKey && r.kind === 'shade').length;
       if (n >= 3) throw new Error("You've thrown 3 at " + to.name + ' today. Save some for tomorrow.');
     } else {

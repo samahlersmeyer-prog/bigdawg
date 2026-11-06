@@ -58,12 +58,13 @@ function denStart(game, panel, onGo) {
 }
 function denOver(game, score, panel, onAgain, title) {
   const newBest = setBest(game, score) && score > 0;
-  if (score > 0 && me) postArcade(game, score, KEY);
+  const posted = score > 0 && me ? postArcade(game, score, KEY) : null;
   panel.innerHTML = ""; panel.hidden = false;
   panel.append(el("h2", null, title || (newBest ? "New best! 🐶" : "Good game")), el("div", "zbig", fmtG(game, score)), el("p", null, newBest ? "That's your best yet." : `Best: ${fmtG(game, aBest[game] || 0)}`));
   const col = el("div", "col"), again = el("button", "pill solid", "Play again"); again.addEventListener("click", e => { e.stopPropagation(); onAgain(); });
   const back = el("button", "pill", "Back to The Den"); back.addEventListener("click", e => { e.stopPropagation(); show("den"); });
   col.append(again, back); panel.append(col);
+  if (posted) panel.append(shadeUpRow(game, score, posted));
 }
 function arcStart(game, panel, onGo) {
   ownLocal(); if (arcCat(game) === "den") return denStart(game, panel, onGo);
@@ -109,7 +110,7 @@ function arcOver(game, score, panel, onAgain, title) {
   // Older servers only know Zoomies; don't let other games' scores land on its board.
   // Post the score. If the leaderboard hasn't loaded yet or the network hiccups, keep it and retry later
   // (it used to be skipped silently, which could lose a great round).
-  if (score > 0 && me && (game === "zoomies" || !arcade || !arcade.games || arcade.games[game])) postArcade(game, score, KEY);
+  const posted = score > 0 && me && (game === "zoomies" || !arcade || !arcade.games || arcade.games[game]) ? postArcade(game, score, KEY) : null;
   panel.innerHTML = ""; panel.hidden = false;
   panel.append(el("h2", null, newBest ? "New best! 🐶" : title || (score === 0 ? "Bonk." : "Ruff.")));
   panel.append(el("div", "zbig", fmtG(game, score)), el("p", null, `Best: ${fmtG(game, aBest[game] || 0)}`));
@@ -131,6 +132,7 @@ function arcOver(game, score, panel, onAgain, title) {
   if (score > 0 && me && arcade && !known) col.append(el("p", "sub", "This game is brand new: leaderboard scores and dares turn on once the server is updated."));
   if (score > 0 && me && (known || !arcade)) { const d = el("button", "pill", `🎯 Dare someone to beat ${fmtG(game, score)}`); d.addEventListener("click", e => { e.stopPropagation(); openDarePicker(game, score); }); col.append(d); }
   panel.append(col);
+  if (posted) panel.append(shadeUpRow(game, score, posted));
 }
 function postArcade(game, score, day) {
   const pend = (store.get("bdd:apend") || []).filter(p => !(p.g === game && p.d === day && !betterG(game, score, p.s)));

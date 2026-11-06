@@ -221,7 +221,7 @@ function renderScores() {
     const sk = el("span", "streak", x.s ? `🔥 ${x.s}-day streak` + (x.z ? " 🧊" : "") : ""); if (x.z) sk.title = "Streak freeze used this week";
     head.appendChild(sk);
     head.appendChild(el("span", "ptot", (RANKPTS[x.id] || 0) + " pts"));
-    if (x.id !== me.id && shadeLoaded && beating(x.id)) head.appendChild(shadeButton(x.id));
+    if (x.id !== me.id && shadeLoaded) head.appendChild(shadeButton(x.id));
     const st = el("div", "stats");
     const tg = autoTags(x.t), pb = PTSBY[x.id] || {};
     const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) || n % 10 > 3 ? 0 : n % 10]);
@@ -446,14 +446,14 @@ function openShade(targetId, opts = {}) {
   if (!me || targetId === me.id) return;
   const tgt = playerInfo(targetId);
   if (tgt.muted && !opts.fire) { toast(`${tgt.name} has shade muted`, 2200); return; }
-  if (!opts.fire && !beating(targetId)) { toast(`You're not beating ${tgt.name} today. Shade is earned. 😤`, 2600); return; }
+  if (!opts.fire && !opts.game && !beating(targetId)) { openShadeLocked(targetId); return; }
   const used = shade.sentToday[targetId] || 0;
   if (!opts.fire && used >= 3) { toast(`You've thrown 3 at ${tgt.name} today. Save some for tomorrow.`, 2600); return; }
   let style = "chaos", text = "";
   const jokes = shade.settings.jokes ? shade.jokes.map(j => j.text) : [];
   // Editable: the generator writes a draft, you can tweak it before sending.
   const card = el("textarea", "shadecard shade-edit"); card.rows = 4; card.maxLength = 300; card.setAttribute("aria-label", "Your shade (tap to edit)");
-  const roll = () => { text = makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, { fire: !!opts.fire, jokes, dare: opts.dare }); card.value = text; };
+  const roll = () => { text = opts.game ? makeGameShade(tgt.name, opts.game, shade.settings.spice || 2, style) : makeShade(tgt.name, tgt.t, todayEntry(), shade.settings.spice || 2, style, { fire: !!opts.fire, jokes, dare: opts.dare }); card.value = text; };
   const chips = el("div", "chips shade-chips");
   [["chaos", "🎲 Chaos"]].concat(STYLE_KEYS.map(k => [k, STYLES[k].label])).forEach(([k, label]) => {
     const c = el("button", "chip" + (k === style ? " on" : ""), label);
@@ -467,14 +467,101 @@ function openShade(targetId, opts = {}) {
   send.addEventListener("click", () => {
     send.disabled = true; status.textContent = "Delivering…";
     text = card.value.trim(); if (!text) { send.disabled = false; status.textContent = "Write something first."; return; }
-    API("sendShade", me.id, targetId, KEY, text, opts.fire ? "fire" : "shade", opts.replyTo || "")
+    API("sendShade", me.id, targetId, KEY, text, opts.fire ? "fire" : "shade", opts.replyTo || "", opts.game ? opts.game.key : "")
       .then(st => { shade = st; renderShadeBits(); closeModal(); toast(opts.dare ? "Trash talk delivered 🗣️" : opts.fire ? "Fired back 🔥" : `Shade delivered to ${tgt.name} 🎯`, 2000); })
       .catch(e => { send.disabled = false; status.textContent = errMsg(e); });
   });
   const row = el("div", "inrow center"); row.append(reroll, send);
-  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), card, el("p", "note center", "✏️ Tap the text to edit it"), chips, row, status]);
+  openModal([el("h2", null, (opts.dare ? "Talk trash at " : opts.fire ? "Fire back at " : "Throw shade at ") + tgt.name), opts.game ? el("p", "sub center", `Earned in ${opts.game.name}: your ${fmtG(opts.game.key, opts.game.mine)} beats their ${fmtG(opts.game.key, opts.game.theirs)}`) : null, card, el("p", "note center", "✏️ Tap the text to edit it"), chips, row, status]);
 }
 let serving = null;
+// ---- Shade earned in the Den or Arcade ----
+// Den daily puzzles: your score today vs theirs today. Arcade: this run vs their best (the server checks your best today).
+function gameBeaten(game, myScore) {
+  const ga = arcade && arcade.games && arcade.games[game];
+  if (!ga || !me || !(myScore > 0)) return [];
+  const mates = {}; (shade.players || []).forEach(p => mates[p.id] = p);
+  const list = ga.daily ? (ga.today || []) : (ga.all || []);
+  return list.filter(x => x.id !== me.id && mates[x.id] && x.n > 0 && betterG(game, myScore, x.n))
+    .map(x => ({ id: x.id, name: x.name || mates[x.id].name, n: x.n }));
+}
+function gameShadeOpts(game, mine, theirs) { return { game: { key: game, name: (ARC[game] && ARC[game].name) || "that game", mine, theirs } }; }
+// "You beat Lauri at Dawg Waffle → 🎯" row for a game-over panel. Fills in once the score has posted.
+function shadeUpRow(game, score, posted) {
+  const box = el("div", "shadeup"); box.hidden = true;
+  const fill = () => {
+    if (!box.isConnected && box.dataset.done) return;
+    const beat = gameBeaten(game, score); box.innerHTML = ""; box.dataset.done = 1;
+    if (!beat.length || !shadeLoaded) { box.hidden = true; return; }
+    const names = beat.slice(0, 3).map(b => b.name);
+    box.append(el("p", "sub", `🎯 You beat ${names.length > 2 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names.join(" and ")}${beat.length > 3 ? " and more" : ""}. Shade earned.`));
+    const chips = el("div", "chips center");
+    beat.slice(0, 6).forEach(b => {
+      const p = playerInfo(b.id), used = shade.sentToday[b.id] || 0;
+      const c = el("button", "chip" + (p.muted || used >= 3 ? " off" : ""), (p.muted ? "🔕 " : "🎯 ") + b.name);
+      c.addEventListener("click", e => { e.stopPropagation(); openShade(b.id, gameShadeOpts(game, score, b.n)); });
+      chips.appendChild(c);
+    });
+    box.append(chips); box.hidden = false;
+  };
+  (posted && posted.then ? posted : Promise.resolve()).then(fill, fill);
+  return box;
+}
+function makeGameShade(name, g, spice, styleKey) {
+  const st = STYLES[styleKey === "chaos" ? pick(STYLE_KEYS) : styleKey];
+  const m = fmtG(g.key, g.mine), t = fmtG(g.key, g.theirs), n = g.name;
+  const line = pick([
+    `${n}: me ${m}, ${name} ${t}. Read it and weep.`,
+    `Just passed your ${t} in ${n}. Didn't even break a sweat.`,
+    `${t} in ${n}, ${name}? I've seen better from a sleeping pug.`,
+    `${m} to ${t} in ${n}. Frame it, ${name}.`,
+    `Hey ${name}, your ${n} score called. It wants a rematch.`,
+    `${n} has a new top dawg, and it isn't you, ${name}.`,
+    `Somebody check on ${name}. ${t} in ${n} is a cry for help.`
+  ]);
+  const parts = [];
+  if (spice >= 2 || Math.random() < 0.5) parts.push(pick(st.open));
+  parts.push(line);
+  if (spice === 1) parts.push(pick([pick(st.close), "Love you though."]));
+  else if (spice === 2) parts.push(Math.random() < 0.5 ? `You ${pick(st.ins)}.` : pick(st.close));
+  else parts.push(`You ${pick(st.ins)}. ${pick(UNHINGED)}`);
+  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 220);
+}
+// Tapping a locked 🎯: say why, and how to earn it (main four, or a Den puzzle you've both played).
+function openShadeLocked(id) {
+  const tgt = playerInfo(id), list = todayList(), mine = list.find(x => x.id === me.id), them = list.find(x => x.id === id);
+  const played = x => x && x.t && (x.t.f || x.t.g || x.t.c || x.t.s);
+  const nodes = [el("h2", null, `🔒 Shade at ${tgt.name} is locked`), el("p", "sub", "Shade is earned: beat them first.")];
+  const ul = el("ul", "rules");
+  const NAMES = { f: "Five", g: "Groups", s: "Strands", c: "the Mini" };
+  const and = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a.join("");
+  if (!played(mine)) ul.appendChild(el("li", null, "Play today's puzzles. Once you're ahead of them on points, the 🎯 unlocks."));
+  else {
+    const by = {}, pts = dayPts(list, by), a = by[me.id] || {}, b = by[id] || {};
+    nodes.push(el("p", null, `${tgt.name} is ahead of you today: ${pts[id] || 0} points to your ${pts[me.id] || 0}.`));
+    const left = ["f", "g", "s", "c"].filter(k => !(mine.t && mine.t[k])).map(k => NAMES[k]);
+    if (left.length) ul.appendChild(el("li", null, `You haven't played ${and(left)} yet. Points there could put you ahead.`));
+    const lost = ["f", "g", "s", "c"].filter(k => mine.t && mine.t[k] && them && them.t && them.t[k] && (b[k] || 0) > (a[k] || 0)).map(k => NAMES[k]);
+    if (lost.length) ul.appendChild(el("li", null, `${tgt.name} beat you on ${and(lost)} today.`));
+  }
+  // Den daily puzzles: already ahead somewhere? throw it now. They've played one you haven't? go beat it.
+  const ready = [], todo = [];
+  Object.keys((arcade && arcade.games) || {}).forEach(g => {
+    const ga = arcade.games[g]; if (!ga.daily || !ARC[g]) return;
+    const t = (ga.today || []).find(x => x.id === id), m = (ga.today || []).find(x => x.id === me.id);
+    if (t && m && betterG(g, m.n, t.n)) ready.push([g, m.n, t.n]); else if (t && !m) todo.push([g, t.n]);
+  });
+  todo.slice(0, 3).forEach(([g, n]) => ul.appendChild(el("li", null, `Beat ${tgt.name}'s ${fmtG(g, n)} in ${ARC[g].name} (The Den) today.`)));
+  ul.appendChild(el("li", null, `Or pass ${tgt.name}'s best in any Arcade or Sports game. You'll get a 🎯 right on the results screen.`));
+  nodes.push(ul);
+  if (ready.length && !tgt.muted) {
+    nodes.push(el("p", "sub", "You're already beating them here:"));
+    const chips = el("div", "chips");
+    ready.forEach(([g, m, t]) => { const c = el("button", "chip", `🎯 ${ARC[g].name}`); c.addEventListener("click", () => { closeModal(); openShade(id, gameShadeOpts(g, m, t)); }); chips.appendChild(c); });
+    nodes.push(chips);
+  }
+  openModal(nodes);
+}
 // Pop-ups are only for things that were earned: shade (only throwable when beating you), dares,
 // and dare results where they actually beat your score. Everything else waits quietly in the bell.
 const popOn = k => (store.get("bdd:pop") || {})[k] !== false;
@@ -606,8 +693,10 @@ function shadeButton(id) {
   const used = shade.sentToday[id] || 0;
   const b = el("button", "shadebtn", p.muted ? "🔕" : "🎯");
   b.dataset.shade = id;
-  b.setAttribute("aria-label", p.muted ? `${p.name} has shade muted` : `Throw shade at ${p.name}`);
+  const locked = !p.muted && !beating(id);
+  b.setAttribute("aria-label", p.muted ? `${p.name} has shade muted` : locked ? `Shade at ${p.name} is locked. Tap to see how to earn it` : `Throw shade at ${p.name}`);
   if (p.muted || used >= 3) b.classList.add("off");
+  if (locked) b.classList.add("locked");
   return b;
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-shade]"); if (b) openShade(b.dataset.shade); });

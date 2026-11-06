@@ -356,6 +356,12 @@ input { -webkit-user-select: text; user-select: text; }
 /* Shade */
 .shadebtn { margin-left: 6px; width: 34px; height: 34px; border-radius: 50%; background: var(--raise); display: grid; place-items: center; font-size: 16px; flex: none; }
 .shadebtn.off { opacity: 0.4; }
+.shadebtn.locked { opacity: 0.45; position: relative; filter: grayscale(1); }
+.shadebtn.locked::after { content: "🔒"; position: absolute; right: -3px; bottom: -3px; font-size: 11px; filter: none; }
+.shadeup { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line, rgba(127,127,127,0.25)); text-align: center; }
+.shadeup .sub { margin: 0 0 8px; }
+.shadeup .chips { justify-content: center; flex-wrap: wrap; }
+.chip.off { opacity: 0.45; }
 .shadebtn:active { transform: scale(0.92); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .wir{display:flex;flex-direction:column;gap:12px;text-align:left;width:100%}

@@ -162,7 +162,7 @@ let toastT;
 function toast(msg, ms = 1400) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms); }
 let modalOnClose = null;
 function openModal(nodes, onClose) {
-  const body = $("modal-body"); body.innerHTML = ""; body.append(...nodes);
+  const body = $("modal-body"); body.innerHTML = ""; body.append(...nodes.filter(Boolean));
   $("modal").hidden = false; modalOnClose = onClose || null;
   syncTimer();
 }

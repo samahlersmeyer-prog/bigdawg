@@ -193,7 +193,7 @@ function denStart(game, panel, onGo) {
 }
 function denOver(game, score, panel, onAgain, title) {
   var newBest = setBest(game, score) && score > 0;
-  if (score > 0 && me) postArcade(game, score, KEY);
+  var posted = score > 0 && me ? postArcade(game, score, KEY) : null;
   panel.innerHTML = "";
   panel.hidden = false;
   panel.append(el("h2", null, title || (newBest ? "New best! 🐶" : "Good game")), el("div", "zbig", fmtG(game, score)), el("p", null, newBest ? "That's your best yet." : "Best: ".concat(fmtG(game, aBest[game] || 0))));
@@ -210,6 +210,7 @@ function denOver(game, score, panel, onAgain, title) {
   });
   col.append(again, back);
   panel.append(col);
+  if (posted) panel.append(shadeUpRow(game, score, posted));
 }
 function arcStart(game, panel, onGo) {
   ownLocal();
@@ -291,7 +292,7 @@ function arcOver(game, score, panel, onAgain, title) {
   var prev = aBest[game] || 0,
     prevMedal = medalOf(game, prev);
   var newBest = setBest(game, score) && score > 0;
-  if (score > 0 && me && (game === "zoomies" || !arcade || !arcade.games || arcade.games[game])) postArcade(game, score, KEY);
+  var posted = score > 0 && me && (game === "zoomies" || !arcade || !arcade.games || arcade.games[game]) ? postArcade(game, score, KEY) : null;
   panel.innerHTML = "";
   panel.hidden = false;
   panel.append(el("h2", null, newBest ? "New best! 🐶" : title || (score === 0 ? "Bonk." : "Ruff.")));
@@ -332,6 +333,7 @@ function arcOver(game, score, panel, onAgain, title) {
     col.append(d);
   }
   panel.append(col);
+  if (posted) panel.append(shadeUpRow(game, score, posted));
 }
 function postArcade(game, score, day) {
   var pend = (store.get("bdd:apend") || []).filter(function (p) {

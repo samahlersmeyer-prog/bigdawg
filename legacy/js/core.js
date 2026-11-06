@@ -394,7 +394,7 @@ var modalOnClose = null;
 function openModal(nodes, onClose) {
   var body = $("modal-body");
   body.innerHTML = "";
-  body.append.apply(body, _toConsumableArray(nodes));
+  body.append.apply(body, _toConsumableArray(nodes.filter(Boolean)));
   $("modal").hidden = false;
   modalOnClose = onClose || null;
   syncTimer();
