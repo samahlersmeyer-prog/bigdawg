@@ -354,7 +354,7 @@ const ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy
 // Sections inside the Arcade and Sports hubs (max 3 each). Order inside a section follows ARC_ORDER.
 // NEW / UPDATED tags. When a game ships or gets a real upgrade, add a line: key: ["new" or "upd", "YYYY-MM-DD"].
 // The tag shows on its card (and a NEW/UPDATED flag on the home hub button) for 7 days, then drops off on its own.
-const FRESH = { waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["new", "2026-11-02"], dawgball: ["upd", "2026-11-02"] };
+const FRESH = { hook: ["new", "2026-11-05"], waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["new", "2026-11-02"], dawgball: ["upd", "2026-11-02"] };
 function freshTag(k) { const f = FRESH[k]; if (!f) return null; const age = (Date.now() - new Date(f[1] + "T00:00:00").getTime()) / 864e5; return age >= 0 && age < 7 ? f[0] : null; }
 function freshEl(k, cls) { const t = freshTag(k); return t ? el("span", "fresh " + t + (cls ? " " + cls : ""), t === "new" ? "NEW" : "UPDATED") : null; }
 function markFreshHubs() {
@@ -367,7 +367,7 @@ function markFreshHubs() {
 }
 const ARC_GROUPS = {
   arcade: [
-    { icon: "🏃", name: "Run & Jump", sub: "Reflexes. Don't crash.", keys: ["dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"] },
+    { icon: "🏃", name: "Run & Jump", sub: "Reflexes. Don't crash.", keys: ["hook", "dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"] },
     { icon: "💥", name: "Blast & Battle", sub: "Shoot, smash, defend.", keys: ["dlords", "pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"] },
     { icon: "🧠", name: "Chill & Think", sub: "Puzzles, putts and party games.", keys: ["blocks", "trap", "mjrush", "mjzen", "putt", "putt18", "drip", "trail", "party"] }
   ],
@@ -940,7 +940,8 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-play
   window.addEventListener("resize", () => { if (active === "game" && G.state !== "play") gIdle(); });
 })();
 
-defGameMeta([{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey", "icon": "🏒", "blurb": "Air hockey vs the cat. First to 7.", "how": "Drag anywhere in the bottom half and your bulldog mallet follows just above your thumb. Swing through the puck fast to hit it hard, and bank it off the walls into the cat's goal at the top. First to 7 wins. Each goal is 100, a win is +500, and every shot on goal adds a little bonus. The cat starts sleepy but wakes up as the game goes on.", "cat": "sports", "max": 9999},
+defGameMeta([{"file": "g_hook.js", "key": "hook", "name": "Hook Dawg", "icon": "🪝", "blurb": "Hold to hook, let go to fling. Swing forever.", "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.", "max": 99999},
+{"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey", "icon": "🏒", "blurb": "Air hockey vs the cat. First to 7.", "how": "Drag anywhere in the bottom half and your bulldog mallet follows just above your thumb. Swing through the puck fast to hit it hard, and bank it off the walls into the cat's goal at the top. First to 7 wins. Each goal is 100, a win is +500, and every shot on goal adds a little bonus. The cat starts sleepy but wakes up as the game goes on.", "cat": "sports", "max": 9999},
 {"file": "g_archery.js", "key": "archery", "name": "Bow Wow", "icon": "🏹", "blurb": "Archery. 10 arrows, mind the wind.", "how": "Put your thumb down and drag to move the crosshair onto the target, then let go to shoot. The wind pushes your arrow (watch the flag), and if you hold too long your aim starts to wobble. 10 arrows, bullseye is 10. Perfect is 100.", "cat": "sports", "max": 100},
 {"file": "g_blocks.js", "key": "blocks", "name": "Block Dawg", "icon": "🧱", "blurb": "Stack the blocks. Clear the lines.", "how": "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!", "max": 9999999},
 {"file": "g_boneball.js", "key": "boneball", "name": "Bone Ball", "icon": "🎾", "blurb": "Daily: balance the bones and balls.", "how": "Fill every square with a 🦴 or a 🎾. Each row and each column needs three of each. No more than two of the same can sit next to each other in a row or column. An = between two squares means they're the same; an × means they're different. Tap a square for a bone, again for a ball, again to clear. Gray squares are given. A new board every day, one go, one answer, and you never need to guess. Score: 700 for solving plus up to 300 for going quick. No clock on screen.", "cat": "den", "max": 1000, "puzzle": true},
