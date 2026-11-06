@@ -1524,8 +1524,8 @@ input { -webkit-user-select: text; user-select: text; }
 /* Hand-tuned fixes for old iPads (iOS 9). Appended after the converted styles.css.
    Buttons can't be flex/grid containers in old Safari, so button layouts are rebuilt here. */
 
-/* Puzzles-only edition: no arcade, sports or den */
-.legacy .hub3, .legacy #fast-tip { display: none !important; }
+/* No "fast site" tip on the old iPad */
+.legacy #fast-tip { display: none !important; }
 
 /* Home cards: icon | title + subtitle | status pill */
 .legacy .gcard { display: block; position: relative; width: 100%; min-height: 74px; padding-right: 104px; white-space: nowrap; }
@@ -1562,3 +1562,20 @@ input { -webkit-user-select: text; user-select: text; }
 /* No double-tap zoom on the puzzle boards */
 .legacy .stgrid, .legacy .board, .legacy .ggrid, .legacy .cw, .legacy .keyboard { -ms-touch-action: manipulation; touch-action: manipulation; }
 .legacy .stgrid { touch-action: none; }
+
+/* Arcade / Sports / Den lists: 3 across with section headers between. The generic grid conversion counts
+   nth-child, which the headers throw off, so lay these out with fixed widths and a negative right margin. */
+.legacy .arc-list { margin-right: -8px; -webkit-align-items: stretch; align-items: stretch; }
+.legacy .arc-list > * { -webkit-flex: none !important; flex: none !important; width: -webkit-calc(33.333% - 8px) !important; width: calc(33.333% - 8px) !important; margin: 0 8px 8px 0 !important; }
+.legacy .arc-list > .arc-sec { width: -webkit-calc(100% - 10px) !important; width: calc(100% - 10px) !important; margin: 4px 10px 6px 2px !important; }
+.legacy .arc-list > .arc-sec.arc-grp { margin-top: 10px !important; }
+.legacy .arc-list > .arc-sec.arc-grp:first-child { margin-top: 2px !important; }
+/* Headers in a column (the Den's .cards) must not take a 100% flex-basis, or they fill the screen */
+.legacy .arc-sec { -webkit-flex: none !important; flex: none !important; }
+.legacy .arc-sec.arc-grp > * { margin-right: 6px; }
+
+/* Arcade tiles are buttons: icon, name and best stacked and centered */
+.legacy .arc-cell { display: block; text-align: center; }
+.legacy .arc-cell > b, .legacy .arc-cell > small { display: block; margin: 5px auto 0; }
+.legacy .arc-cell > b { display: -webkit-box; }
+.legacy .arc-cell > .gicon { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; margin: 0 auto; }

@@ -2106,7 +2106,7 @@ function loadGame(key) {
   if (gLoading[d.lazy]) return gLoading[d.lazy];
   return gLoading[d.lazy] = new Promise(function (res, rej) {
     var sc = document.createElement("script");
-    sc.src = "games/" + d.lazy + (window.GAMES_V ? "?v=" + GAMES_V : "");
+    sc.src = "legacy/games/" + d.lazy + (window.GAMES_V ? "?v=" + GAMES_V : "");
     sc.onload = function () {
       var r = GAMEDEFS[key];
       if (r && r.update) res(r);else rej(new Error("bad game file"));

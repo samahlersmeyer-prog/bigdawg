@@ -25,7 +25,43 @@
   def([EP], "releasePointerCapture", function () {});
   if (window.Uint32Array && !Uint32Array.prototype.forEach) Uint32Array.prototype.forEach = Array.prototype.forEach;
   if (!Math.hypot) Math.hypot = function () { var s = 0; for (var i = 0; i < arguments.length; i++) s += arguments[i] * arguments[i]; return Math.sqrt(s); };
-  if (!window.requestAnimationFrame) window.requestAnimationFrame = window.webkitRequestAnimationFrame || function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+  if (window.Node && !("isConnected" in Node.prototype)) Object.defineProperty(Node.prototype, "isConnected", { configurable: true, get: function () { return document.documentElement.contains(this); } });
+
+  // ---------- Canvas: roundRect / ellipse (games draw with these; Safari 9 has neither roundRect nor always ellipse) ----------
+  function roundRect(x, y, w, h, r) {
+    if (w < 0) { x += w; w = -w; } if (h < 0) { y += h; h = -h; }
+    var a = r == null ? [0] : (r instanceof Array ? r : [r]);
+    a = a.map(function (v) { return typeof v === "number" ? v : (v && (v.x || 0)) || 0; });
+    var tl, tr, br, bl;
+    if (a.length === 1) tl = tr = br = bl = a[0];
+    else if (a.length === 2) { tl = br = a[0]; tr = bl = a[1]; }
+    else if (a.length === 3) { tl = a[0]; tr = bl = a[1]; br = a[2]; }
+    else { tl = a[0]; tr = a[1]; br = a[2]; bl = a[3]; }
+    var k = Math.min(1, w / ((tl + tr) || 1), w / ((bl + br) || 1), h / ((tl + bl) || 1), h / ((tr + br) || 1));
+    tl *= k; tr *= k; br *= k; bl *= k;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y); this.arcTo(x + w, y, x + w, y + tr, tr);
+    this.lineTo(x + w, y + h - br); this.arcTo(x + w, y + h, x + w - br, y + h, br);
+    this.lineTo(x + bl, y + h); this.arcTo(x, y + h, x, y + h - bl, bl);
+    this.lineTo(x, y + tl); this.arcTo(x, y, x + tl, y, tl);
+    this.closePath();
+  }
+  function ellipse(x, y, rx, ry, rot, a0, a1, ccw) {
+    if (rx < 0 || ry < 0) return;
+    // only for contexts with save/restore; Path2D falls back to a scaled arc without rotation
+    if (this.save && this.setTransform) {
+      this.save(); this.translate(x, y); this.rotate(rot || 0); this.scale(rx || 1e-6, ry || 1e-6);
+      this.arc(0, 0, 1, a0, a1, !!ccw); this.restore(); return;
+    }
+    this.arc(x, y, Math.max(rx, ry), a0, a1, !!ccw);
+  }
+  var C2 = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype, P2 = window.Path2D && Path2D.prototype;
+  def([C2, P2], "roundRect", roundRect);
+  def([C2, P2], "ellipse", ellipse);
+  def([C2], "setLineDash", function () {});
+  def([C2], "getLineDash", function () { return []; });
+
+  if (!window.requestAnimationFrame)window.requestAnimationFrame = window.webkitRequestAnimationFrame || function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
 
   // ---------- Pointer events -> touch / mouse (iOS 9 has no pointer events) ----------
   if (!window.PointerEvent) {

@@ -1,6 +1,7 @@
 // Builds legacy/ — a copy of the app for old iPads (iOS 9, Safari 9).
 // Run by tools/stamp.py; never edit legacy/ by hand.
 //   - js/*.js      -> legacy/js/*.js   (Babel down to ES5)
+//   - games/*.js   -> legacy/games/*.js (same; the arcade loads them from there)
 //   - polyfills    -> legacy/poly.js   (core-js for what the code uses, fetch, then shim.js)
 //   - styles.css   -> legacy/styles.css (grid/gap/clamp/inset rewritten to old flexbox CSS, then legacy.css)
 //   - index.html   -> legacy/index.html (same markup, base href="../", no service worker)
@@ -24,19 +25,28 @@ const write = (p, s) => { const f = path.join(OUT, p); fs.mkdirSync(path.dirname
 // ---------- JS ----------
 const usedPolys = new Set();
 const out = {};
-for (const f of FILES) {
-  const src = read(`js/${f}.js`);
+const GAME_FILES = fs.readdirSync(path.join(ROOT, "games")).filter(n => /^g_\w+\.js$/.test(n)).sort();
+const jobs = FILES.map(f => ({ src: `js/${f}.js`, dst: `js/${f}.js`, key: f, compact: f === "data" }))
+  .concat(GAME_FILES.map(n => ({ src: `games/${n}`, dst: `games/${n}`, key: "games/" + n, compact: false })));
+for (const { src: srcPath, dst, key: f, compact } of jobs) {
+  let src = read(srcPath);
+  // the arcade loads games/<file>; on the old iPad it must load the transpiled copies instead
+  if (f === "arcade") { if (!src.includes('sc.src = "games/"')) throw new Error("legacy: game loader path not found in js/arcade.js"); src = src.replace('sc.src = "games/"', 'sc.src = "legacy/games/"'); }
   // pass 1: find which core-js polyfills the code needs
   const scan = babel.transformSync(src, { babelrc: false, configFile: false, sourceType: "script", compact: true,
     presets: [["@babel/preset-env", { targets: TARGET, modules: false, useBuiltIns: "usage", corejs: "3.40" }]] }).code;
   for (const m of scan.matchAll(/core-js\/modules\/([\w.-]+?)(?:\.js)?["']/g)) usedPolys.add(m[1]);
   // pass 2: the real transpile
-  const code = babel.transformSync(src, { babelrc: false, configFile: false, sourceType: "script", compact: f === "data", comments: false,
+  const code = babel.transformSync(src, { babelrc: false, configFile: false, sourceType: "script", compact, comments: false,
     presets: [["@babel/preset-env", { targets: TARGET, modules: false, forceAllTransforms: true }]] }).code;
   acorn.parse(code, { ecmaVersion: 5, sourceType: "script" }); // throws if anything newer than ES5 slipped through
   out[f] = code;
-  write(`js/${f}.js`, code);
+  write(dst, code);
 }
+// drop transpiled copies of games that no longer exist
+const LG = path.join(OUT, "games");
+if (fs.existsSync(LG)) for (const n of fs.readdirSync(LG)) if (!GAME_FILES.includes(n)) fs.unlinkSync(path.join(LG, n));
+const gamesV = h(GAME_FILES.map(n => out["games/" + n]).join("\n"));
 
 // ---------- polyfills ----------
 // Things the code uses that Babel can't see (DOM collections, URL helpers).
@@ -212,6 +222,7 @@ html = html.replace(/<base target="_top">/, '<base href="../" target="_top">');
 html = html.replace(/href="styles\.css\?v=\w*"/, `href="legacy/styles.css?v=${h(css)}"`);
 html = html.replace(/<script src="js\/(\w+)\.js\?v=\w*"><\/script>/g, (m, f) => `<script src="legacy/js/${f}.js?v=${h(out[f])}"></script>`);
 html = html.replace(/(<script src="legacy\/js\/data\.js)/, `<script src="legacy/poly.js?v=${h(poly)}"></script>\n$1`);
+html = html.replace(/window\.GAMES_V="\w*"/, `window.GAMES_V="${gamesV}"`);
 html = html.replace(/<script>\s*\/\/ Keep the installed app up to date[\s\S]*?<\/script>\s*/, "");
 html = html.replace(/<link rel="manifest"[^>]*>\s*/, "");
 // iOS 9 zooms on double-tap (e.g. quick taps in Strands); old Safari still honors user-scalable=no.
@@ -219,4 +230,4 @@ html = html.replace(/<meta name="viewport" content="[^"]*">/, '<meta name="viewp
 html = html.replace("<head>", "<head>\n<!-- Built by tools/legacy/build.mjs from index.html. Don't edit; run python3 tools/stamp.py. -->");
 if (/serviceWorker/.test(html)) throw new Error("legacy: service worker script still in page");
 write("index.html", html);
-console.log(`legacy: built for iOS 9 (${polyList.length} polyfills, ${Math.round(poly.length / 1024)}KB poly, ${Math.round(css.length / 1024)}KB css)`);
+console.log(`legacy: built for iOS 9 (${GAME_FILES.length} games, ${polyList.length} polyfills, ${Math.round(poly.length / 1024)}KB poly, ${Math.round(css.length / 1024)}KB css)`);
