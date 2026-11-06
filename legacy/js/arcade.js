@@ -904,6 +904,8 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  fall: ["new", "2026-11-06"],
+  cliff: ["new", "2026-11-06"],
   hook: ["new", "2026-11-05"],
   waffle: ["new", "2026-11-04"],
   guess: ["new", "2026-11-04"],
@@ -943,7 +945,7 @@ var ARC_GROUPS = {
     icon: "🏃",
     name: "Run & Jump",
     sub: "Reflexes. Don't crash.",
-    keys: ["hook", "dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"]
+    keys: ["fall", "cliff", "hook", "dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"]
   }, {
     icon: "💥",
     name: "Blast & Battle",
@@ -2581,6 +2583,22 @@ document.addEventListener("click", function (e) {
   });
 })();
 defGameMeta([{
+  "file": "g_fall.js",
+  "key": "fall",
+  "name": "Fall Dawg",
+  "icon": "⬇️",
+  "blurb": "Roll through the gaps. Don't hit the spikes.",
+  "how": "The bars keep rising. Hold the left or right side of the screen (or use the arrow keys) to roll the Big Dawg into a gap and drop through. Every row you drop is +10, and bones in the gaps are +25. If the bars push you up into the spikes at the top, it's over. It gets faster the longer you last.",
+  "max": 99999
+}, {
+  "file": "g_cliff.js",
+  "key": "cliff",
+  "name": "Cliff Dawg",
+  "icon": "🏞️",
+  "blurb": "Leap, steer, nail the tiny pool at the bottom.",
+  "how": "Hold anywhere to charge your jump (the meter swings up and down), then let go to leap off the cliff. Too weak and you hit the cliff, too strong and you hit the far wall. While you fall, hold the left or right side (or the arrow keys) to steer. The canyon gets narrower toward the bottom, and rocks stick out of the walls on deeper dives. Land in the pool to score, more for hitting the middle and +100 for a PERFECT. Every dive is deeper and tighter. Touch a wall and it's over.",
+  "max": 99999
+}, {
   "file": "g_hook.js",
   "key": "hook",
   "name": "Hook Dawg",
