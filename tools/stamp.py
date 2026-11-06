@@ -15,6 +15,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # Refuse to ship a broken Strands board (overlapping or crossing words, gaps). See tools/strands.mjs.
 if shutil.which("node") and subprocess.run(["node", "tools/strands.mjs", "check"], cwd=ROOT).returncode:
     sys.exit("stamp: fix the Strands puzzles above first (node tools/strands.mjs fix)")
+# Refuse to ship a daily puzzle that repeats an earlier one (Five, Groups, Mini, Strands). See tools/repeats.mjs.
+if shutil.which("node") and subprocess.run(["node", "tools/repeats.mjs"], cwd=ROOT).returncode:
+    sys.exit("stamp: swap out the repeated upcoming puzzles above first (never edit today's or past ones)")
 h = lambda b: hashlib.sha1(b).hexdigest()[:10]
 
 index = ROOT / "index.html"
