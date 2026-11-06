@@ -6,7 +6,8 @@
 //
 // A good board: 6 wide x 8 tall, every one of the 48 cells used by exactly one word, each word a path of
 // touching cells, no two paths crossing (a diagonal step can't share a 2x2 square with the opposite
-// diagonal), and the spangram (word 0) touching opposite sides. Same rules the game itself plays by.
+// diagonal), and the spangram (word 0) running from one side to the opposite side (first and last letters on
+// opposite edges; boards already played only had to touch both sides). Same rules the game itself plays by.
 import fs from "node:fs";
 
 const DATA = "js/data.js", BONUS = "strands_x.json";
@@ -20,9 +21,13 @@ const adj = (p, q) => p !== q && Math.abs((p / W | 0) - (q / W | 0)) <= 1 && Mat
 const edge = (p, q) => p < q ? p + "-" + q : q + "-" + p;
 const cross = (p, q) => { const r1 = p / W | 0, c1 = p % W, r2 = q / W | 0, c2 = q % W; return r1 !== r2 && c1 !== c2 ? edge(r1 * W + c2, r2 * W + c1) : null; };
 const spans = c => { const rs = c.map(i => i / W | 0), cs = c.map(i => i % W); return (rs.includes(0) && rs.includes(H - 1)) || (cs.includes(0) && cs.includes(W - 1)); };
+// Stricter rule for new boards: the spangram STARTS on one side and ENDS on the opposite side (not just touching it mid-word).
+const endToEnd = c => { const [r1, c1, r2, c2] = [c[0] / W | 0, c[0] % W, c[c.length - 1] / W | 0, c[c.length - 1] % W]; return (Math.min(r1, r2) === 0 && Math.max(r1, r2) === H - 1) || (Math.min(c1, c2) === 0 && Math.max(c1, c2) === W - 1); };
+const EPOCH = Date.UTC(2026, 9, 6), now = new Date();
+const DAY = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - EPOCH) / 864e5); // today's bank index; older boards keep the looser rule
 const nbrs = p => [-7, -6, -5, -1, 1, 5, 6, 7].map(d => p + d).filter(q => q >= 0 && q < N && adj(p, q));
 
-function problems(p) {
+function problems(p, i) {
   const errs = [], owner = new Map(), diag = new Map();
   if (p.g.length !== N) errs.push(`grid has ${p.g.length} letters, needs ${N}`);
   p.w.forEach(([w, c], k) => {
@@ -38,6 +43,7 @@ function problems(p) {
       }
     });
     if (k === 0 && !spans(c)) errs.push(`spangram ${w} doesn't touch opposite sides`);
+    else if (k === 0 && i > DAY && !endToEnd(c)) errs.push(`spangram ${w} doesn't run from one side to the opposite side`);
   });
   if (owner.size !== N) errs.push(`words cover ${owner.size} of ${N} cells`);
   return errs;
@@ -68,7 +74,7 @@ function layout(words, seed) {
       free.delete(start);
       const grow = () => {
         if (path.length === L) {
-          if (k === 0 && !spans(path)) return false;
+          if (k === 0 && !endToEnd(path)) return false;
           const rest = left.filter(x => x !== k);
           if (rest.length && !regionsOk(rest)) return false;
           cells[k] = path.slice(); return place(rest);
@@ -106,7 +112,7 @@ function bonusWords(p, dict) {
 }
 
 const cmd = process.argv[2] || "check";
-const bad = P.map((p, i) => [i, problems(p)]).filter(x => x[1].length);
+const bad = P.map((p, i) => [i, problems(p, i)]).filter(x => x[1].length);
 if (cmd === "check") {
   bad.forEach(([i, e]) => console.error(`Strands #${i} "${P[i].t}": ${e.slice(0, 3).join("; ")}`));
   if (bad.length) { console.error(`strands: ${bad.length} broken puzzle(s). Fix with: node tools/strands.mjs fix`); process.exit(1); }
@@ -121,7 +127,7 @@ if (cmd === "check") {
     for (let t = 0; !r && t < 500; t++) r = layout(words, i * 7919 + t * 104729 + 1);
     if (!r) { console.error(`#${i} "${p.t}": couldn't find a layout`); process.exit(1); }
     p.g = r.g; p.w = words.map((w, k) => [w, r.cells[k]]);
-    const e = problems(p); if (e.length) { console.error(`#${i}: ${e.join("; ")}`); process.exit(1); }
+    const e = problems(p, i); if (e.length) { console.error(`#${i}: ${e.join("; ")}`); process.exit(1); }
     X[i] = bonusWords(p, dict);
     console.log(`#${i} "${p.t}": new layout, ${X[i].split(" ").length} bonus words`);
   }
