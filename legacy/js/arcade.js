@@ -366,6 +366,17 @@ function retryArcade() {
     return postArcade(p.g, p.s, p.d);
   });
 }
+function recoverBests(a) {
+  if (!me || !a || !a.games) return;
+  Object.keys(a.games).forEach(function (k) {
+    var mine = aBest[k] || 0,
+      f = "bdd:arecov:" + k + ":" + me.id;
+    if (mine > 0 && !(a.games[k].myBest > 0) && !store.get(f) && mine <= 99999) {
+      store.set(f, 1);
+      postArcade(k, mine, KEY);
+    }
+  });
+}
 function syncBests() {
   if (!arcade) return;
   var g = arcade.games || {
@@ -713,6 +724,7 @@ function refreshArcade() {
   ownLocal();
   retryArcade();
   API("getArcade", me.id, KEY).then(function (a) {
+    recoverBests(a);
     arcade = a;
     syncBests();
     renderArcade();

@@ -1075,7 +1075,7 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, topdogs: 1000, leash: 1000, mahjong: 1500, mjrush: 999999, mjzen: 999999,
   squad: 999999, dig: 999999, solitaire: 1000, boneball: 1000,
-  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
+  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000, hook: 99999 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
 const DEN_SINCE = '2026-10-28'; // daily Den boards start fresh with the chill scoring
 const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true, boneball: true, links: true, midi: true, guess: true, waffle: true }; // daily Den puzzles get a today-only board too
 const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen', 'solitaire', 'boneball', 'links', 'midi', 'guess', 'waffle'].indexOf(g) < 0); // long or retired games sit out

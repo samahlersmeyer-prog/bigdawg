@@ -141,6 +141,15 @@ function postArcade(game, score, day) {
   }).catch(e => { if (/newest server/.test(errMsg(e))) store.set("bdd:apend", (store.get("bdd:apend") || []).filter(p => p.g !== game)); });
 }
 function retryArcade() { if (!me) return; (store.get("bdd:apend") || []).filter(p => p.id === me.id).slice(0, 5).forEach(p => postArcade(p.g, p.s, p.d)); }
+// A brand-new game's scores get rejected until the server knows it, and the phone drops them. Once the server
+// takes the game, send this phone's best up once if the server still has nothing from this player.
+function recoverBests(a) {
+  if (!me || !a || !a.games) return;
+  Object.keys(a.games).forEach(k => {
+    const mine = aBest[k] || 0, f = "bdd:arecov:" + k + ":" + me.id;
+    if (mine > 0 && !(a.games[k].myBest > 0) && !store.get(f) && mine <= 99999) { store.set(f, 1); postArcade(k, mine, KEY); }
+  });
+}
 function syncBests() { if (!arcade) return; const g = arcade.games || { zoomies: { myBest: arcade.myBest } }; Object.keys(g).forEach(k => setBest(k, g[k].myBest || 0)); }
 const Z = { state: "idle", raf: 0, last: 0, W: 0, H: 0, dpr: 1, y: 0, vy: 0, pipes: [], score: 0, t: 0, dist: 0, dead: 0 };
 const ZC = { grav: 1500, flap: -440, r: 18, pw: 62, space: 210 };
@@ -276,7 +285,7 @@ window.addEventListener("resize", () => { if (active === "zoomies" && Z.state ==
 document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || active === "den" ? active : active === "game" && ARC[arcTab] ? arcCat(arcTab) : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
 function refreshArcade() {
   if (!me) return;
-  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => {});
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { recoverBests(a); arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => {});
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
