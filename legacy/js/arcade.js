@@ -2595,8 +2595,8 @@ defGameMeta([{
   "key": "cliff",
   "name": "Cliff Dawg",
   "icon": "🏞️",
-  "blurb": "Leap, steer, nail the tiny pool at the bottom.",
-  "how": "Hold anywhere to charge your jump (the meter swings up and down), then let go to leap off the cliff. Too weak and you hit the cliff, too strong and you hit the far wall. While you fall, hold the left or right side (or the arrow keys) to steer. The canyon gets narrower toward the bottom, and rocks stick out of the walls on deeper dives. Land in the pool to score, more for hitting the middle and +100 for a PERFECT. Every dive is deeper and tighter. Touch a wall and it's over.",
+  "blurb": "Leap, steer, nail the tiny pool. 3 lives.",
+  "how": "Hold anywhere to charge your jump (the meter swings up and down), then let go to leap off the cliff. Too weak and you hit the cliff, too strong and you hit the far wall. While you fall, hold the left or right side (or the arrow keys) to steer. The canyon gets narrower toward the bottom, and rocks stick out of the walls on deeper dives. Land in the pool to score, more for hitting the middle and +100 for a PERFECT. Every dive is deeper and tighter. You get 3 lives: hit a wall and you climb back up to try that same dive again. Lose all 3 and the run is over.",
   "max": 99999
 }, {
   "file": "g_hook.js",
