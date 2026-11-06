@@ -32,6 +32,7 @@ function problems(p, i) {
   if (p.g.length !== N) errs.push(`grid has ${p.g.length} letters, needs ${N}`);
   p.w.forEach(([w, c], k) => {
     if (w.length !== c.length) errs.push(`${w}: ${c.length} cells for ${w.length} letters`);
+    if (w.length < 4) errs.push(`${w}: theme words need 4+ letters (the game rejects shorter ones)`);
     c.forEach((x, q) => {
       if (p.g[x] !== w[q]) errs.push(`${w}: cell ${x} is ${p.g[x]}, not ${w[q]}`);
       if (owner.has(x)) errs.push(`${w} overlaps ${owner.get(x)} at cell ${x}`);
