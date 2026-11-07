@@ -135,7 +135,10 @@ var MEDALS = {
   harvest: [3000, 10000, 20000],
   dvz: [500, 1500, 3000],
   trap: [500, 1500, 3500],
-  mjrush: [2000, 6000, 15000]
+  mjrush: [2000, 6000, 15000],
+  unfair: [2000, 4500, 7500],
+  pede: [5000, 15000, 40000],
+  cube: [5000, 15000, 35000]
 };
 var MEDAL_ICON = ["", "🥉", "🥈", "🥇"],
   MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
@@ -904,8 +907,11 @@ var ARC_BLURB = {
   snake: "Swipe to steer. Eat bones, grow longer.",
   fetch: "Bounce the ball. Smash the treats."
 };
-var ARC_ORDER = ["sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  unfair: ["new", "2026-11-07"],
+  pede: ["new", "2026-11-07"],
+  cube: ["new", "2026-11-07"],
   fall: ["new", "2026-11-06"],
   cliff: ["new", "2026-11-06"],
   hook: ["new", "2026-11-05"],
@@ -944,20 +950,25 @@ function markFreshHubs() {
 }
 var ARC_GROUPS = {
   arcade: [{
+    icon: "🕹️",
+    name: "Retro Classics",
+    sub: "Old-school arcade, Dawg style.",
+    keys: ["unfair", "pede", "cube", "pupman", "squad", "dig", "fetch", "blocks", "cross"]
+  }, {
     icon: "🏃",
     name: "Run & Jump",
     sub: "Reflexes. Don't crash.",
-    keys: ["fall", "cliff", "hook", "dash", "drive", "hop", "jump", "cross", "zoomies", "snake", "blumji", "pupshot", "harvest"]
+    keys: ["fall", "cliff", "hook", "dash", "drive", "hop", "jump", "zoomies", "snake", "blumji", "pupshot", "harvest"]
   }, {
     icon: "💥",
     name: "Blast & Battle",
     sub: "Shoot, smash, defend.",
-    keys: ["dlords", "pupman", "squad", "dig", "smash", "pop", "fetch", "td", "dvz"]
+    keys: ["dlords", "smash", "pop", "td", "dvz"]
   }, {
     icon: "🧠",
     name: "Chill & Think",
     sub: "Puzzles, putts and party games.",
-    keys: ["blocks", "trap", "mjrush", "mjzen", "putt", "putt18", "drip", "trail", "party"]
+    keys: ["trap", "mjrush", "mjzen", "putt", "putt18", "drip", "trail", "party"]
   }],
   sports: [{
     icon: "🏈",
@@ -2585,6 +2596,30 @@ document.addEventListener("click", function (e) {
   });
 })();
 defGameMeta([{
+  "file": "g_unfair.js",
+  "key": "unfair",
+  "name": "Unfair Dawg",
+  "icon": "😈",
+  "blurb": "A cute little platformer. Totally fair. 9 lives.",
+  "how": "Run right and touch the flag. Hold the left quarter of the screen to walk left, the next quarter to walk right, and tap the right half to jump (hold it to jump higher). Arrow keys and space work too. Bonk ? blocks for bones (+25) and stomp cats (+50). Each level is +1000, or +1500 with no deaths. Fair warning: the level is out to get you. Blocks hide where you jump, the ground falls away, spikes pop up and not every flag is real. You get 9 lives, like a cat.",
+  "max": 99999
+}, {
+  "file": "g_pede.js",
+  "key": "pede",
+  "name": "Dawgipede",
+  "icon": "🐛",
+  "blurb": "Blast the Catterpillar before it reaches you.",
+  "how": "A Catterpillar winds down through the toadstools. Drag anywhere to move the Big Dawg (or use the arrow keys). Bones fire on their own, one at a time, so aim with your feet. Every segment you hit becomes a toadstool and splits the cat in two: heads are 100, body parts are 10. Squirrels zigzag through your area and eat toadstools: 300, 600 or 900 the closer they are. Birds dive-bomb and drop toadstools, 2 hits for 200. Touch anything and you lose a life. Clear the Catterpillar for a faster wave. Extra life every 12,000.",
+  "max": 999999
+}, {
+  "file": "g_cube.js",
+  "key": "cube",
+  "name": "Cube Dawg",
+  "icon": "🧊",
+  "blurb": "Hop the pyramid. Change every cube. Dodge the cat.",
+  "how": "Tap the corner of the screen you want to hop toward: up-left, up-right, down-left or down-right of the Big Dawg (or use the arrow keys: up = up-right, right = down-right, down = down-left, left = up-left). Landing on a cube changes its color (+25). Turn every cube to the target color shown at the top to clear the round. Red yarn balls roll down the pyramid. The purple ball hatches into an alley cat at the bottom that chases you. Hop off the edge onto a spinning frisbee to fly back to the top, and if the cat is right behind you it jumps off after you (+500). Catch a tennis ball to freeze everything (+100) and catch squirrels before they undo your cubes (+300). Hop off the pyramid anywhere else and you fall. 4 lives.",
+  "max": 999999
+}, {
   "file": "g_fall.js",
   "key": "fall",
   "name": "Fall Dawg",
