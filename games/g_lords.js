@@ -3,7 +3,7 @@
 // one per cannon per shot; drag to move it. The x99 gate in the middle multiplies every pup that goes through.
 // Pups that hit the horde knock cats out and push the front back. Each side lane is a conveyor held back by a
 // barrier: its number is the shots it takes to break. Break it and the tiles behind it keep rolling down to you
-// until the next barrier rolls in. Left lane: +N tiles (add cannons). Right lane: x2 tiles (multiply cannons) —
+// until the next barrier rolls in. Left lane: +1 tiles, 20 per barrier. Right lane: x2 tiles (multiply cannons) —
 // the horde grows exponentially, so only multipliers can keep pace late. Every so often a boss marches in; beat it
 // and catch its gold x2 drop.
 (function () {
@@ -16,7 +16,7 @@
   ];
   const BOSSES = [{ n: "FAT CAT", e: "😾" }, { n: "TOMCAT KING", e: "🦁" }, { n: "TIGER LORD", e: "🐯" }, { n: "THE BIG MEOW", e: "🙀" }];
   // Tuning knobs (kept together so balance changes are one-line edits).
-  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 48, fire: 2.5, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, belt: 34, gap: 30, c0: 2, k: [5, 1], hp0: [5, 250], hpg: [3, 5.5], pv: 2, xv: 2, bossX: 2 };
+  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 48, fire: 2.5, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, belt: 34, gap: 30, c0: 2, k: [20, 1], hp0: [5, 150], hpg: [3, 5], xv: 2, bossX: 2 };
   const SP = 7.2; // spacing of the little soldiers in the horde
   const fmtN = n => n >= 1e15 ? (n / 1e15).toFixed(1) + "Q" : n >= 1e12 ? (n / 1e12).toFixed(1) + "T" : n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
   const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
@@ -30,7 +30,7 @@
   defGame({
     key: "dlords", name: "Dawg Lords", icon: "👑", max: 99999, T,
     blurb: "Hold back an endless cat horde. x99 gate. x2 tiles. Bosses.",
-    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it keep rolling down to you until the next barrier rolls in. Slide under them to catch them: blue +N tiles on the left add cannons, gold x2 tiles on the right double ALL your cannons. Missed tiles are gone. Each barrier is tougher than the last, and the left tiles behind it are worth more. The horde keeps multiplying, so late in a battle the x2s are what keep you alive. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold x2 drop. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it keep rolling down to you until the next barrier rolls in. Slide under them to catch them: blue +1 tiles on the left add a cannon each (20 behind every barrier), gold x2 tiles on the right double ALL your cannons. Missed tiles are gone. Each barrier is tougher than the last. The horde keeps multiplying, so late in a battle the x2s are what keep you alive. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold x2 drop. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
@@ -49,7 +49,7 @@
     onScreen(s) { return Math.max(0, Math.round((s.front - 36) / SP + 1)) * this.per(s) * this.unit(s); },
     // Each side lane: a conveyor of items, barrier then its batch of tiles, then the next (tougher) barrier with
     // bigger tiles, and so on. A standing barrier holds back everything behind it.
-    tileV(i, lvl) { return i ? T.xv : T.pv * (lvl + 1) * (lvl + 2) / 2; }, // left: +2, +6, +12, +20... right: x2
+    tileV(i) { return i ? T.xv : 1; }, // left: +1 each, right: x2
     nextItem(s, i) {
       const q = s.lanes[i].q;
       if (q.n === 0) { q.n = 1; const hp = Math.round(T.hp0[i] * Math.pow(T.hpg[i], q.lvl)); return { b: 1, hp, hp0: hp, lvl: q.lvl }; }
