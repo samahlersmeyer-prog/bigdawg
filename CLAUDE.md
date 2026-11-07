@@ -31,6 +31,9 @@ The `js/` files are classic scripts sharing one global scope, loaded in order da
 ## The Den
 `DEN_SECTIONS` in `js/arcade.js` sets the daily puzzles: Words (big cards) and Logic (compact rows), in a fixed order. Re-rank that order by hand every month or so from play counts (distinct players per week), not live. NEW games (`FRESH`) pin to the top of their section for 7 days; finished puzzles sink to a slim ✓ row.
 
+## Den card games
+Unlisted Den games (euchre, crib, crazy, rummy, skipbo, solitaire) fall into the "Card games & more" section. Rummy Dawgs (`g_rummy.js`, Rummikub): 3-round match with traditional plus/minus scoring (out = others' rack totals, jokers 30; dry pool = lowest rack wins the differences); score 300 + match total, +100 for winning. Skip-Bo Dawgs (`g_skipbo.js`): vs Rex and Duke, Quick (20) or Classic (30) stockpiles; CPU plays a route to its stockpile card, avoids feeding a pup's stockpile, stacks discards high-to-low; if the deck dries up and everyone passes 3 times, smallest stockpile wins.
+
 ## Retro Classics
 Dawg takes on old arcade games. Unfair Dawg (`g_unfair.js`): troll platformer, 5 hand-built levels from a small tile builder (`LV`), 9 lives; every troll is survivable once you know it (e.g. hidden blocks sit where an early jump clears them), so keep that true when adding levels. Its touch controls listen to raw touch events for multi-touch (run + jump at once). Dawgipede (`g_pede.js`): Centipede-style. Cube Dawg (`g_cube.js`): Q*bert-style, 4 level rules x 4 rounds, then repeats faster.
 

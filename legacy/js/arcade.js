@@ -907,8 +907,10 @@ var ARC_BLURB = {
   snake: "Swipe to steer. Eat bones, grow longer.",
   fetch: "Bounce the ball. Smash the treats."
 };
-var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  skipbo: ["new", "2026-11-07"],
+  rummy: ["upd", "2026-11-07"],
   unfair: ["new", "2026-11-07"],
   pede: ["new", "2026-11-07"],
   cube: ["new", "2026-11-07"],
@@ -3050,10 +3052,19 @@ defGameMeta([{
   "key": "rummy",
   "name": "Rummy Dawgs",
   "icon": "🧮",
-  "blurb": "Number-tile rummy vs Rex and Duke.",
-  "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Win: 200 + the tiles left in the pups' racks. Lose: 100 minus what's left in your rack.",
+  "blurb": "Number-tile rummy vs Rex and Duke. 3 rounds, classic scoring.",
+  "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play each round has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Classic scoring, 3 rounds: when someone goes out, everyone else loses the face value of the tiles left in their rack (jokers 30) and the winner gains it all. If the pool runs out first, the lowest rack wins and the others lose the difference. Highest total after 3 rounds wins the match. Score: 300 + your match total, +100 for winning the match.",
   "cat": "den",
   "max": 800
+}, {
+  "file": "g_skipbo.js",
+  "key": "skipbo",
+  "name": "Skip-Bo Dawgs",
+  "icon": "🔢",
+  "blurb": "The stockpile card game vs Rex and Duke.",
+  "how": "Be the first to empty your stockpile (left, top card face up). The 4 building piles in the middle go up from 1 to 12, any color; at 12 a pile clears. Orange 🐶 cards are wild and count as whatever the pile needs. On your turn you fill up to 5 cards, then play as many cards as you like from your hand, the top of your stockpile, or the tops of your 4 discard piles: tap a card, then tap a building pile. Use your whole hand and you draw 5 more. To end your turn, tap a hand card and then one of your discard piles. Only the top card of each discard pile can be played, so stack them high-to-low. Quick game: 20-card stockpiles; Classic: 30. Win = 25 + 5 for each card left in the pups' stockpiles. Score: win = 100 + that; lose = 5 for every stockpile card you got rid of.",
+  "cat": "den",
+  "max": 500
 }, {
   "file": "g_waffle.js",
   "key": "waffle",

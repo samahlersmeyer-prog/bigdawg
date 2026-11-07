@@ -2,7 +2,11 @@
 // You vs Rex and Duke. 106 tiles: 1-13 in four colors (two of each) + 2 dog jokers. Make runs (3+ in a row, same color)
 // and groups (3-4 of the same number, all different colors). Your first play must total 30+ from your own tiles.
 // After that you can rework the table any way you like, as long as every set is valid when you tap Done.
+// Traditional scoring over a 3-round match: whoever goes out scores the total left in the other racks (jokers 30),
+// everyone else loses what's left in their own rack. If the pool runs dry, the lowest rack wins the round and the
+// others lose the difference. Highest total after 3 rounds wins.
 (function () {
+  const ROUNDS = 3;
   const NAMES = ["YOU", "REX", "DUKE"], FACES = [null, "🐕", "🐶"];
   const TC = ["#d32f2f", "#1565c0", "#ef6c00", "#263238"], SHAPE = ["●", "■", "▲", "◆"];
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -77,19 +81,21 @@
 
   defGame({
     key: "rummy", name: "Rummy Dawgs", icon: "🧮", max: 800, cat: "den",
-    blurb: "Number-tile rummy vs Rex and Duke.",
-    how: "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Win: 200 + the tiles left in the pups' racks. Lose: 100 minus what's left in your rack.",
+    blurb: "Number-tile rummy vs Rex and Duke. 3 rounds, classic scoring.",
+    how: "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play each round has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Classic scoring, 3 rounds: when someone goes out, everyone else loses the face value of the tiles left in their rack (jokers 30) and the winner gains it all. If the pool runs out first, the lowest rack wins and the others lose the difference. Highest total after 3 rounds wins the match. Score: 300 + your match total, +100 for winning the match.",
     save(G) {
-      const s = G.s; if (s.phase !== "play" || s.turn !== 0) return null;
-      return { label: `You ${s.racks[0].length} tiles · pool ${s.pool.length}`, v: JSON.parse(JSON.stringify(Object.assign({}, s, { btns: [], hl: null, say: [null, null, null] }))) };
+      const s = G.s; if (!(s.phase === "between" || (s.phase === "play" && s.turn === 0))) return null;
+      return { label: `Round ${s.round}/${ROUNDS} · you ${s.totals[0] >= 0 ? "+" : ""}${s.totals[0]}`, v: JSON.parse(JSON.stringify(Object.assign({}, s, { btns: [], hl: null, say: [null, null, null] }))) };
     },
-    load(G, sv) { Object.assign(G.s, sv.v); G.s.wait = 0.4; G.s.msg = "Welcome back. Your turn."; },
-    reset(G) {
+    load(G, sv) { Object.assign(G.s, sv.v); if (!G.s.totals) { G.s.totals = [0, 0, 0]; G.s.round = 1; } G.s.wait = 0.4; G.s.msg = G.s.phase === "play" ? "Welcome back. Your turn." : ""; },
+    reset(G) { G.s = { totals: [0, 0, 0], round: 0 }; this.deal(G); },
+    deal(G) {
       const pool = []; let id = 0;
       for (let k = 0; k < 2; k++) for (let c = 0; c < 4; c++) for (let n = 1; n <= 13; n++) pool.push({ id: id++, n, c, j: false });
       pool.push({ id: id++, n: 0, c: 0, j: true }, { id: id++, n: 0, c: 0, j: true }); shuffle(pool);
       const racks = [[], [], []]; for (let r = 0; r < 14; r++) for (let p = 0; p < 3; p++) racks[p].push(pool.pop());
-      G.s = { pool, racks, table: [], opened: [false, false, false], turn: 0, sel: [], placed: [], sortBy: "run", phase: "play", msg: "Your turn. Make 30+ from your own tiles, or Draw.", wait: 0, passes: 0, say: [null, null, null], hl: null, btns: [] };
+      const keep = G.s || {}, round = (keep.round || 0) + 1;
+      G.s = { totals: keep.totals || [0, 0, 0], round, pool, racks, table: [], opened: [false, false, false], turn: (round - 1) % 3, sel: [], placed: [], sortBy: "run", phase: "play", msg: round === 1 ? "Your turn. Make 30+ from your own tiles, or Draw." : `Round ${round}. ${["You start", "Rex starts", "Duke starts"][(round - 1) % 3]}.`, wait: 0.6, passes: 0, say: [null, null, null], hl: null, btns: [] };
       this.snapshot(G);
     },
     snapshot(G) { const s = G.s; s.snap = JSON.stringify({ table: s.table, rack: s.racks[0] }); s.placed = []; s.sel = []; },
@@ -166,11 +172,19 @@
     },
     finish(G, w) {
       const s = G.s, left = s.racks.map(r => r.reduce((a, t) => a + tpts(t), 0));
-      if (w < 0) w = left.indexOf(Math.min(...left)); // pool ran dry and nobody can play: lowest rack wins
-      s.phase = "over"; s.winner = w; s.left = left;
-      const score = w === 0 ? Math.min(800, 200 + left[1] + left[2]) : Math.max(0, 100 - left[0]);
-      s.final = score; G.sfx(w === 0 ? "win" : "lose");
-      setTimeout(() => G.over(score, w === 0 ? "Rummy! Top dog 🐶" : `${NAMES[w]} went out first.`), 1800);
+      // Pool ran dry and nobody can play: lowest rack wins, everyone else pays the difference.
+      const dry = w < 0; if (dry) w = left.indexOf(Math.min(...left));
+      const pay = left.map((v, p) => p === w ? 0 : dry ? v - left[w] : v);
+      const pts = pay.map((v, p) => p === w ? pay.reduce((a, x) => a + x, 0) : -v);
+      pts.forEach((v, p) => s.totals[p] += v);
+      s.winner = w; s.left = left; s.pts = pts; s.dry = dry; s.wait = 0; s.sel = [];
+      G.sfx(w === 0 ? "win" : "lose");
+      if (s.round < ROUNDS) { s.phase = "between"; return; }
+      s.phase = "over";
+      const best = Math.max(...s.totals), won = s.totals[0] === best, champ = s.totals.indexOf(best);
+      const score = Math.max(0, Math.min(800, 300 + s.totals[0] + (won ? 100 : 0)));
+      s.final = score;
+      setTimeout(() => G.over(score, won ? "Rummy champ! Top dog 🐶" : `${NAMES[champ]} wins the match.`), 2200);
     },
     update(G, dt) {
       const s = G.s;
@@ -197,12 +211,13 @@
     draw(G, c) {
       const s = G.s, L = this.L(G), W = L.W, H = L.H; s.btns = [];
       const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1f5f4a"); g.addColorStop(1, "#123a2e"); c.fillStyle = g; c.fillRect(0, 0, W, H);
-      G.hud(c, `POOL ${s.pool.length}`, s.opened[0] ? "RUMMY DAWGS" : "FIRST PLAY: 30+", `YOU ${s.racks[0].length}`);
+      const sg = v => (v > 0 ? "+" : "") + v;
+      G.hud(c, `POOL ${s.pool.length}`, s.opened[0] ? `ROUND ${s.round}/${ROUNDS}` : `R${s.round} · FIRST 30+`, `YOU ${sg(s.totals[0])}`);
       // opponents strip
       [1, 2].forEach(p => {
         const x = p === 1 ? W * 0.27 : W * 0.73, y = 54, turn = s.turn === p && s.phase === "play";
         if (turn) { c.fillStyle = "rgba(255,210,63,0.3)"; rr(c, x - 70, y - 16, 140, 32, 16); c.fill(); }
-        G.emoji(c, FACES[p], x - 50, y, 22); G.text(c, `${NAMES[p]} ${s.racks[p].length}`, x + 4, y, 10, s.racks[p].length <= 2 ? "#ff8a80" : "#fff");
+        G.emoji(c, FACES[p], x - 50, y, 22); G.text(c, `${NAMES[p]} ${s.racks[p].length}·${sg(s.totals[p])}`, x + 6, y, 9, s.racks[p].length <= 2 ? "#ff8a80" : "#fff");
         const b = s.say[p]; if (b) { c.fillStyle = "#fff"; rr(c, x - 50, y + 14, 100, 22, 11); c.fill(); c.fillStyle = "#222"; c.font = "700 12px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(b.txt, x, y + 25); }
       });
       // table
@@ -237,15 +252,25 @@
         tile(c, x, y, L.rw, t, { sel, up: sel, dim: !myTurn });
         s.btns.push({ x: x - L.rw / 2, y: y - L.rh / 2 - 6, w: L.rw + 2, h: L.rh + 6, id: t.id }); });
       G.hint(c, "TAP TILES, THEN NEW SET OR +", 5, L.btnY - 52);
-      if (s.phase === "over") {
-        c.fillStyle = "rgba(0,0,0,0.7)"; c.fillRect(0, 0, W, H);
-        G.banner(c, s.winner === 0 ? "RUMMY! YOU WIN" : `${NAMES[s.winner]} WINS`, s.winner === 0 ? "#ffd23f" : "#fff", H * 0.35, 18);
-        [0, 1, 2].forEach(p => G.text(c, `${NAMES[p]}: ${s.racks[p].length} tiles left (${s.left[p]})`, W / 2, H * 0.45 + p * 26, 11, p === 0 ? "#ffd23f" : "#fff"));
+      if (s.phase === "over" || s.phase === "between") {
+        c.fillStyle = "rgba(0,0,0,0.75)"; c.fillRect(0, 0, W, H);
+        const w = s.winner, last = s.phase === "over";
+        G.banner(c, w === 0 ? (s.dry ? "LOWEST RACK!" : "RUMMY!") : `${NAMES[w]} ${s.dry ? "HAS LOWEST" : "WENT OUT"}`, w === 0 ? "#ffd23f" : "#fff", H * 0.2, 16);
+        G.text(c, `ROUND ${s.round} OF ${ROUNDS}`, W / 2, H * 0.27, 10, "#bbb");
+        // table: player · left in rack · this round · match total
+        const y0 = H * 0.34, cols = [W * 0.2, W * 0.46, W * 0.68, W * 0.88];
+        ["", "LEFT", "ROUND", "TOTAL"].forEach((t, i) => G.text(c, t, cols[i], y0, 8, "#999"));
+        [0, 1, 2].forEach(p => { const y = y0 + 30 + p * 30, col = p === 0 ? "#ffd23f" : "#fff";
+          G.text(c, NAMES[p], cols[0], y, 10, col); G.text(c, String(s.left[p]), cols[1], y, 10, col);
+          G.text(c, sg(s.pts[p]), cols[2], y, 10, s.pts[p] > 0 ? "#69f0ae" : s.pts[p] < 0 ? "#ff8a80" : col); G.text(c, sg(s.totals[p]), cols[3], y, 10, col); });
+        if (last) { const best = Math.max(...s.totals), champ = s.totals.indexOf(best); G.text(c, champ === 0 ? "YOU WIN THE MATCH!" : `${NAMES[champ]} WINS THE MATCH`, W / 2, y0 + 150, 11, champ === 0 ? "#ffd23f" : "#fff"); }
+        else { const bx = W / 2 - 100, by = y0 + 140; c.fillStyle = "#ffd23f"; rr(c, bx, by, 200, 48, 24); c.fill(); G.text(c, `ROUND ${s.round + 1}`, W / 2, by + 24, 12, "#222"); s.btns.unshift({ x: bx, y: by, w: 200, h: 48, k: "nextround" }); }
       }
     },
     tap(G, x, y) {
-      const s = G.s; if (s.turn !== 0 || s.phase !== "play" || s.wait > 0) return;
-      const hits = s.btns.filter(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!hits.length) return;
+      const s = G.s, hits = s.btns.filter(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+      if (s.phase === "between") { if (hits.some(h => h.k === "nextround")) { this.deal(G); G.sfx("pop"); } return; }
+      if (s.turn !== 0 || s.phase !== "play" || s.wait > 0 || !hits.length) return;
       const b = hits.find(h => h.k) || hits.find(h => h.add !== undefined) || hits.find(h => h.id !== undefined) || hits[0];
       if (b.k === "new") return this.newSet(G);
       if (b.k === "undo") return this.undo(G);
