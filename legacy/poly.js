@@ -12716,6 +12716,34 @@ if (DESCRIPTORS && !('size' in URLSearchParamsPrototype)) {
     };
   }
 
+  // ---------- Fast, reliable taps ----------
+  // Old iOS waits ~300ms before a tap becomes a click and sometimes drops it (taps felt dead). Fire the click
+  // ourselves the moment the finger lifts, if it barely moved, and cancel the slow native one. Touches a game
+  // already claimed (touchstart prevented: drags, boards) are left alone.
+  (function () {
+    var CLICKABLE = "button, a, label, [onclick], [role=button], [data-home]";
+    var t0 = 0, x0 = 0, y0 = 0, moved = false, startEv = null;
+    document.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1) { startEv = null; return; }
+      var p = e.touches[0]; t0 = Date.now(); x0 = p.clientX; y0 = p.clientY; moved = false; startEv = e;
+    }, false);
+    document.addEventListener("touchmove", function (e) {
+      var p = e.touches[0]; if (p && (Math.abs(p.clientX - x0) > 10 || Math.abs(p.clientY - y0) > 10)) moved = true;
+    }, false);
+    document.addEventListener("touchend", function (e) {
+      var s = startEv; startEv = null;
+      if (!s || s.defaultPrevented || moved || Date.now() - t0 > 800 || e.defaultPrevented) return;
+      var el = s.target; if (el && el.nodeType !== 1) el = el.parentNode;
+      var c = el && el.closest ? el.closest(CLICKABLE) : null;
+      if (!c || c.disabled) return;
+      var tg = el.tagName; if (tg === "INPUT" || tg === "TEXTAREA" || tg === "SELECT") return;
+      e.preventDefault();
+      var p = e.changedTouches[0], ev = document.createEvent("MouseEvents");
+      ev.initMouseEvent("click", true, true, window, 1, p.screenX, p.screenY, p.clientX, p.clientY, false, false, false, false, 0, null);
+      el.dispatchEvent(ev);
+    }, false);
+  })();
+
   // ---------- Server calls: fall back to a <script> tag (JSONP) ----------
   // The app POSTs to the Apps Script URL, which redirects to googleusercontent.com. Old Safari can refuse that
   // cross-site redirect, so if a POST fails we send the same request as GET ?cb=..&q=.. (server doGet answers JS).

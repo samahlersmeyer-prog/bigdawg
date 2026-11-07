@@ -1579,3 +1579,6 @@ input { -webkit-user-select: text; user-select: text; }
 .legacy .arc-cell > b, .legacy .arc-cell > small { display: block; margin: 5px auto 0; }
 .legacy .arc-cell > b { display: -webkit-box; }
 .legacy .arc-cell > .gicon { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; margin: 0 auto; }
+
+/* iOS only delivers taps reliably to things that look clickable */
+html.legacy button, html.legacy label, html.legacy [role=button] { cursor: pointer; }
