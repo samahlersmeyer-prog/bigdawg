@@ -232,5 +232,31 @@ html = html.replace(/<link rel="manifest"[^>]*>\s*/, "");
 html = html.replace(/<meta name="viewport" content="[^"]*">/, '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">');
 html = html.replace("<head>", "<head>\n<!-- Built by tools/legacy/build.mjs from index.html. Don't edit; run python3 tools/stamp.py. -->");
 if (/serviceWorker/.test(html)) throw new Error("legacy: service worker script still in page");
+
+// Offline: iOS 9 has no service worker, but it does have the old Application Cache. List every file the page
+// needs (with the same ?v= it asks for) so a bookmark or home-screen icon opens with no internet.
+// Paths are relative to legacy/manifest.appcache. Server calls (scoreboard) stay online-only (NETWORK: *).
+const cacheList = [
+  `styles.css?v=${h(css)}`, `poly.js?v=${h(poly)}`,
+  ...FILES.map(f => `js/${f}.js?v=${h(out[f])}`),
+  ...GAME_FILES.map(n => `games/${n}?v=${gamesV}`),
+  "../strands_x.json", "../apple-touch-icon.png", "../icon-192.png",
+];
+for (const u of cacheList) { const f = path.join(OUT, u.split("?")[0]); if (!fs.existsSync(f)) throw new Error("legacy: offline file missing: " + u); }
+const manifest = "CACHE MANIFEST\n# " + h(html + cacheList.join("\n") + read("strands_x.json")) + "\n\nCACHE:\n" + cacheList.join("\n") + "\n\nNETWORK:\n*\n";
+write("manifest.appcache", manifest);
+// absolute path: the page's <base href="../"> isn't read yet when <html manifest> is
+html = html.replace('<html lang="en" class="legacy">', '<html lang="en" class="legacy" manifest="/bigdawg/legacy/manifest.appcache">');
+// when a newer version has downloaded, switch to it (right away if just opened, else next time the iPad wakes it)
+html = html.replace("</body>", `<script>
+(function () { var ac = window.applicationCache, t0 = Date.now(); if (!ac) return;
+  function swap() { try { ac.swapCache(); } catch (e) {} location.reload(); }
+  ac.addEventListener("updateready", function () {
+    if (Date.now() - t0 < 15000) return swap();
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) swap(); });
+  });
+})();
+</script>
+</body>`);
 write("index.html", html);
 console.log(`legacy: built for iOS 9 (${GAME_FILES.length} games, ${polyList.length} polyfills, ${Math.round(poly.length / 1024)}KB poly, ${Math.round(css.length / 1024)}KB css)`);

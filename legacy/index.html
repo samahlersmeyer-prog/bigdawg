@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="legacy">
+<html lang="en" class="legacy" manifest="/bigdawg/legacy/manifest.appcache">
 <head>
 <!-- Built by tools/legacy/build.mjs from index.html. Don't edit; run python3 tools/stamp.py. -->
 <base href="../" target="_top">
@@ -436,5 +436,14 @@
 <script src="legacy/js/social.js?v=c6ceadf7d2"></script>
 <script src="legacy/js/arcade.js?v=76adb8ff54"></script>
 <script src="legacy/js/boot.js?v=6a667503fa"></script>
+<script>
+(function () { var ac = window.applicationCache, t0 = Date.now(); if (!ac) return;
+  function swap() { try { ac.swapCache(); } catch (e) {} location.reload(); }
+  ac.addEventListener("updateready", function () {
+    if (Date.now() - t0 < 15000) return swap();
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) swap(); });
+  });
+})();
+</script>
 </body>
 </html>
