@@ -919,7 +919,7 @@ var FRESH = {
   guess: ["new", "2026-11-04"],
   midi: ["new", "2026-11-04"],
   links: ["new", "2026-11-04"],
-  dlords: ["new", "2026-11-02"],
+  dlords: ["upd", "2026-11-07"],
   dawgball: ["upd", "2026-11-02"]
 };
 function freshTag(k) {
@@ -3149,8 +3149,8 @@ defGameMeta([{
   "key": "dlords",
   "name": "Dawg Lords",
   "icon": "👑",
-  "blurb": "Hold back an endless cat horde. x99 gate. Bosses.",
-  "how": "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it (+1s on the left, +99s on the right) keep rolling down to you until the next barrier rolls in. Slide under them to catch them: each one adds that many cannons. Missed tiles are gone. The next barrier is tougher, but the tiles behind it are worth more. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold drop for extra cannons. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+  "blurb": "Hold back an endless cat horde. x99 gate. x2 tiles. Bosses.",
+  "how": "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it keep rolling down to you until the next barrier rolls in. Slide under them to catch them: blue +N tiles on the left add cannons, gold x2 tiles on the right double ALL your cannons. Missed tiles are gone. Each barrier is tougher than the last, and the left tiles behind it are worth more. The horde keeps multiplying, so late in a battle the x2s are what keep you alive. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold x2 drop. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
   "max": 99999
 }, {
   "file": "g_tennis.js",

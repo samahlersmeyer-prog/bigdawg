@@ -2,9 +2,10 @@
 // An endless red cat horde marches down the road and keeps getting bigger. Your cannon at the bottom fires pups,
 // one per cannon per shot; drag to move it. The x99 gate in the middle multiplies every pup that goes through.
 // Pups that hit the horde knock cats out and push the front back. Each side lane is a conveyor held back by a
-// barrier: its number is the shots it takes to break. Break it and the +N tiles behind it keep rolling down to you
-// (catch them: each adds N cannons) until the next barrier rolls in, with bigger tiles behind it.
-// Every so often a boss marches in; beat it and catch its gold drop.
+// barrier: its number is the shots it takes to break. Break it and the tiles behind it keep rolling down to you
+// until the next barrier rolls in. Left lane: +N tiles (add cannons). Right lane: x2 tiles (multiply cannons) —
+// the horde grows exponentially, so only multipliers can keep pace late. Every so often a boss marches in; beat it
+// and catch its gold x2 drop.
 (function () {
   const PERKS = [
     { k: "rate", n: "BIG CANNON", e: "⚡", max: 10, c: l => Math.round(30 * Math.pow(1.45, l)), d: "+8% fire rate" },
@@ -15,9 +16,9 @@
   ];
   const BOSSES = [{ n: "FAT CAT", e: "😾" }, { n: "TOMCAT KING", e: "🦁" }, { n: "TIGER LORD", e: "🐯" }, { n: "THE BIG MEOW", e: "🙀" }];
   // Tuning knobs (kept together so balance changes are one-line edits).
-  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 48, fire: 2.5, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, belt: 34, gap: 30, c0: 2, k: [6, 4], hp0: [5, 888], hpg: [3.5, 3.5] };
+  const T = { march: 9, marchT: 0.025, unit: 10, unitG: 48, fire: 2.5, boss1: 40, bossEvery: 55, bossHp: 2500, gate: 99, belt: 34, gap: 30, c0: 2, k: [5, 1], hp0: [5, 250], hpg: [3, 5.5], pv: 2, xv: 2, bossX: 2 };
   const SP = 7.2; // spacing of the little soldiers in the horde
-  const fmtN = n => n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
+  const fmtN = n => n >= 1e15 ? (n / 1e15).toFixed(1) + "Q" : n >= 1e12 ? (n / 1e12).toFixed(1) + "T" : n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
   const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
   const mkey = () => "bdd:lords3:" + (typeof me !== "undefined" && me ? me.id : "");
   const today = () => new Date().toDateString();
@@ -28,18 +29,18 @@
 
   defGame({
     key: "dlords", name: "Dawg Lords", icon: "👑", max: 99999, T,
-    blurb: "Hold back an endless cat horde. x99 gate. Bosses.",
-    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it (+1s on the left, +99s on the right) keep rolling down to you until the next barrier rolls in. Slide under them to catch them: each one adds that many cannons. Missed tiles are gone. The next barrier is tougher, but the tiles behind it are worth more. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold drop for extra cannons. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    blurb: "Hold back an endless cat horde. x99 gate. x2 tiles. Bosses.",
+    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it keep rolling down to you until the next barrier rolls in. Slide under them to catch them: blue +N tiles on the left add cannons, gold x2 tiles on the right double ALL your cannons. Missed tiles are gone. Each barrier is tougher than the last, and the left tiles behind it are worth more. The horde keeps multiplying, so late in a battle the x2s are what keep you alive. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold x2 drop. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset(G) {
       const W = G.W, H = G.H;
       G.s = { mode: "camp", meta: loadMeta(), W, H, gy: Math.round(H * 0.5), cy: H - 64, ax0: W * 0.22, ax1: W * 0.78,
         cols: [{ x0: W * 0.035, x1: W * 0.2 }, { x0: W * 0.8, x1: W * 0.965 }],
         t: 0, score: 0, kills: 0, cx: W / 2, tx: W / 2, cd: 0, pups: [], fx: [], drops: [], more: 0, start: 0, lanes: [],
-        front: 60, boss: null, bossN: 0, nextBoss: T.boss1, gateOn: true, gflash: 0, msg: null, sfxT: 0, recoil: 0 };
+        mul: 1, front: 60, boss: null, bossN: 0, nextBoss: T.boss1, gateOn: true, gflash: 0, msg: null, sfxT: 0, recoil: 0 };
     },
     begin(G) {
       const s = G.s; s.mode = "play"; s.daily = s.meta.lastDay !== today(); G.t = 0;
-      s.start = 2 * (s.meta.side || 0); s.more = 0; this.fillBelts(s);
+      s.start = 2 * (s.meta.side || 0); s.more = 0; s.mul = 1; this.fillBelts(s);
       s.msg = { txt: s.daily ? "DAILY 2X COINS!" : "HOLD THE ROAD!", t: 2 };
     },
     per(s) { return Math.max(1, Math.floor((s.ax1 - s.ax0) / SP)); },
@@ -48,27 +49,27 @@
     onScreen(s) { return Math.max(0, Math.round((s.front - 36) / SP + 1)) * this.per(s) * this.unit(s); },
     // Each side lane: a conveyor of items, barrier then its batch of tiles, then the next (tougher) barrier with
     // bigger tiles, and so on. A standing barrier holds back everything behind it.
-    tileV(i, lvl) { return i ? 99 * (lvl + 1) : lvl + 1; },
+    tileV(i, lvl) { return i ? T.xv : T.pv * (lvl + 1) * (lvl + 2) / 2; }, // left: +2, +6, +12, +20... right: x2
     nextItem(s, i) {
       const q = s.lanes[i].q;
       if (q.n === 0) { q.n = 1; const hp = Math.round(T.hp0[i] * Math.pow(T.hpg[i], q.lvl)); return { b: 1, hp, hp0: hp, lvl: q.lvl }; }
       const it = { v: this.tileV(i, q.lvl) }; if (q.n++ >= T.k[i]) { q.lvl++; q.n = 0; } return it;
     },
     blockY(s) { return s.gy; },
-    cannons(s) { return T.c0 + (s.start || 0) + s.more; },
+    cannons(s) { return (T.c0 + (s.start || 0) + s.more) * (s.mul || 1); },
     fillBelts(s, lv) {
       s.lanes = [0, 1].map(i => ({ items: [], q: { lvl: lv ? lv[i] : 0, n: 0 }, flash: 0 }));
       for (let i = 0; i < 2; i++) for (let y = this.blockY(s); y >= 40; y -= T.gap) s.lanes[i].items.push(Object.assign(this.nextItem(s, i), { y }));
     },
     save(G) {
       const s = G.s; if (s.mode !== "play" || s.t < 5) return null;
-      return { label: `⏱ ${fmtT(s.t)}`, t: s.t, kills: s.kills, daily: s.daily, more: s.more, start: s.start, lv: s.lanes.map(L => (L.items.find(x => x.b) || { lvl: L.q.lvl }).lvl), bossN: s.bossN, nextBoss: s.nextBoss };
+      return { label: `⏱ ${fmtT(s.t)}`, t: s.t, kills: s.kills, daily: s.daily, more: s.more, mul: s.mul, start: s.start, lv: s.lanes.map(L => (L.items.find(x => x.b) || { lvl: L.q.lvl }).lvl), bossN: s.bossN, nextBoss: s.nextBoss };
     },
     load(G, v) {
       if (v.more == null || v.t == null) throw new Error("old save");
       const s = G.s; s.mode = "play"; ["t", "kills", "daily", "start", "bossN", "nextBoss", "more"].forEach(k => s[k] = v[k]);
       this.fillBelts(s, v.lv);
-      s.front = 60; s.msg = { txt: "BACK TO THE ROAD!", t: 1.5 };
+      s.mul = v.mul || 1; s.front = 60; s.msg = { txt: "BACK TO THE ROAD!", t: 1.5 };
     },
     // A clump of pups. One dot can stand for many pups (w) so huge multipliers stay smooth on a phone.
     add(s, x, y, w, vx) {
@@ -107,12 +108,14 @@
         const top = It[It.length - 1]; if (!top || top.y >= 40 + T.gap) It.push(Object.assign(this.nextItem(s, i), { y: top ? top.y - T.gap : 40 }));
         while (It.length && !It[0].b && It[0].y >= s.cy - 24) {
           const t = It.shift();
-          if (this.catchAt(s, cxm, (c.x1 - c.x0) / 2 + 16)) { s.more += t.v; this.gain(G, t.v, i ? "#ffd23f" : "#82b1ff"); }
+          if (this.catchAt(s, cxm, (c.x1 - c.x0) / 2 + 16)) {
+            if (i) { s.mul *= t.v; this.gain(G, t.v, "#ffd23f", `x${t.v} 🔫 = ${fmtN(this.cannons(s))}`); } else { s.more += t.v; this.gain(G, t.v, "#82b1ff"); }
+          }
           else s.fx.push({ txt: "MISSED", x: cxm, y: s.cy - 10, t: 0.6, col: "#ff8a80" });
         }
       }
       // boss gold drops fall down the road
-      s.drops.forEach(d => { d.y += 95 * dt; if (d.y >= s.cy - 24) { d.done = true; if (this.catchAt(s, d.x, 38)) { s.more += d.v; this.gain(G, d.v, "#ffd23f"); s.msg = { txt: `+${d.v} CANNONS!`, t: 1.2 }; G.sfx("win"); } else s.fx.push({ txt: "MISSED", x: d.x, y: s.cy - 10, t: 0.7, col: "#ff8a80" }); } });
+      s.drops.forEach(d => { d.y += 95 * dt; if (d.y >= s.cy - 24) { d.done = true; if (this.catchAt(s, d.x, 38)) { s.mul *= d.v; this.gain(G, d.v, "#ffd23f", `x${d.v} 🔫`); s.msg = { txt: `x${d.v} CANNONS!`, t: 1.2 }; G.sfx("win"); } else s.fx.push({ txt: "MISSED", x: d.x, y: s.cy - 10, t: 0.7, col: "#ff8a80" }); } });
       s.drops = s.drops.filter(d => !d.done);
       // the horde marches; bosses join every so often
       s.front += this.march(s) * dt;
@@ -145,7 +148,7 @@
         if (b && p.y <= s.front + 8 && Math.abs(p.x - b.x) < b.r) {
           const k = Math.min(b.hp, p.w); b.hp -= k; p.w -= k; b.flash = 0.06; s.kills += k;
           if (b.hp <= 0) {
-            const v = 2 + s.bossN; s.bossN++; s.boss = null; s.nextBoss = s.t + T.bossEvery;
+            const v = T.bossX; s.bossN++; s.boss = null; s.nextBoss = s.t + T.bossEvery;
             s.drops.push({ x: Math.max(s.cx - 60, Math.min(s.cx + 60, b.x)), y: s.front, v });
             s.msg = { txt: "BOSS DOWN! CATCH THE GOLD!", t: 1.8 }; G.sfx("win");
           }
@@ -208,7 +211,7 @@
         }
         c.fillStyle = i ? "#c99a00" : "#1e5fc2"; rr(c, x, t.y - 11, w, 24, 4); c.fill();
         c.fillStyle = i ? "#ffd23f" : "#2f80ed"; rr(c, x, t.y - 13, w, 22, 4); c.fill();
-        G.text(c, "+" + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
+        G.text(c, (i ? "x" : "+") + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
       }));
       // the x99 gate
       { const x = s.ax0, w = s.ax1 - s.ax0, y = s.gy - 13, on = s.gateOn;
@@ -236,7 +239,7 @@
       c.fillStyle = "rgba(0,0,0,0.55)"; rr(c, W / 2 - 56, 42, 112, 22, 11); c.fill();
       G.text(c, "🐱" + fmtN(this.onScreen(s)), W / 2, 53, 10, "#fff");
       // gold drops from bosses
-      s.drops.forEach(d => { c.fillStyle = "#c99a00"; rr(c, d.x - 26, d.y - 11, 52, 26, 6); c.fill(); c.fillStyle = "#ffd23f"; rr(c, d.x - 26, d.y - 13, 52, 24, 6); c.fill(); G.text(c, `+${d.v}`, d.x, d.y - 1, 11, "#3a2c00"); });
+      s.drops.forEach(d => { c.fillStyle = "#c99a00"; rr(c, d.x - 26, d.y - 11, 52, 26, 6); c.fill(); c.fillStyle = "#ffd23f"; rr(c, d.x - 26, d.y - 13, 52, 24, 6); c.fill(); G.text(c, `x${d.v}`, d.x, d.y - 1, 11, "#3a2c00"); });
       // pups
       const pb = new Path2DShim(c), ph = new Path2DShim(c);
       s.pups.forEach(p => { const r = Math.min(8, 3.8 + Math.log10(Math.max(1, p.w)) * 1.2); pb.dot(p.x, p.y, r); ph.dot(p.x - r * 0.25, p.y - r * 0.5, r * 0.45); });

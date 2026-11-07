@@ -74,13 +74,16 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     belt: 34,
     gap: 30,
     c0: 2,
-    k: [6, 4],
-    hp0: [5, 888],
-    hpg: [3.5, 3.5]
+    k: [5, 1],
+    hp0: [5, 250],
+    hpg: [3, 5.5],
+    pv: 2,
+    xv: 2,
+    bossX: 2
   };
   var SP = 7.2;
   var fmtN = function fmtN(n) {
-    return n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
+    return n >= 1e15 ? (n / 1e15).toFixed(1) + "Q" : n >= 1e12 ? (n / 1e12).toFixed(1) + "T" : n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(Math.max(0, Math.round(n)));
   };
   var fmtT = function fmtT(t) {
     return "".concat(Math.floor(t / 60), ":").concat(String(Math.floor(t % 60)).padStart(2, "0"));
@@ -115,8 +118,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     icon: "👑",
     max: 99999,
     T: T,
-    blurb: "Hold back an endless cat horde. x99 gate. Bosses.",
-    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it (+1s on the left, +99s on the right) keep rolling down to you until the next barrier rolls in. Slide under them to catch them: each one adds that many cannons. Missed tiles are gone. The next barrier is tougher, but the tiles behind it are worth more. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold drop for extra cannons. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
+    blurb: "Hold back an endless cat horde. x99 gate. x2 tiles. Bosses.",
+    how: "An endless cat horde marches down the road and keeps getting bigger. Drag to move your cannon; each cannon fires one pup at a time. The middle of the road is one big x99 gate: every pup through it becomes 99, and every pup that hits the horde knocks out a cat and pushes them back. Each side lane is a conveyor held back by a barrier, and the barrier's number is how many pups it takes to break. Break it and the tiles behind it keep rolling down to you until the next barrier rolls in. Slide under them to catch them: blue +N tiles on the left add cannons, gold x2 tiles on the right double ALL your cannons. Missed tiles are gone. Each barrier is tougher than the last, and the left tiles behind it are worth more. The horde keeps multiplying, so late in a battle the x2s are what keep you alive. The catch: time spent on the sides is time not feeding the x99. Every so often a boss marches in with the horde; knock it out and catch its gold x2 drop. If the horde reaches your cannon it's over. Score is 10 points a second plus 250 per boss; coins buy permanent upgrades at camp, and the first battle each day pays double.",
     reset: function reset(G) {
       var W = G.W,
         H = G.H;
@@ -148,6 +151,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         more: 0,
         start: 0,
         lanes: [],
+        mul: 1,
         front: 60,
         boss: null,
         bossN: 0,
@@ -166,6 +170,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       G.t = 0;
       s.start = 2 * (s.meta.side || 0);
       s.more = 0;
+      s.mul = 1;
       this.fillBelts(s);
       s.msg = {
         txt: s.daily ? "DAILY 2X COINS!" : "HOLD THE ROAD!",
@@ -185,7 +190,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       return Math.max(0, Math.round((s.front - 36) / SP + 1)) * this.per(s) * this.unit(s);
     },
     tileV: function tileV(i, lvl) {
-      return i ? 99 * (lvl + 1) : lvl + 1;
+      return i ? T.xv : T.pv * (lvl + 1) * (lvl + 2) / 2;
     },
     nextItem: function nextItem(s, i) {
       var q = s.lanes[i].q;
@@ -212,7 +217,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       return s.gy;
     },
     cannons: function cannons(s) {
-      return T.c0 + (s.start || 0) + s.more;
+      return (T.c0 + (s.start || 0) + s.more) * (s.mul || 1);
     },
     fillBelts: function fillBelts(s, lv) {
       s.lanes = [0, 1].map(function (i) {
@@ -238,6 +243,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         kills: s.kills,
         daily: s.daily,
         more: s.more,
+        mul: s.mul,
         start: s.start,
         lv: s.lanes.map(function (L) {
           return (L.items.find(function (x) {
@@ -258,6 +264,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         return s[k] = v[k];
       });
       this.fillBelts(s, v.lv);
+      s.mul = v.mul || 1;
       s.front = 60;
       s.msg = {
         txt: "BACK TO THE ROAD!",
@@ -347,8 +354,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         while (It.length && !It[0].b && It[0].y >= s.cy - 24) {
           var t = It.shift();
           if (this.catchAt(s, cxm, (c.x1 - c.x0) / 2 + 16)) {
-            s.more += t.v;
-            this.gain(G, t.v, _i ? "#ffd23f" : "#82b1ff");
+            if (_i) {
+              s.mul *= t.v;
+              this.gain(G, t.v, "#ffd23f", "x".concat(t.v, " \uD83D\uDD2B = ").concat(fmtN(this.cannons(s))));
+            } else {
+              s.more += t.v;
+              this.gain(G, t.v, "#82b1ff");
+            }
           } else s.fx.push({
             txt: "MISSED",
             x: cxm,
@@ -363,10 +375,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         if (d.y >= s.cy - 24) {
           d.done = true;
           if (_this.catchAt(s, d.x, 38)) {
-            s.more += d.v;
-            _this.gain(G, d.v, "#ffd23f");
+            s.mul *= d.v;
+            _this.gain(G, d.v, "#ffd23f", "x".concat(d.v, " \uD83D\uDD2B"));
             s.msg = {
-              txt: "+".concat(d.v, " CANNONS!"),
+              txt: "x".concat(d.v, " CANNONS!"),
               t: 1.2
             };
             G.sfx("win");
@@ -471,7 +483,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               b.flash = 0.06;
               s.kills += _k2;
               if (b.hp <= 0) {
-                var v = 2 + s.bossN;
+                var v = T.bossX;
                 s.bossN++;
                 s.boss = null;
                 s.nextBoss = s.t + T.bossEvery;
@@ -660,7 +672,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           c.fillStyle = i ? "#ffd23f" : "#2f80ed";
           rr(c, x, t.y - 13, w, 22, 4);
           c.fill();
-          G.text(c, "+" + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
+          G.text(c, (i ? "x" : "+") + fmtN(t.v), x + w / 2, t.y - 1, Math.min(10, w / 5), i ? "#3a2c00" : "#fff");
         });
       });
       {
@@ -730,7 +742,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         c.fillStyle = "#ffd23f";
         rr(c, d.x - 26, d.y - 13, 52, 24, 6);
         c.fill();
-        G.text(c, "+".concat(d.v), d.x, d.y - 1, 11, "#3a2c00");
+        G.text(c, "x".concat(d.v), d.x, d.y - 1, 11, "#3a2c00");
       });
       var pb = new Path2DShim(c),
         ph = new Path2DShim(c);
