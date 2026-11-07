@@ -53,7 +53,7 @@ defGame({
     this.spawnWave(G, 12);
   },
   spd: function spd(G) {
-    return Math.min(17, 8.5 + G.s.wave * 0.7);
+    return Math.min(11, 4 + G.s.wave * 0.5);
   },
   spawnWave: function spawnWave(G, total) {
     var s = G.s,
@@ -258,7 +258,7 @@ defGame({
         s.sq = {
           x: _L ? s.ox - c : s.ox + s.cols * c + c,
           y: s.oy + (top + 1) * c,
-          vx: (_L ? 1 : -1) * (70 + s.wave * 6),
+          vx: (_L ? 1 : -1) * (55 + s.wave * 5),
           vy: 170
         };
       }

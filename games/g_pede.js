@@ -17,7 +17,7 @@ defGame({
     s.p = { x: s.ox + cols * cell / 2, y: s.oy + (rows - 1.5) * cell };
     this.spawnWave(G, 12);
   },
-  spd(G) { return Math.min(17, 8.5 + G.s.wave * 0.7); },
+  spd(G) { return Math.min(11, 4 + G.s.wave * 0.5); }, // cells per second: 4.5 on wave 1, +0.5 a wave, tops out at 11 (wave 14)
   spawnWave(G, total) {
     const s = G.s, heads = Math.min(s.wave - 1, 6, total - 1), len = total - heads;
     s.segs = [];
@@ -88,7 +88,7 @@ defGame({
       if (s.sideT <= 0) { s.sideT = Math.max(2.5, 6 - s.wave * 0.3); const L = Math.random() < 0.5; s.segs.push({ x: L ? -1 : s.cols, y: top, dx: L ? 1 : -1, dy: 1, px: L ? -2 : s.cols + 1, py: top, head: true }); }
     }
     // squirrel
-    if (!s.sq) { s.sqT -= dt; if (s.sqT <= 0) { const L = Math.random() < 0.5; s.sq = { x: L ? s.ox - c : s.ox + s.cols * c + c, y: s.oy + (top + 1) * c, vx: (L ? 1 : -1) * (70 + s.wave * 6), vy: 170 }; } }
+    if (!s.sq) { s.sqT -= dt; if (s.sqT <= 0) { const L = Math.random() < 0.5; s.sq = { x: L ? s.ox - c : s.ox + s.cols * c + c, y: s.oy + (top + 1) * c, vx: (L ? 1 : -1) * (55 + s.wave * 5), vy: 170 }; } }
     else {
       const q = s.sq; q.x += q.vx * dt; q.y += q.vy * dt;
       const yt = s.oy + top * c + c / 2, yb = s.oy + s.rows * c - c / 2;
