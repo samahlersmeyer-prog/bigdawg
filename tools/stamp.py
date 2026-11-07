@@ -54,3 +54,9 @@ if shutil.which("node"):
     subprocess.run(["node", "build.mjs"], cwd=lg, check=True)
 else:
     print("legacy: SKIPPED (Node not installed) - legacy/ is now out of date")
+
+# Rebuild offline.html (one-file edition for computers with no internet). Needs Node; see tools/offline/build.mjs.
+if shutil.which("node"):
+    subprocess.run(["node", "tools/offline/build.mjs"], cwd=ROOT, check=True)
+else:
+    print("offline: SKIPPED (Node not installed) - offline.html is now out of date")
