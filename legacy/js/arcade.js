@@ -2454,7 +2454,7 @@ function gLoop() {
   cancelAnimationFrame(G.raf);
   G.raf = requestAnimationFrame(function (now) {
     if (G.state !== "play") return;
-    var dt = Math.min(0.033, Math.max(0, (now - G.last) / 1000));
+    var dt = Math.min(0.05, Math.max(0, (now - G.last) / 1000));
     G.last = now;
     G.t += dt;
     G.def.update(G, dt);

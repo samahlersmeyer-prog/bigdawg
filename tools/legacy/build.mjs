@@ -31,7 +31,10 @@ const jobs = FILES.map(f => ({ src: `js/${f}.js`, dst: `js/${f}.js`, key: f, com
 for (const { src: srcPath, dst, key: f, compact } of jobs) {
   let src = read(srcPath);
   // the arcade loads games/<file>; on the old iPad it must load the transpiled copies instead
-  if (f === "arcade") { if (!src.includes('sc.src = "games/"')) throw new Error("legacy: game loader path not found in js/arcade.js"); src = src.replace('sc.src = "games/"', 'sc.src = "legacy/games/"'); }
+  if (f === "arcade") { if (!src.includes('sc.src = "games/"')) throw new Error("legacy: game loader path not found in js/arcade.js"); src = src.replace('sc.src = "games/"', 'sc.src = "legacy/games/"');
+    // at a slow frame rate keep game speed right (skip ahead up to 1/20 s per frame) instead of slow motion
+    if (!src.includes("Math.min(0.033, Math.max(0, (now - G.last) / 1000))")) throw new Error("legacy: game loop dt cap not found in js/arcade.js");
+    src = src.replace("Math.min(0.033, Math.max(0, (now - G.last) / 1000))", "Math.min(0.05, Math.max(0, (now - G.last) / 1000))"); }
   // pass 1: find which core-js polyfills the code needs
   const scan = babel.transformSync(src, { babelrc: false, configFile: false, sourceType: "script", compact: true,
     presets: [["@babel/preset-env", { targets: TARGET, modules: false, useBuiltIns: "usage", corejs: "3.40" }]] }).code;

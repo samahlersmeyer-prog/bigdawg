@@ -64,6 +64,16 @@
   if (!window.requestAnimationFrame)window.requestAnimationFrame = window.webkitRequestAnimationFrame || function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
 
   // ---------- Pointer events -> touch / mouse (iOS 9 has no pointer events) ----------
+  function tappable(n, stop) {
+    for (; n && n !== stop && n.nodeType === 1; n = n.parentNode) {
+      var tg = n.tagName; if (tg === "BUTTON" || tg === "A" || tg === "INPUT" || tg === "SELECT" || tg === "TEXTAREA" || tg === "LABEL") return true;
+      if ((" " + n.className + " ").indexOf(" zpanel ") >= 0) return true;
+    }
+    return false;
+  }
+  // ---------- Speed: draw canvases at 1x. A retina iPad from 2012 can't push 4x the pixels at 60fps ----------
+  try { Object.defineProperty(window, "devicePixelRatio", { configurable: true, get: function () { return 1; } }); } catch (e) {}
+
   if (!window.PointerEvent) {
     var MAP = { pointerdown: ["touchstart", "mousedown"], pointermove: ["touchmove", "mousemove"], pointerup: ["touchend", "mouseup"], pointercancel: ["touchcancel"] };
     var lastTouch = 0;
@@ -79,7 +89,9 @@
           if (touch) lastTouch = Date.now(); else if (Date.now() - lastTouch < 1000) return; // skip the fake mouse events after a tap
           if (!touch && t === "mousemove" && !ev.buttons && !ev.which) return;
           var p = touch ? (ev.changedTouches && ev.changedTouches[0]) || {} : ev;
-          if ((t === "touchmove" || t === "touchstart") && target.nodeType === 1) ev.preventDefault(); // drag, don't scroll or double-tap zoom
+          // drag, don't scroll or double-tap zoom -- but never on a touch that starts on a button or a start/results
+          // panel, or iOS drops the tap's click (that left Start dead on every game)
+          if ((t === "touchmove" || t === "touchstart") && target.nodeType === 1 && !(t === "touchstart" && tappable(ev.target, target))) ev.preventDefault();
           fn.call(target, {
             type: type, target: ev.target, currentTarget: target, pointerId: touch ? p.identifier || 1 : 1, pointerType: touch ? "touch" : "mouse",
             clientX: p.clientX, clientY: p.clientY, pageX: p.pageX, pageY: p.pageY, button: 0, isPrimary: true,
