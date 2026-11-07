@@ -49,6 +49,11 @@ if (aBest.zoomies > 300) {
   store.set("bdd:zbest", 0);
   store.set("bdd:abest", aBest);
 }
+if (!store.get("bdd:rummy2")) {
+  if (aBest.rummy) aBest.rummy = Math.min(800, aBest.rummy + 200);
+  store.set("bdd:rummy2", 1);
+  store.set("bdd:abest", aBest);
+}
 var lowG = function lowG(g) {
   return !!(typeof GAMEDEFS !== "undefined" && GAMEDEFS[g] && GAMEDEFS[g].low);
 };

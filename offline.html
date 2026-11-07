@@ -5482,6 +5482,9 @@ let aDares = (store.get("bdd:dares") || []).map(d => Object.assign({ game: "zoom
 const aBest = Object.assign({ zoomies: Number(store.get("bdd:zbest")) || 0, snake: 0, fetch: 0 }, store.get("bdd:abest") || {});
 // Oct 10 glitch: other games' scores were filed under Zoomies. Real Zoomies runs never get near 300.
 if (aBest.zoomies > 300) { aBest.zoomies = 0; store.set("bdd:zbest", 0); store.set("bdd:abest", aBest); }
+// Nov 7: Rummy Dawgs moved to 3-round traditional scoring (300 + match total, +100 for the match win).
+// An old single-hand score converts to old + 200 (same as a one-round match won); the Sheet rows were converted too.
+if (!store.get("bdd:rummy2")) { if (aBest.rummy) aBest.rummy = Math.min(800, aBest.rummy + 200); store.set("bdd:rummy2", 1); store.set("bdd:abest", aBest); }
 // Golf is lower-is-better (strokes); everything else is higher-is-better.
 const lowG = g => !!(typeof GAMEDEFS !== "undefined" && GAMEDEFS[g] && GAMEDEFS[g].low);
 const fmtG = (g, n) => (typeof GAMEDEFS !== "undefined" && GAMEDEFS[g] && GAMEDEFS[g].fmt && n > 0) ? GAMEDEFS[g].fmt(n) : String(n || 0);
