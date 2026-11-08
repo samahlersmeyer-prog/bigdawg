@@ -914,6 +914,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  scapes: ["new", "2026-11-08"],
   skipbo: ["new", "2026-11-07"],
   rummy: ["upd", "2026-11-07"],
   unfair: ["new", "2026-11-07"],
@@ -1020,7 +1021,7 @@ var DEN_SECTIONS = [{
   icon: "✏️",
   name: "Words",
   sub: "Crosswords, chains and word hunts.",
-  keys: ["midi", "links", "waffle", "hive", "guess", "sgroups"]
+  keys: ["midi", "links", "scapes", "waffle", "hive", "guess", "sgroups"]
 }, {
   icon: "🧩",
   name: "Logic",
@@ -1047,21 +1048,25 @@ function denStatus(k) {
     var _r2 = denRec(k);
     return _r2 && _r2.done ? ["Done", true, _r2.score ? "".concat(_r2.won ? "Fixed" : "Out of swaps", " \xB7 ").concat(_r2.score, " pts") : "Done for today"] : _r2 && _r2.used ? ["Continue", false, "".concat(15 - _r2.used, " swaps left")] : ["Play", false, null];
   }
-  if (k === "guess") {
+  if (k === "scapes") {
     var _r3 = denRec(k);
-    return _r3 && _r3.done ? ["Done", true, _r3.score ? "".concat(_r3.won ? "Got it" : "Missed", " \xB7 ").concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.guesses && _r3.guesses.length ? ["Continue", false, "".concat(_r3.guesses.length, " of 15 guesses")] : ["Play", false, null];
+    return _r3 && _r3.done ? ["Done", true, _r3.score ? "Filled \xB7 ".concat(_r3.score, " pts") : "Done for today"] : _r3 && _r3.found && _r3.found.length ? ["Continue", false, "".concat(_r3.found.length, " of ").concat(_r3.n, " words")] : ["Play", false, null];
+  }
+  if (k === "guess") {
+    var _r4 = denRec(k);
+    return _r4 && _r4.done ? ["Done", true, _r4.score ? "".concat(_r4.won ? "Got it" : "Missed", " \xB7 ").concat(_r4.score, " pts") : "Done for today"] : _r4 && _r4.guesses && _r4.guesses.length ? ["Continue", false, "".concat(_r4.guesses.length, " of 15 guesses")] : ["Play", false, null];
   }
   if (k === "links") {
-    var _r4 = denRec(k);
-    return _r4 && _r4.done ? ["Done", true, _r4.score ? "Linked \xB7 ".concat(_r4.score, " pts") : "Done for today"] : _r4 && _r4.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
+    var _r5 = denRec(k);
+    return _r5 && _r5.done ? ["Done", true, _r5.score ? "Linked \xB7 ".concat(_r5.score, " pts") : "Done for today"] : _r5 && _r5.rev ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
   if (k === "hive") {
-    var _r5 = denRec(k);
-    return _r5 && _r5.found && _r5.found.length ? ["Continue", false, "".concat(_r5.score, " pts \xB7 ").concat(_r5.found.length, " words")] : ["Play", false, null];
+    var _r6 = denRec(k);
+    return _r6 && _r6.found && _r6.found.length ? ["Continue", false, "".concat(_r6.score, " pts \xB7 ").concat(_r6.found.length, " words")] : ["Play", false, null];
   }
   if (k !== "pips" && k !== "sudoku") {
-    var _r6 = denRec(k);
-    return _r6 && _r6.done ? ["Done", true, _r6.score ? "Solved \xB7 ".concat(_r6.score, " pts") : "Done for today"] : _r6 && _r6.el ? ["Continue", false, "In progress"] : ["Play", false, null];
+    var _r7 = denRec(k);
+    return _r7 && _r7.done ? ["Done", true, _r7.score ? "Solved \xB7 ".concat(_r7.score, " pts") : "Done for today"] : _r7 && _r7.el ? ["Continue", false, "In progress"] : ["Play", false, null];
   }
   var n = [0, 1, 2].filter(function (d) {
     var r = denRec(k, d);
@@ -3077,6 +3082,16 @@ defGameMeta([{
   "icon": "🧇",
   "blurb": "Daily: swap letters to fix six words.",
   "how": "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.",
+  "cat": "den",
+  "max": 1000,
+  "puzzle": true
+}, {
+  "file": "g_scapes.js",
+  "key": "scapes",
+  "name": "Dawgscapes",
+  "icon": "🍂",
+  "blurb": "Daily: swipe the letters to fill the crossword.",
+  "how": "Drag your finger from letter to letter on the wheel to spell a word, then let go. Words that fit the crossword drop into place. Every word uses only the wheel's letters, each letter once. Slide back over a letter to undo it. Real words that aren't in the crossword count as bonus words (🔍). 🔀 shuffles the wheel for a fresh look. 💡 shows one letter (it costs 50 pts). One board a day. Score: 700 for filling the board, minus 50 per hint (never below 300), plus 50 per bonus word, up to 6.",
   "cat": "den",
   "max": 1000,
   "puzzle": true
