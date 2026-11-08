@@ -30,6 +30,13 @@ function showWho() {
   splashMode("load");
   return API("listPlayers").then(function (list) {
     whoList = list || [];
+    if (whoList.length) store.set("bdd:who", whoList.map(function (p) {
+      return {
+        id: p.id,
+        name: p.name,
+        hasPin: p.hasPin
+      };
+    }));
     if (!whoList.length) {
       showJoin();
       return;
@@ -41,8 +48,26 @@ function showWho() {
       return $("who-q").focus();
     }, 60);
   })["catch"](function () {
-    return showJoin();
+    whoList = store.get("bdd:who") || [];
+    if (!whoList.length) {
+      showJoin();
+      return;
+    }
+    $("who-q").value = "";
+    drawWho();
+    splashMode("who");
   });
+}
+function offlineSignIn(fn, id, name, pin) {
+  store.set("bdd:pendme", {
+    fn: fn,
+    args: fn === "register" ? [id, name, pin] : [id, pin]
+  });
+  signedIn({
+    id: id,
+    name: name
+  });
+  toast("No internet. You're playing offline; scores sync when you're back online.", 3200);
 }
 function drawWho() {
   var box = $("who-list");
@@ -109,6 +134,10 @@ $("pin-form").addEventListener("submit", function (ev) {
   $("pin-go").disabled = true;
   msg.textContent = "Checking…";
   API("claimPlayer", pinFor.id, v).then(signedIn)["catch"](function (e) {
+    if (isNetErr(e)) {
+      offlineSignIn("claimPlayer", pinFor.id, pinFor.name, v);
+      return;
+    }
     msg.textContent = errMsg(e);
     $("pin-in").value = "";
   })["finally"](function () {
@@ -130,7 +159,12 @@ $("join-form").addEventListener("submit", function (ev) {
   }
   $("join-go").disabled = true;
   msg.textContent = "Joining…";
-  API("register", newId(), v, pin).then(signedIn)["catch"](function (e) {
+  var nid = newId();
+  API("register", nid, v, pin).then(signedIn)["catch"](function (e) {
+    if (isNetErr(e)) {
+      offlineSignIn("register", nid, v, pin);
+      return;
+    }
     msg.textContent = errMsg(e);
   })["finally"](function () {
     $("join-go").disabled = false;

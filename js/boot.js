@@ -8,11 +8,23 @@ function showWho() {
   splashMode("load");
   return API("listPlayers").then(list => {
     whoList = list || [];
+    if (whoList.length) store.set("bdd:who", whoList.map(p => ({ id: p.id, name: p.name, hasPin: p.hasPin })));
     if (!whoList.length) { showJoin(); return; }
     $("who-q").value = ""; drawWho();
     splashMode("who");
     setTimeout(() => $("who-q").focus(), 60);
-  }).catch(() => showJoin());
+  }).catch(() => {
+    // No internet: show the last player list this device saw, if any.
+    whoList = store.get("bdd:who") || [];
+    if (!whoList.length) { showJoin(); return; }
+    $("who-q").value = ""; drawWho(); splashMode("who");
+  });
+}
+// No internet: sign in on this device now and finish with the server once back online (settleMe in core.js).
+function offlineSignIn(fn, id, name, pin) {
+  store.set("bdd:pendme", { fn, args: fn === "register" ? [id, name, pin] : [id, pin] });
+  signedIn({ id, name });
+  toast("No internet. You're playing offline; scores sync when you're back online.", 3200);
 }
 // Type a few letters of your name instead of scrolling a long list.
 function drawWho() {
@@ -48,7 +60,7 @@ $("pin-form").addEventListener("submit", ev => {
   if (!goodPin(v)) { msg.textContent = "Your PIN is 4 numbers."; return; }
   $("pin-go").disabled = true; msg.textContent = "Checking…";
   API("claimPlayer", pinFor.id, v).then(signedIn)
-    .catch(e => { msg.textContent = errMsg(e); $("pin-in").value = ""; }).finally(() => { $("pin-go").disabled = false; });
+    .catch(e => { if (isNetErr(e)) { offlineSignIn("claimPlayer", pinFor.id, pinFor.name, v); return; } msg.textContent = errMsg(e); $("pin-in").value = ""; }).finally(() => { $("pin-go").disabled = false; });
 });
 $("join-form").addEventListener("submit", ev => {
   ev.preventDefault();
@@ -56,8 +68,9 @@ $("join-form").addEventListener("submit", ev => {
   if (!v) { msg.textContent = "Type a name your friends will recognize."; return; }
   if (!goodPin(pin)) { msg.textContent = "Pick a PIN: 4 numbers."; return; }
   $("join-go").disabled = true; msg.textContent = "Joining…";
-  API("register", newId(), v, pin).then(signedIn)
-    .catch(e => { msg.textContent = errMsg(e); }).finally(() => { $("join-go").disabled = false; });
+  const nid = newId();
+  API("register", nid, v, pin).then(signedIn)
+    .catch(e => { if (isNetErr(e)) { offlineSignIn("register", nid, v, pin); return; } msg.textContent = errMsg(e); }).finally(() => { $("join-go").disabled = false; });
 });
 function setMe(r) { me = { id: r.id, name: r.name }; store.set("bdd:me", me); rememberInUrl(me.id); }
 function confirmWho(who) {

@@ -168,9 +168,50 @@ if (FAST_URL && window.google && google.script && google.script.run) {
 }
 var SERVER_URL = "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec".indexOf("__") === 0 ? "" : "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec";
 var STATIC = !hasServer() && !!SERVER_URL;
+var isNetErr = function isNetErr(e) {
+  return !e || e.message === "offline" || e.name === "TypeError" || navigator.onLine === false;
+};
+var settling = null;
+function settleMe() {
+  var p = store.get("bdd:pendme");
+  if (!p) return Promise.resolve();
+  if (!settling) settling = rawCall.apply(void 0, [p.fn].concat(_toConsumableArray(p.args))).then(function (r) {
+    store.del("bdd:pendme");
+    settling = null;
+    if (r && r.id) {
+      me = {
+        id: r.id,
+        name: r.name
+      };
+      store.set("bdd:me", me);
+    }
+  }, function (e) {
+    settling = null;
+    if (isNetErr(e)) throw e;
+    store.del("bdd:pendme");
+    store.del("bdd:me");
+    alert("Couldn't finish signing you in: " + errMsg(e) + "\nPlease sign in again.");
+    location.reload();
+    throw e;
+  });
+  return settling;
+}
+window.addEventListener("online", function () {
+  settleMe().then(function () {
+    if (me) save();
+  })["catch"](function () {});
+});
 function callServer(fn) {
   for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
     args[_key - 1] = arguments[_key];
+  }
+  return settleMe().then(function () {
+    return rawCall.apply(void 0, [fn].concat(args));
+  });
+}
+function rawCall(fn) {
+  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    args[_key2 - 1] = arguments[_key2];
   }
   if (hasServer()) {
     window.__crew = crewSel;
@@ -233,8 +274,8 @@ function primeBoot() {
   });
 }
 var API = function API(fn) {
-  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-    args[_key2 - 1] = arguments[_key2];
+  for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+    args[_key3 - 1] = arguments[_key3];
   }
   if (PRIME && PRIME[fn]) {
     var pr = PRIME[fn];

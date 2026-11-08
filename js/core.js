@@ -68,7 +68,30 @@ const fastLink = () => { let id = ""; try { const m = JSON.parse(localStorage.ge
 if (FAST_URL && window.google && google.script && google.script.run) { const a = document.getElementById("fast-splash"); if (a) { a.href = fastLink(); a.hidden = false; } }
 const SERVER_URL = "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec".indexOf("__") === 0 ? "" : "https://script.google.com/macros/s/AKfycbxPfcr0_vWObUwDG5-ZjuVAmiCNNFqTXo38-YpkEPfOcsEq6iehAkjhtPNVf0Az_rh_/exec";
 const STATIC = !hasServer() && !!SERVER_URL;
-function callServer(fn, ...args) {
+// Signing in with no internet (airplane mode, old iPad): you play right away and the sign-in
+// (claimPlayer / register) is finished with the server before any other call once you're back online.
+// A wrong PIN or taken name then signs you out on this device.
+const isNetErr = e => !e || e.message === "offline" || e.name === "TypeError" || navigator.onLine === false;
+let settling = null;
+function settleMe() {
+  const p = store.get("bdd:pendme");
+  if (!p) return Promise.resolve();
+  if (!settling) settling = rawCall(p.fn, ...p.args).then(r => {
+    store.del("bdd:pendme"); settling = null;
+    if (r && r.id) { me = { id: r.id, name: r.name }; store.set("bdd:me", me); }
+  }, e => {
+    settling = null;
+    if (isNetErr(e)) throw e;
+    store.del("bdd:pendme"); store.del("bdd:me");
+    alert("Couldn't finish signing you in: " + errMsg(e) + "\nPlease sign in again.");
+    location.reload();
+    throw e;
+  });
+  return settling;
+}
+window.addEventListener("online", () => { settleMe().then(() => { if (me) save(); }).catch(() => {}); });
+function callServer(fn, ...args) { return settleMe().then(() => rawCall(fn, ...args)); }
+function rawCall(fn, ...args) {
   if (hasServer()) { window.__crew = crewSel; window.__me = me ? me.id : ""; }
   if (hasServer()) return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
   if (!SERVER_URL) return Promise.reject(new Error("offline"));
