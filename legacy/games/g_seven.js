@@ -153,7 +153,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     max: 999,
     cat: "sports",
     blurb: "7-on-7 passing football. Pick a play, hit the open dog.",
-    how: "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver to throw to him. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
+    how: "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver once to pump-fake to him (the cats near him bite and jump the fake), DOUBLE-TAP to really throw. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
     reset: function reset(G) {
       G.s = {
         score: 0,
@@ -223,6 +223,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         y: L - 13,
         safety: true
       });
+      s.fakes = 0;
+      s.tap = null;
       s.dspd = RSPD * Math.min(0.99, 0.86 + lv * 0.025);
       s.react = Math.max(0.12, 0.32 - lv * 0.03);
     },
@@ -242,16 +244,64 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       });
       return d;
     },
-    throwTo: function throwTo(G, i) {
-      var s = G.s,
-        r = s.rec[i],
-        qb = s.qb;
+    tapRec: function tapRec(G, i) {
+      var s = G.s;
+      if (s.tap && s.tap.i === i) {
+        s.tap = null;
+        return this.throwTo(G, i);
+      }
+      if (s.tap) this.fake(G, s.tap.i);
+      s.tap = {
+        i: i,
+        t: 0.26
+      };
+    },
+    lead: function lead(G, r) {
+      var qb = G.s.qb;
       var t = dist(qb, r) / 22;
       for (var k = 0; k < 4; k++) {
         var f = along(r, t);
         t = Math.hypot(f.x - qb.x, f.y - qb.y) / 22 + 0.05;
       }
-      var tg = along(r, t);
+      return {
+        t: t,
+        p: along(r, t)
+      };
+    },
+    fake: function fake(G, i) {
+      var s = G.s,
+        r = s.rec[i],
+        tg = this.lead(G, r).p;
+      s.fakes++;
+      s.def.forEach(function (d) {
+        var near = d.man === i || Math.hypot(d.x - tg.x, d.y - tg.y) < (d.safety ? 11 : 6.5);
+        if (!near) return;
+        var str = 1 / (1 + (d.bit || 0)) * Math.max(0.45, 1 - s.lv * 0.06);
+        if (str < 0.3) return;
+        d.bit = (d.bit || 0) + 1;
+        d.bite = {
+          x: tg.x,
+          y: tg.y,
+          t: 0.6 * str
+        };
+      });
+      s.pops.push({
+        txt: "PUMP!",
+        x: s.qb.x,
+        y: s.qb.y - 1.5,
+        t: 0.8
+      });
+      s.pump = 0.25;
+      G.sfx("pop");
+    },
+    throwTo: function throwTo(G, i) {
+      var s = G.s,
+        r = s.rec[i],
+        qb = s.qb;
+      s.tap = null;
+      var L = this.lead(G, r),
+        t = L.t,
+        tg = L.p;
       s.ball = {
         x: qb.x,
         y: qb.y,
@@ -343,7 +393,16 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             ty,
             sp = s.dspd;
           var breakOn = s.phase === "air" && s.ball.t > s.react + 0.1 && Math.hypot(d.x - s.ball.tx, d.y - s.ball.ty) < 4.5;
-          if (breakOn) {
+          if (!d.safety) {
+            var r = s.rec[d.man];
+            d.hist.push([r.x, r.y]);
+            if (d.hist.length > 90) d.hist.shift();
+          }
+          if (d.bite && d.bite.t > 0 && !breakOn) {
+            d.bite.t -= dt;
+            tx = d.bite.x;
+            ty = d.bite.y;
+          } else if (breakOn) {
             tx = s.ball.tx;
             ty = s.ball.ty;
             sp *= 0.9;
@@ -362,13 +421,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             }
             sp *= 0.92;
           } else {
-            var r = s.rec[d.man];
-            d.hist.push([r.x, r.y]);
             var lag = Math.round(s.react * 60),
               h = d.hist.length > lag ? d.hist[d.hist.length - 1 - lag] : d.hist[0];
             tx = h[0];
             ty = h[1] - 1.1;
-            if (d.hist.length > 90) d.hist.shift();
           }
           var L = Math.hypot(tx - d.x, ty - d.y);
           if (L > 0.05) {
@@ -377,6 +433,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             d.y += (ty - d.y) / L * m;
           }
         });
+      }
+      if (s.pump > 0) s.pump -= dt;
+      if (s.phase === "live" && s.tap) {
+        s.tap.t -= dt;
+        if (s.tap.t <= 0) {
+          var i = s.tap.i;
+          s.tap = null;
+          this.fake(G, i);
+        }
       }
       if (s.phase === "live") {
         s.clock -= dt;
@@ -574,6 +639,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       s.def.forEach(function (d) {
         body(X(d.x), Y(d.y), OPP, OPP2, rr);
         G.emoji(c, "🐈", X(d.x), Y(d.y) - 1, rr * 1.25);
+        if (d.bite && d.bite.t > 0 && s.phase === "live") G.text(c, "!", X(d.x) + rr, Y(d.y) - rr, 12, "#ffd23f");
       });
       s.rec.forEach(function (r, i) {
         var x = X(r.x),
@@ -594,6 +660,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         var q = s.qb;
         body(X(q.x), Y(q.y), TEAM, TEAM2, rr + 3);
         G.img(c, s.phase === "dead" && s.res && /SACK|PICK/.test(s.res.txt) ? ":dawgpain:" : ":dawgW:", X(q.x), Y(q.y) - 1, (rr + 3) * 2);
+        if (s.pump > 0) G.emoji(c, "🏈", X(q.x) + rr, Y(q.y) - rr - 8 - s.pump * 20, rr);
       }
       if (s.carrier) G.emoji(c, "🏈", X(s.carrier.x) + rr * 0.8, Y(s.carrier.y) + rr * 0.4, rr);
       if (s.ball && s.phase === "air") {
@@ -660,7 +727,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         G.banner(c, s.res.txt, s.res.col, by, s.res.txt.length > 11 ? Math.min(22, W / 15) : undefined);
         if (s.res.sub) G.text(c, s.res.sub, W / 2, by + 30, 10, "#fff");
       }
-      if (s.phase === "live" && s.drive === 1 && s.down === 1) G.hint(c, "TAP A RECEIVER TO THROW", 99, H - 30);
+      if (s.phase === "live" && s.drive === 1 && s.down === 1) G.hint(c, "TAP = FAKE · DOUBLE-TAP = THROW", 99, H - 30);
       if (s.phase === "run" && s.tds === 0 && s.drive === 1) G.hint(c, "DRAG TO STEER", 99, H - 30);
     },
     hitRec: function hitRec(G, x, y) {
@@ -694,7 +761,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
       if (s.phase === "live") {
         var i = this.hitRec(G, x, y);
-        if (i >= 0) this.throwTo(G, i);
+        if (i >= 0) this.tapRec(G, i);
         return;
       }
       if (s.phase === "run") s.fx = (x - fl) / ppy;
@@ -711,7 +778,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var s = G.s;
       if (!d) return;
       if (s.phase === "call" && /^[123]$/.test(k)) this.choose(G, s.offer[+k - 1]);
-      if (s.phase === "live" && /^[1-5]$/.test(k)) this.throwTo(G, +k - 1);
+      if (s.phase === "live" && /^[1-5]$/.test(k)) this.tapRec(G, +k - 1);
       if (s.phase === "run" && s.carrier) {
         if (k === "ArrowLeft") s.fx = s.carrier.x - 4;
         if (k === "ArrowRight") s.fx = s.carrier.x + 4;

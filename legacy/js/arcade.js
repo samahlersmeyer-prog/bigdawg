@@ -914,6 +914,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  seven: ["upd", "2026-11-08"],
   scapes: ["new", "2026-11-08"],
   skipbo: ["new", "2026-11-07"],
   rummy: ["upd", "2026-11-07"],
@@ -3101,7 +3102,7 @@ defGameMeta([{
   "name": "Dawg 7s",
   "icon": "🏈",
   "blurb": "7-on-7 passing football. Pick a play, hit the open dog.",
-  "how": "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver to throw to him. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
+  "how": "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver once to pump-fake to him (the cats near him bite and jump the fake), DOUBLE-TAP to really throw. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
   "cat": "sports",
   "max": 999
 }, {

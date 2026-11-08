@@ -1,5 +1,5 @@
 // ---------- Dawg 7s (Sports: 7-on-7 passing football) ----------
-// Top-down 7-on-7: no linemen, no running plays. Pick a play, then TAP a receiver to throw to him before the
+// Top-down 7-on-7: no linemen, no running plays. Pick a play, then TAP a receiver to pump-fake (nearby cats bite) or DOUBLE-TAP to throw before the
 // 4-second pass clock runs out. After the catch, drag to steer him through the cats. 4 downs to gain 10 yards. Touchdown = 7 and the cats get quicker. Lose 3 drives and it's over.
 (function () {
   const FW = 30, TEAM = "#2f6fe0", TEAM2 = "#ffd23f", OPP = "#e2483d", OPP2 = "#fff";
@@ -49,7 +49,7 @@
   defGame({
     key: "seven", name: "Dawg 7s", icon: "🏈", max: 999, cat: "sports",
     blurb: "7-on-7 passing football. Pick a play, hit the open dog.",
-    how: "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver to throw to him. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
+    how: "7-on-7: no linemen, every play is a pass. Pick one of three plays, and your receivers run their routes. TAP a receiver once to pump-fake to him (the cats near him bite and jump the fake), DOUBLE-TAP to really throw. Green ring = open, yellow = tight, red = covered (picks happen!). Throw within 4 seconds or you get sacked. After the catch, DRAG to steer him through the cats. 4 downs to reach the yellow line 10 yards ahead, like real football. Touchdown = 7 points and the cats get quicker; every first down is +1. Turn it over 3 times and the game's over.",
     reset(G) { G.s = { score: 0, tds: 0, lives: 3, lv: 0, pops: [], drive: 0 }; this.drive(G); },
     drive(G) { const s = G.s; s.los = 40; s.togo = 30; s.down = 1; s.drive++; this.call(G); },
     call(G) { // offer three plays
@@ -64,15 +64,33 @@
       const cush = Math.max(1.6, 4 - lv * 0.35);
       s.def = s.rec.map((r, i) => ({ x: r.x + (r.x < 15 ? 0.8 : -0.8), y: L - cush, man: i, hist: [] }));
       s.def.push({ x: 8, y: L - 13, safety: true }, { x: 22, y: L - 13, safety: true });
+      s.fakes = 0; s.tap = null;
       s.dspd = RSPD * Math.min(0.99, 0.86 + lv * 0.025); s.react = Math.max(0.12, 0.32 - lv * 0.03);
     },
     choose(G, play) { const s = G.s; s.pick = play; this.lineup(G, play); s.phase = "pre"; s.pt = 1.1; G.sfx("pop"); },
     openness(G, r) { const s = G.s; let d = 99; s.def.forEach(q => d = Math.min(d, dist(q, r))); return d; },
+    // one tap = pump fake (fires once the double-tap window passes), two quick taps on the same dog = real throw
+    tapRec(G, i) {
+      const s = G.s;
+      if (s.tap && s.tap.i === i) { s.tap = null; return this.throwTo(G, i); }
+      if (s.tap) this.fake(G, s.tap.i);                 // tapped someone else: the first tap was a fake
+      s.tap = { i, t: 0.26 };
+    },
+    lead(G, r) { const qb = G.s.qb; let t = dist(qb, r) / 22; for (let k = 0; k < 4; k++) { const f = along(r, t); t = Math.hypot(f.x - qb.x, f.y - qb.y) / 22 + 0.05; } return { t, p: along(r, t) }; },
+    fake(G, i) {
+      const s = G.s, r = s.rec[i], tg = this.lead(G, r).p; s.fakes++;
+      // cats near the fake bite and jump the throw spot; each cat bites less every time he's been fooled, and better cats bite less
+      s.def.forEach(d => {
+        const near = d.man === i || Math.hypot(d.x - tg.x, d.y - tg.y) < (d.safety ? 11 : 6.5); if (!near) return;
+        const str = 1 / (1 + (d.bit || 0)) * Math.max(0.45, 1 - s.lv * 0.06);
+        if (str < 0.3) return; d.bit = (d.bit || 0) + 1; d.bite = { x: tg.x, y: tg.y, t: 0.6 * str };
+      });
+      s.pops.push({ txt: "PUMP!", x: s.qb.x, y: s.qb.y - 1.5, t: 0.8 }); s.pump = 0.25; G.sfx("pop");
+    },
     throwTo(G, i) {
-      const s = G.s, r = s.rec[i], qb = s.qb;
+      const s = G.s, r = s.rec[i], qb = s.qb; s.tap = null;
       // lead the receiver: solve for flight time against where he'll be
-      let t = dist(qb, r) / 22; for (let k = 0; k < 4; k++) { const f = along(r, t); t = Math.hypot(f.x - qb.x, f.y - qb.y) / 22 + 0.05; }
-      const tg = along(r, t);
+      const L = this.lead(G, r), t = L.t, tg = L.p;
       s.ball = { x: qb.x, y: qb.y, sx: qb.x, sy: qb.y, tx: tg.x, ty: tg.y, t: 0, T: t, to: i };
       s.phase = "air"; G.sfx("pop");
     },
@@ -100,12 +118,16 @@
         s.def.forEach(d => {
           let tx, ty, sp = s.dspd;
           const breakOn = s.phase === "air" && s.ball.t > s.react + 0.1 && Math.hypot(d.x - s.ball.tx, d.y - s.ball.ty) < 4.5;
-          if (breakOn) { tx = s.ball.tx; ty = s.ball.ty; sp *= 0.9; }            // only nearby cats break on the ball, a beat late
+          if (!d.safety) { const r = s.rec[d.man]; d.hist.push([r.x, r.y]); if (d.hist.length > 90) d.hist.shift(); }
+          if (d.bite && d.bite.t > 0 && !breakOn) { d.bite.t -= dt; tx = d.bite.x; ty = d.bite.y; }   // bit on the pump fake
+          else if (breakOn) { tx = s.ball.tx; ty = s.ball.ty; sp *= 0.9; }            // only nearby cats break on the ball, a beat late
           else if (d.safety) { const deep = s.rec.filter(r => r.y < s.los - 6).sort((a, b) => dist(a, d) - dist(b, d))[0]; if (deep) { tx = deep.x; ty = deep.y - 2; } else { tx = d.x; ty = Math.min(d.y, s.los - 12); } sp *= 0.92; }
-          else { const r = s.rec[d.man]; d.hist.push([r.x, r.y]); const lag = Math.round(s.react * 60), h = d.hist.length > lag ? d.hist[d.hist.length - 1 - lag] : d.hist[0]; tx = h[0]; ty = h[1] - 1.1; if (d.hist.length > 90) d.hist.shift(); }
+          else { const lag = Math.round(s.react * 60), h = d.hist.length > lag ? d.hist[d.hist.length - 1 - lag] : d.hist[0]; tx = h[0]; ty = h[1] - 1.1; }
           const L = Math.hypot(tx - d.x, ty - d.y); if (L > 0.05) { const m = Math.min(L, sp * dt); d.x += (tx - d.x) / L * m; d.y += (ty - d.y) / L * m; }
         });
       }
+      if (s.pump > 0) s.pump -= dt;
+      if (s.phase === "live" && s.tap) { s.tap.t -= dt; if (s.tap.t <= 0) { const i = s.tap.i; s.tap = null; this.fake(G, i); } }
       if (s.phase === "live") { s.clock -= dt; if (s.clock <= 0) { G.sfx("lose"); G.buzz(); this.endPlay(G, "SACKED!", "#ff6b6b", -3, { sub: "TOO LONG IN THE POCKET" }); } return; }
       if (s.phase === "air") {
         const b = s.ball; b.t += dt; const u = Math.min(1, b.t / b.T); b.x = b.sx + (b.tx - b.sx) * u; b.y = b.sy + (b.ty - b.sy) * u;
@@ -157,14 +179,14 @@
       }
       const body = (x, y, col, col2, r) => { c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.ellipse(x + 2, y + 4, r, r * 0.7, 0, 0, 7); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = col2; c.lineWidth = 2; c.stroke(); };
       const rr = Math.max(11, ppy * 0.95);
-      s.def.forEach(d => { body(X(d.x), Y(d.y), OPP, OPP2, rr); G.emoji(c, "🐈", X(d.x), Y(d.y) - 1, rr * 1.25); });
+      s.def.forEach(d => { body(X(d.x), Y(d.y), OPP, OPP2, rr); G.emoji(c, "🐈", X(d.x), Y(d.y) - 1, rr * 1.25); if (d.bite && d.bite.t > 0 && s.phase === "live") G.text(c, "!", X(d.x) + rr, Y(d.y) - rr, 12, "#ffd23f"); });
       s.rec.forEach((r, i) => {
         const x = X(r.x), y = Y(r.y);
         if (s.phase === "live" && r !== s.carrier) { const o = this.openness(G, r); c.strokeStyle = o > 2.6 ? "#5be35b" : o > 1.4 ? "#ffd23f" : "#ff5a5a"; c.lineWidth = 4; c.beginPath(); c.arc(x, y, rr + 6, 0, 7); c.stroke(); }
         body(x, y, TEAM, TEAM2, rr); G.emoji(c, "🐶", x, y - 2, rr * 1.25);
         G.text(c, String(r.num), x, y + rr + 7, 8, "#fff");
       });
-      if (s.phase !== "run") { const q = s.qb; body(X(q.x), Y(q.y), TEAM, TEAM2, rr + 3); G.img(c, s.phase === "dead" && s.res && /SACK|PICK/.test(s.res.txt) ? ":dawgpain:" : ":dawgW:", X(q.x), Y(q.y) - 1, (rr + 3) * 2); }
+      if (s.phase !== "run") { const q = s.qb; body(X(q.x), Y(q.y), TEAM, TEAM2, rr + 3); G.img(c, s.phase === "dead" && s.res && /SACK|PICK/.test(s.res.txt) ? ":dawgpain:" : ":dawgW:", X(q.x), Y(q.y) - 1, (rr + 3) * 2); if (s.pump > 0) G.emoji(c, "🏈", X(q.x) + rr, Y(q.y) - rr - 8 - s.pump * 20, rr); }
       if (s.carrier) G.emoji(c, "🏈", X(s.carrier.x) + rr * 0.8, Y(s.carrier.y) + rr * 0.4, rr);
       if (s.ball && s.phase === "air") { const b = s.ball, u = b.t / b.T, hgt = Math.sin(u * Math.PI) * Math.min(40, b.T * 30);
         c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.ellipse(X(b.x), Y(b.y), 6, 3, 0, 0, 7); c.fill();
@@ -184,7 +206,7 @@
       }
       if (s.phase === "pre" && s.pick) G.banner(c, s.pick.n, "#fff", H * 0.3);
       if (s.phase === "dead" && s.res) { const by = Math.max(110, H * 0.3); c.fillStyle = "rgba(0,0,0,0.45)"; c.fillRect(0, by - 34, W, 80); G.banner(c, s.res.txt, s.res.col, by, s.res.txt.length > 11 ? Math.min(22, W / 15) : undefined); if (s.res.sub) G.text(c, s.res.sub, W / 2, by + 30, 10, "#fff"); }
-      if (s.phase === "live" && s.drive === 1 && s.down === 1) G.hint(c, "TAP A RECEIVER TO THROW", 99, H - 30);
+      if (s.phase === "live" && s.drive === 1 && s.down === 1) G.hint(c, "TAP = FAKE · DOUBLE-TAP = THROW", 99, H - 30);
       if (s.phase === "run" && s.tds === 0 && s.drive === 1) G.hint(c, "DRAG TO STEER", 99, H - 30);
     },
     hitRec(G, x, y) { const s = G.s, W = G.W, H = G.H, ppy = (W - 16) / (FW + 2), fl = 8 + ppy, camY = s.los - 6;
@@ -192,13 +214,13 @@
     down(G, x, y) {
       const s = G.s, ppy = (G.W - 16) / (FW + 2), fl = 8 + ppy;
       if (s.phase === "call") { const b = (s.btns || []).find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (b) this.choose(G, b.play); return; }
-      if (s.phase === "live") { const i = this.hitRec(G, x, y); if (i >= 0) this.throwTo(G, i); return; }
+      if (s.phase === "live") { const i = this.hitRec(G, x, y); if (i >= 0) this.tapRec(G, i); return; }
       if (s.phase === "run") s.fx = (x - fl) / ppy;
     },
     move(G, x) { const s = G.s; if (s.phase === "run") { const ppy = (G.W - 16) / (FW + 2); s.fx = (x - 8 - ppy) / ppy; } },
     up(G) { },
     onKey(G, k, d) { const s = G.s; if (!d) return; if (s.phase === "call" && /^[123]$/.test(k)) this.choose(G, s.offer[+k - 1]);
-      if (s.phase === "live" && /^[1-5]$/.test(k)) this.throwTo(G, +k - 1);
+      if (s.phase === "live" && /^[1-5]$/.test(k)) this.tapRec(G, +k - 1);
       if (s.phase === "run" && s.carrier) { if (k === "ArrowLeft") s.fx = s.carrier.x - 4; if (k === "ArrowRight") s.fx = s.carrier.x + 4; } }
   });
 })();
