@@ -275,6 +275,19 @@ input { -webkit-user-select: text; user-select: text; }
 .dots i { width: 13px; height: 13px; border-radius: 50%; background: var(--g-sel); display: block; transition: transform 0.25s, opacity 0.25s; }
 .dots i.used { transform: scale(0); opacity: 0; }
 .gactions { flex: none; display: flex; gap: 8px; justify-content: center; padding: 4px 8px 18px; flex-wrap: wrap; }
+/* Groups laid out like Sports Groups: board at the top, taller tiles, mistakes and three equal buttons right under it. */
+html:not(.legacy) #v-groups .main { flex: none; gap: 12px; padding-bottom: 4px; }
+html:not(.legacy) #v-groups .fit { flex: none; container-type: inline-size; display: block; }
+html:not(.legacy) #v-groups .ggrid { width: min(100%, 480px); margin: 0 auto; aspect-ratio: 366 / 328; gap: 8px; }
+html:not(.legacy) #v-groups .gtile { font-weight: 700; font-size: clamp(11px, 4.2cqw, 18px); }
+html:not(.legacy) #v-groups .gtile.long { font-size: clamp(9px, 3.4cqw, 15px); }
+html:not(.legacy) #v-groups .solved b { font-size: clamp(13px, 4.2cqw, 18px); }
+html:not(.legacy) #v-groups .solved span { font-size: clamp(12px, 3.9cqw, 16px); }
+html:not(.legacy) #v-groups .mistakes { font-size: 15px; }
+html:not(.legacy) #v-groups .gactions { flex-wrap: nowrap; padding: 6px 12px 18px; }
+html:not(.legacy) #v-groups .gactions .pill { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 0 8px; white-space: nowrap; }
+html:not(.legacy) #v-groups .pill.solid:disabled { background: transparent; color: var(--ink); }
+html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 
 /* Mini */
 .minibar { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
