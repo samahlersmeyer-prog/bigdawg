@@ -40,7 +40,7 @@
   }
 
   defGame({
-    key: "kickret", name: "Dawg Return", icon: "🏈", max: 9999, cat: "sports",
+    key: "kickret", name: "Dawg Return", icon: "🏃", max: 9999, cat: "sports",
     blurb: "Return the kick. Juke the cats. Score.",
     how: "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.",
     reset(G) {

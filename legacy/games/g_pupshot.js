@@ -566,7 +566,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var pup = Object.assign(common("pupshot"), {
     key: "pupshot",
     name: "Pup Shot",
-    icon: "🏀",
+    icon: "🌀",
     max: 99999,
     blurb: "Fling it, warp to it, dunk it. 12 courts.",
     how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",

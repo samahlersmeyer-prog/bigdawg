@@ -1,8 +1,8 @@
-// ---------- Dawg Crossing (street + creek crossing) ----------
+// ---------- Dawgger (street + creek crossing) ----------
 // Hop the bulldog across 5 lanes of traffic, a grassy median and 4 creek lanes of logs/floats,
 // then into one of 5 dog houses. Fill all 5 to clear the level (traffic gets faster).
 defGame({
-  key: "cross", name: "Dawg Crossing", icon: "🚗", max: 99999,
+  key: "cross", name: "Dawgger", icon: "🐸", max: 99999,
   blurb: "Cross the street. Don't get flattened.",
   how: "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.",
   reset(G) {

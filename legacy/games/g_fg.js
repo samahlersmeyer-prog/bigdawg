@@ -193,7 +193,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   defGame({
     key: "fg",
     name: "Kick Dawg",
-    icon: "🏈",
+    icon: "🥅",
     max: 9999,
     cat: "sports",
     blurb: "Field goals. Read the wind. Split the uprights.",

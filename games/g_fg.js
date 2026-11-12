@@ -84,7 +84,7 @@
   }
 
   defGame({
-    key: "fg", name: "Kick Dawg", icon: "🏈", max: 9999, cat: "sports",
+    key: "fg", name: "Kick Dawg", icon: "🥅", max: 9999, cat: "sports",
     blurb: "Field goals. Read the wind. Split the uprights.",
     how: "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. Hit 1,000 points and you're in PRO RANGE: nothing shorter than 40 yards and the wind really picks up. 3 misses and you're done.",
     reset(G) {

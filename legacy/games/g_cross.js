@@ -7,8 +7,8 @@ function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" !=
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 defGame({
   key: "cross",
-  name: "Dawg Crossing",
-  icon: "🚗",
+  name: "Dawgger",
+  icon: "🐸",
   max: 99999,
   blurb: "Cross the street. Don't get flattened.",
   how: "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.",

@@ -1519,6 +1519,100 @@ $("g-help").addEventListener("click", function () {
   if (!G.def) return;
   openModal([el("h2", null, "How to play " + G.def.name), el("p", "sub", G.def.how)]);
 });
+var ARC_PAIRS = {
+  golf: {
+    name: "Dawg Golf",
+    blurb: "9 or 18 holes. Mind the wind.",
+    keys: ["golf", "golf18"],
+    opts: ["Front nine · par 36", "Full 18 · par 74"]
+  },
+  putt: {
+    name: "Putt Pup",
+    blurb: "Backyard mini golf, 9 or 18.",
+    keys: ["putt", "putt18"],
+    opts: ["9 holes", "The full 18"]
+  },
+  mjrush: {
+    name: "Endless Mahjong",
+    blurb: "Tile matching, timed or chill.",
+    keys: ["mjrush", "mjzen"],
+    opts: ["Rush · race the clock", "Zen · no clock"]
+  }
+};
+var ARC_PAIR_SECOND = {
+  golf18: "golf",
+  putt18: "putt",
+  mjzen: "mjrush"
+};
+function openPairPicker(k) {
+  var p = ARC_PAIRS[k],
+    col = el("div", "pair-pick");
+  p.keys.forEach(function (g, i) {
+    if (!ARC[g]) return;
+    var b = el("button", "pair-opt"),
+      ic = el("span", "gicon");
+    ic.appendChild(emo(ARC[g].icon, 26));
+    var tx = el("span");
+    tx.append(el("b", null, p.opts[i]), el("small", null, aBest[g] ? "Your best " + fmtG(g, aBest[g]) : "Not played yet"));
+    b.append(ic, tx);
+    b.addEventListener("click", function () {
+      closeModal();
+      playGame(g);
+    });
+    col.appendChild(b);
+  });
+  openModal([el("h2", null, p.name), col]);
+}
+var arcFavs = function arcFavs() {
+  return me && store.get("bdd:favs:" + me.id) || [];
+};
+function toggleFav(k, cat) {
+  if (!me) return;
+  var f = arcFavs(),
+    on = f.includes(k),
+    nf = on ? f.filter(function (x) {
+      return x !== k;
+    }) : [k].concat(f);
+  store.set("bdd:favs:" + me.id, nf);
+  if (navigator.vibrate) navigator.vibrate(15);
+  toast(on ? "Unpinned ".concat((ARC_PAIRS[k] || ARC[k]).name) : "\uD83D\uDCCC Pinned ".concat((ARC_PAIRS[k] || ARC[k]).name));
+  renderArcHub(cat);
+}
+function longPress(node, fn) {
+  var t = 0,
+    sx = 0,
+    sy = 0;
+  var cancel = function cancel() {
+    clearTimeout(t);
+    t = 0;
+  };
+  node.addEventListener("pointerdown", function (e) {
+    sx = e.clientX;
+    sy = e.clientY;
+    delete node.dataset.lp;
+    t = setTimeout(function () {
+      t = 0;
+      node.dataset.lp = "1";
+      fn();
+    }, 500);
+  });
+  node.addEventListener("pointermove", function (e) {
+    if (t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel();
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
+    return node.addEventListener(ev, cancel);
+  });
+  node.addEventListener("contextmenu", function (e) {
+    return e.preventDefault();
+  });
+  node.addEventListener("click", function (e) {
+    if (node.dataset.lp) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      delete node.dataset.lp;
+    }
+  }, true);
+}
 function renderArcHub(cat) {
   ownLocal();
   cat = cat || "arcade";
@@ -1542,9 +1636,37 @@ function renderArcHub(cat) {
     var card = el("button", "gotd");
     card.dataset.play = gd.game;
     var lead = gd.board[0];
-    card.append(el("b", null, "\uD83C\uDFAF GAME OF THE DAY: ".concat(ARC[gd.game].name)), el("span", null, lead ? "Today's leader: ".concat(lead.name, " ").concat(fmtG(gd.game, lead.n), " \xB7 resets at midnight") : "Nobody's played it yet today. Be first."));
-    if (gd.y && gd.y.win && ARC[gd.y.game]) card.append(el("small", null, "\uD83C\uDFC6 Yesterday: ".concat(gd.y.win.name, " won ").concat(ARC[gd.y.game].name)));
+    var ic = el("span", "gicon");
+    ic.appendChild(emo(ARC[gd.game].icon, 34));
+    var tx = el("span", "gotd-tx"),
+      mine = me && gd.board.find(function (x) {
+        return x.id === me.id;
+      });
+    tx.append(el("small", "gotd-k", "Game of the day"), el("b", null, ARC[gd.game].name), el("span", null, lead ? "\uD83D\uDC51 ".concat(lead.name, " ").concat(fmtG(gd.game, lead.n)).concat(mine && lead.id !== me.id ? " \xB7 you ".concat(fmtG(gd.game, mine.n)) : mine ? " · that's you" : "") : "Nobody's played it yet today. Be first."));
+    if (gd.y && gd.y.win && ARC[gd.y.game]) tx.append(el("small", null, "\uD83C\uDFC6 Yesterday: ".concat(gd.y.win.name, " won ").concat(ARC[gd.y.game].name)));
+    card.append(ic, tx, el("span", "gotd-go", "Play"));
     box.prepend(card);
+  }
+  if (cat !== "den" && arcade && arcade.games && me) {
+    var ks = Object.keys(ARC).filter(function (k) {
+        return arcCat(k) === cat && !ARC[k].puzzle;
+      }),
+      held = ks.filter(function (k) {
+        var g = arcade.games[k];
+        return g && g.all && g.all[0] && g.all[0].id === me.id;
+      });
+    var counts = {};
+    ks.forEach(function (k) {
+      var g = arcade.games[k],
+        t = g && g.all && g.all[0];
+      if (t) counts[t.name] = (counts[t.name] || 0) + 1;
+    });
+    var top = Object.keys(counts).sort(function (a, b) {
+      return counts[b] - counts[a];
+    })[0];
+    var c = el("div", "crowns");
+    c.append(el("b", null, held.length ? "\uD83D\uDC51 You hold ".concat(held.length, " crown").concat(held.length > 1 ? "s" : "") : "👑 No crowns yet"), el("small", null, top && top !== me.name ? "".concat(top, " has the most: ").concat(counts[top]) : top ? "You have the most" : "Every top score is up for grabs"));
+    box.appendChild(c);
   }
   var list = $(cat === "sports" ? "sp-list" : cat === "den" ? "den-list" : "arc-list");
   list.innerHTML = "";
@@ -1557,33 +1679,82 @@ function renderArcHub(cat) {
       return !DEN_PUZ.includes(k);
     });
   }
-  var recent = (store.get("bdd:recent") || []).filter(function (k) {
+  all = all.filter(function (k) {
+    return !ARC_PAIR_SECOND[k];
+  });
+  var favs = arcFavs().filter(function (k) {
     return all.includes(k);
-  }).slice(0, 3);
+  });
+  var recent = (store.get("bdd:recent") || []).map(function (k) {
+    return ARC_PAIR_SECOND[k] || k;
+  }).filter(function (k, i, a) {
+    return all.includes(k) && a.indexOf(k) === i && !favs.includes(k);
+  }).slice(0, 4);
+  var champ = function champ(k) {
+    var g = arcade && arcade.games && arcade.games[k],
+      t = g && g.all && g.all[0];
+    return t || null;
+  };
   var cell = function cell(k) {
-    var r = el("button", "arc-cell");
-    r.dataset.play = k;
+    var pair = ARC_PAIRS[k],
+      r = el("button", "arc-cell" + (favs.includes(k) ? " fav" : ""));
+    if (pair) r.addEventListener("click", function () {
+      return openPairPicker(k);
+    });else r.dataset.play = k;
     var ic = el("span", "gicon");
     ic.appendChild(emo(ARC[k].icon, 28));
-    var dr = ARC[k].puzzle && denRec(k);
-    if (ARC[k].puzzle) r.append(ic, el("b", null, ARC[k].name), el("small", null, dr && dr.done ? "\u2713 Today \xB7 ".concat(dr.score, " pts") : dr ? "In progress" : "Daily puzzle"));else r.append(ic, el("b", null, ARC[k].name), el("small", null, aBest[k] ? "Best " + fmtG(k, aBest[k]) + (medalOf(k, aBest[k]) ? " " + MEDAL_ICON[medalOf(k, aBest[k])] : "") : "\xA0"));
-    if (gd && gd.game === k) r.classList.add("isgotd");
+    var dr = ARC[k].puzzle && denRec(k),
+      name = pair ? pair.name : ARC[k].name;
+    var keys = pair ? pair.keys : [k],
+      bk = keys.find(function (x) {
+        return aBest[x];
+      });
+    var line = ARC[k].puzzle ? dr && dr.done ? "\u2713 Today \xB7 ".concat(dr.score, " pts") : dr ? "In progress" : "Daily puzzle" : bk ? "Best " + fmtG(bk, aBest[bk]) + (medalOf(bk, aBest[bk]) ? " " + MEDAL_ICON[medalOf(bk, aBest[bk])] : "") : pair ? pair.blurb : ARC[k].blurb;
+    r.append(ic, el("b", null, name), el("small", bk || ARC[k].puzzle ? "" : "blurb", line));
+    if (gd && keys.includes(gd.game)) r.classList.add("isgotd");
     var td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
-    if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", "\uD83D\uDC51 ".concat(td[0].name)));
+    if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", "\uD83D\uDC51 ".concat(td[0].name)));else if (cat !== "den") {
+      var _c = champ(k);
+      if (_c) r.appendChild(el("small", "today" + (me && _c.id === me.id ? " mine" : ""), me && _c.id === me.id ? "👑 You" : "\uD83D\uDC51 ".concat(_c.name)));
+    }
     var n = aDares.filter(function (d) {
-        return d.game === k;
+        return keys.includes(d.game);
       }).length,
-      sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
+      sv = me && keys.some(function (x) {
+        return store.get("bdd:gsave:" + x + ":" + me.id);
+      });
     if (n) r.appendChild(el("span", "badge", "\uD83C\uDFAF".concat(n)));else if (sv) r.appendChild(el("span", "badge go", "▶"));
     var fr = freshEl(k);
     if (fr) r.appendChild(fr);
+    if (favs.includes(k) && !n && !sv) r.appendChild(el("span", "favpin", "📌"));
+    longPress(r, function () {
+      return toggleFav(k, cat);
+    });
     return r;
   };
-  if (recent.length >= 2 && cat !== "den") {
-    list.appendChild(el("div", "arc-sec", "Jump back in"));
-    recent.forEach(function (k) {
+  var shelves = cat !== "den";
+  list.classList.toggle("shelves", shelves);
+  var section = function section(head, keys) {
+    if (!keys.length) return;
+    list.appendChild(head);
+    if (!shelves) return keys.forEach(function (k) {
       return list.appendChild(cell(k));
     });
+    var sh = el("div", "shelf");
+    keys.forEach(function (k) {
+      return sh.appendChild(cell(k));
+    });
+    list.appendChild(sh);
+  };
+  var plain = function plain(t, sub) {
+    var h = el("div", "arc-sec arc-grp");
+    h.append(el("b", null, t));
+    if (sub) h.appendChild(el("small", null, sub));
+    return h;
+  };
+  if (cat !== "den") {
+    section(plain("📌 Your favorites"), favs);
+    if (recent.length >= 2) section(plain("Jump back in"), recent);
   }
   var groups = ARC_GROUPS[cat];
   if (groups) {
@@ -1594,20 +1765,12 @@ function renderArcHub(cat) {
       var keys = all.filter(function (k) {
         return g.keys.includes(k) || i === groups.length - 1 && !placed.has(k);
       });
-      if (!keys.length) return;
       var h = el("div", "arc-sec arc-grp");
       h.append(el("span", null, g.icon), el("b", null, g.name), el("small", null, g.sub));
-      list.appendChild(h);
-      keys.forEach(function (k) {
-        return list.appendChild(cell(k));
-      });
+      section(h, keys);
     });
-  } else {
-    if (recent.length >= 2 && cat !== "den") list.appendChild(el("div", "arc-sec", "All games"));
-    all.forEach(function (k) {
-      return list.appendChild(cell(k));
-    });
-  }
+  } else section(plain("All games"), all);
+  if (cat !== "den") list.appendChild(el("p", "arc-foot", "Just for fun: none of this counts on the daily scoreboard.".concat(favs.length ? "" : " Press and hold any game to pin it to your favorites.")));
   if (!arcade) refreshArcade();else if (cat === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 }
 $("den4").addEventListener("click", function () {
@@ -3045,7 +3208,7 @@ defGameMeta([{
   "file": "g_crib.js",
   "key": "crib",
   "name": "Cribbage",
-  "icon": "🎯",
+  "icon": "📌",
   "blurb": "Cribbage vs Old Tom the cat. First to 121.",
   "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).",
   "cat": "den",
@@ -3053,8 +3216,8 @@ defGameMeta([{
 }, {
   "file": "g_cross.js",
   "key": "cross",
-  "name": "Dawg Crossing",
-  "icon": "🚗",
+  "name": "Dawgger",
+  "icon": "🐸",
   "blurb": "Cross the street. Don't get flattened.",
   "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.",
   "max": 99999
@@ -3147,7 +3310,7 @@ defGameMeta([{
   "file": "g_fg.js",
   "key": "fg",
   "name": "Kick Dawg",
-  "icon": "🏈",
+  "icon": "🥅",
   "blurb": "Field goals. Read the wind. Split the uprights.",
   "how": "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. Hit 1,000 points and you're in PRO RANGE: nothing shorter than 40 yards and the wind really picks up. 3 misses and you're done.",
   "cat": "sports",
@@ -3235,7 +3398,7 @@ defGameMeta([{
   "file": "g_kickret.js",
   "key": "kickret",
   "name": "Dawg Return",
-  "icon": "🏈",
+  "icon": "🏃",
   "blurb": "Return the kick. Juke the cats. Score.",
   "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.",
   "cat": "sports",
@@ -3377,7 +3540,7 @@ defGameMeta([{
   "file": "g_pupshot.js",
   "key": "pupshot",
   "name": "Pup Shot",
-  "icon": "🏀",
+  "icon": "🌀",
   "blurb": "Fling it, warp to it, dunk it. 12 courts.",
   "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
   "max": 99999

@@ -589,6 +589,41 @@ function puzzleResults(game, info) {
   openModal(nodes); return fill;
 }
 $("g-help").addEventListener("click", () => { if (!G.def) return; openModal([el("h2", null, "How to play " + G.def.name), el("p", "sub", G.def.how)]); });
+// Same game in two lengths/modes shows as one tile; tapping it asks which. Scores stay separate.
+const ARC_PAIRS = {
+  golf: { name: "Dawg Golf", blurb: "9 or 18 holes. Mind the wind.", keys: ["golf", "golf18"], opts: ["Front nine · par 36", "Full 18 · par 74"] },
+  putt: { name: "Putt Pup", blurb: "Backyard mini golf, 9 or 18.", keys: ["putt", "putt18"], opts: ["9 holes", "The full 18"] },
+  mjrush: { name: "Endless Mahjong", blurb: "Tile matching, timed or chill.", keys: ["mjrush", "mjzen"], opts: ["Rush · race the clock", "Zen · no clock"] }
+};
+const ARC_PAIR_SECOND = { golf18: "golf", putt18: "putt", mjzen: "mjrush" };
+function openPairPicker(k) {
+  const p = ARC_PAIRS[k], col = el("div", "pair-pick");
+  p.keys.forEach((g, i) => {
+    if (!ARC[g]) return;
+    const b = el("button", "pair-opt"), ic = el("span", "gicon"); ic.appendChild(emo(ARC[g].icon, 26));
+    const tx = el("span"); tx.append(el("b", null, p.opts[i]), el("small", null, aBest[g] ? "Your best " + fmtG(g, aBest[g]) : "Not played yet"));
+    b.append(ic, tx); b.addEventListener("click", () => { closeModal(); playGame(g); }); col.appendChild(b);
+  });
+  openModal([el("h2", null, p.name), col]);
+}
+// Favorites: press and hold a tile to pin it to the top shelf.
+const arcFavs = () => (me && store.get("bdd:favs:" + me.id)) || [];
+function toggleFav(k, cat) {
+  if (!me) return;
+  const f = arcFavs(), on = f.includes(k), nf = on ? f.filter(x => x !== k) : [k].concat(f);
+  store.set("bdd:favs:" + me.id, nf); if (navigator.vibrate) navigator.vibrate(15);
+  toast(on ? `Unpinned ${(ARC_PAIRS[k] || ARC[k]).name}` : `📌 Pinned ${(ARC_PAIRS[k] || ARC[k]).name}`); renderArcHub(cat);
+}
+function longPress(node, fn) {
+  let t = 0, sx = 0, sy = 0;
+  const cancel = () => { clearTimeout(t); t = 0; };
+  node.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; delete node.dataset.lp; t = setTimeout(() => { t = 0; node.dataset.lp = "1"; fn(); }, 500); });
+  node.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => node.addEventListener(ev, cancel));
+  node.addEventListener("contextmenu", e => e.preventDefault());
+  // A long press shouldn't also open the game.
+  node.addEventListener("click", e => { if (node.dataset.lp) { e.stopImmediatePropagation(); e.preventDefault(); delete node.dataset.lp; } }, true);
+}
 function renderArcHub(cat) {
   ownLocal();
   cat = cat || "arcade";
@@ -603,42 +638,78 @@ function renderArcHub(cat) {
   if (gd) {
     const card = el("button", "gotd"); card.dataset.play = gd.game;
     const lead = gd.board[0];
-    card.append(el("b", null, `🎯 GAME OF THE DAY: ${ARC[gd.game].name}`), el("span", null, lead ? `Today's leader: ${lead.name} ${fmtG(gd.game, lead.n)} · resets at midnight` : "Nobody's played it yet today. Be first."));
-    if (gd.y && gd.y.win && ARC[gd.y.game]) card.append(el("small", null, `🏆 Yesterday: ${gd.y.win.name} won ${ARC[gd.y.game].name}`));
+    const ic = el("span", "gicon"); ic.appendChild(emo(ARC[gd.game].icon, 34));
+    const tx = el("span", "gotd-tx"), mine = me && gd.board.find(x => x.id === me.id);
+    tx.append(el("small", "gotd-k", "Game of the day"), el("b", null, ARC[gd.game].name),
+      el("span", null, lead ? `👑 ${lead.name} ${fmtG(gd.game, lead.n)}${mine && lead.id !== me.id ? ` · you ${fmtG(gd.game, mine.n)}` : mine ? " · that's you" : ""}` : "Nobody's played it yet today. Be first."));
+    if (gd.y && gd.y.win && ARC[gd.y.game]) tx.append(el("small", null, `🏆 Yesterday: ${gd.y.win.name} won ${ARC[gd.y.game].name}`));
+    card.append(ic, tx, el("span", "gotd-go", "Play"));
     box.prepend(card);
+  }
+  // Crowns: how many games you hold the all-time top score in, here. A reason to go take one back.
+  if (cat !== "den" && arcade && arcade.games && me) {
+    const ks = Object.keys(ARC).filter(k => arcCat(k) === cat && !ARC[k].puzzle), held = ks.filter(k => { const g = arcade.games[k]; return g && g.all && g.all[0] && g.all[0].id === me.id; });
+    const counts = {}; ks.forEach(k => { const g = arcade.games[k], t = g && g.all && g.all[0]; if (t) counts[t.name] = (counts[t.name] || 0) + 1; });
+    const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    const c = el("div", "crowns");
+    c.append(el("b", null, held.length ? `👑 You hold ${held.length} crown${held.length > 1 ? "s" : ""}` : "👑 No crowns yet"),
+      el("small", null, top && top !== me.name ? `${top} has the most: ${counts[top]}` : top ? "You have the most" : "Every top score is up for grabs"));
+    box.appendChild(c);
   }
   const list = $(cat === "sports" ? "sp-list" : cat === "den" ? "den-list" : "arc-list"); list.innerHTML = "";
   let all = arcOrder().filter(k => arcCat(k) === cat);
   if (cat === "den") { renderDenPuz(); all = all.filter(k => !DEN_PUZ.includes(k)); }
-  const recent = (store.get("bdd:recent") || []).filter(k => all.includes(k)).slice(0, 3);
+  all = all.filter(k => !ARC_PAIR_SECOND[k]);
+  const favs = arcFavs().filter(k => all.includes(k));
+  const recent = (store.get("bdd:recent") || []).map(k => ARC_PAIR_SECOND[k] || k).filter((k, i, a) => all.includes(k) && a.indexOf(k) === i && !favs.includes(k)).slice(0, 4);
+  const champ = k => { const g = arcade && arcade.games && arcade.games[k], t = g && g.all && g.all[0]; return t || null; };
   const cell = k => {
-    const r = el("button", "arc-cell"); r.dataset.play = k;
+    const pair = ARC_PAIRS[k], r = el("button", "arc-cell" + (favs.includes(k) ? " fav" : ""));
+    if (pair) r.addEventListener("click", () => openPairPicker(k)); else r.dataset.play = k;
     const ic = el("span", "gicon"); ic.appendChild(emo(ARC[k].icon, 28));
-    const dr = ARC[k].puzzle && denRec(k);
-    if (ARC[k].puzzle) r.append(ic, el("b", null, ARC[k].name), el("small", null, dr && dr.done ? `✓ Today · ${dr.score} pts` : dr ? "In progress" : "Daily puzzle"));
-    else r.append(ic, el("b", null, ARC[k].name), el("small", null, aBest[k] ? "Best " + fmtG(k, aBest[k]) + (medalOf(k, aBest[k]) ? " " + MEDAL_ICON[medalOf(k, aBest[k])] : "") : "\u00a0"));
-    if (gd && gd.game === k) r.classList.add("isgotd");
-    const td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today; if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", `👑 ${td[0].name}`));
-    const n = aDares.filter(d => d.game === k).length, sv = me && store.get("bdd:gsave:" + k + ":" + me.id);
+    const dr = ARC[k].puzzle && denRec(k), name = pair ? pair.name : ARC[k].name;
+    // Line under the name: your best once you've played, otherwise what the game is, so a new tile isn't blank.
+    const keys = pair ? pair.keys : [k], bk = keys.find(x => aBest[x]);
+    const line = ARC[k].puzzle ? (dr && dr.done ? `✓ Today · ${dr.score} pts` : dr ? "In progress" : "Daily puzzle")
+      : bk ? "Best " + fmtG(bk, aBest[bk]) + (medalOf(bk, aBest[bk]) ? " " + MEDAL_ICON[medalOf(bk, aBest[bk])] : "") : (pair ? pair.blurb : ARC[k].blurb);
+    r.append(ic, el("b", null, name), el("small", bk || ARC[k].puzzle ? "" : "blurb", line));
+    if (gd && keys.includes(gd.game)) r.classList.add("isgotd");
+    const td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
+    if (cat === "den" && td && td[0]) r.appendChild(el("small", "today", `👑 ${td[0].name}`));
+    else if (cat !== "den") { const c = champ(k); if (c) r.appendChild(el("small", "today" + (me && c.id === me.id ? " mine" : ""), me && c.id === me.id ? "👑 You" : `👑 ${c.name}`)); }
+    const n = aDares.filter(d => keys.includes(d.game)).length, sv = me && keys.some(x => store.get("bdd:gsave:" + x + ":" + me.id));
     if (n) r.appendChild(el("span", "badge", `🎯${n}`)); else if (sv) r.appendChild(el("span", "badge go", "▶"));
     const fr = freshEl(k); if (fr) r.appendChild(fr);
+    if (favs.includes(k) && !n && !sv) r.appendChild(el("span", "favpin", "📌"));
+    longPress(r, () => toggleFav(k, cat));
     return r;
   };
-  if (recent.length >= 2 && cat !== "den") { list.appendChild(el("div", "arc-sec", "Jump back in")); recent.forEach(k => list.appendChild(cell(k))); }
+  // Arcade and Sports: one sideways shelf per section, so the whole hub fits in about two screens.
+  // The Den's card games stay a small grid.
+  const shelves = cat !== "den";
+  list.classList.toggle("shelves", shelves);
+  const section = (head, keys) => {
+    if (!keys.length) return;
+    list.appendChild(head);
+    if (!shelves) return keys.forEach(k => list.appendChild(cell(k)));
+    const sh = el("div", "shelf"); keys.forEach(k => sh.appendChild(cell(k))); list.appendChild(sh);
+  };
+  const plain = (t, sub) => { const h = el("div", "arc-sec arc-grp"); h.append(el("b", null, t)); if (sub) h.appendChild(el("small", null, sub)); return h; };
+  if (cat !== "den") {
+    section(plain("📌 Your favorites"), favs);
+    if (recent.length >= 2) section(plain("Jump back in"), recent);
+  }
   const groups = ARC_GROUPS[cat];
   if (groups) {
     // Sections per hub. Any game not listed lands in the last section, so new games always show up.
     const placed = new Set(groups.flatMap(g => g.keys));
     groups.forEach((g, i) => {
       const keys = all.filter(k => g.keys.includes(k) || (i === groups.length - 1 && !placed.has(k)));
-      if (!keys.length) return;
       const h = el("div", "arc-sec arc-grp"); h.append(el("span", null, g.icon), el("b", null, g.name), el("small", null, g.sub));
-      list.appendChild(h); keys.forEach(k => list.appendChild(cell(k)));
+      section(h, keys);
     });
-  } else {
-    if (recent.length >= 2 && cat !== "den") list.appendChild(el("div", "arc-sec", "All games"));
-    all.forEach(k => list.appendChild(cell(k)));
-  }
+  } else section(plain("All games"), all);
+  if (cat !== "den") list.appendChild(el("p", "arc-foot", `Just for fun: none of this counts on the daily scoreboard.${favs.length ? "" : " Press and hold any game to pin it to your favorites."}`));
   if (!arcade) refreshArcade(); else if (cat === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 }
 $("den4").addEventListener("click", () => openDenBoard());
@@ -1091,8 +1162,8 @@ defGameMeta([{"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "ic
 {"file": "g_boneball.js", "key": "boneball", "name": "Bone Ball", "icon": "🎾", "blurb": "Daily: balance bones and balls.", "how": "Fill every square with a 🦴 or a 🎾. Each row and each column needs three of each. No more than two of the same can sit next to each other in a row or column. An = between two squares means they're the same; an × means they're different. Tap a square for a bone, again for a ball, again to clear. Gray squares are given. A new board every day, one go, one answer, and you never need to guess. Score: 700 for solving plus up to 300 for going quick. No clock on screen.", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_bowl.js", "key": "bowl", "name": "Bowl-a-Dawg", "icon": "🎳", "blurb": "10 frames. Swipe to roll. Curve it.", "how": "Swipe up from the bottom to roll. Where you start = where you stand, the swipe's direction = your aim, bend the swipe to hook it, flick faster for more speed. Hit the pocket (just beside the head pin) for strikes. 10 frames, real scoring, 300 is perfect.", "cat": "sports", "max": 300},
 {"file": "g_crazy.js", "key": "crazy", "name": "Crazy Dawgs", "icon": "🎴", "blurb": "The color-matching card game vs 3 pups.", "how": "You vs Rex, Biscuit and Duke. Match the top card by color or by number/symbol. Skip ⊘ skips the next player, Reverse ⇄ flips direction, +2 makes the next player draw 2 and lose their turn, Wild lets you pick the color, Wild +4 picks the color and makes the next player draw 4. Can't play? Tap the deck to draw one (play it if it fits). Down to 2 cards? Tap BARK! before you play, or get caught and draw 2. Win a hand to score the cards left in everyone's hands (numbers = face value, action cards 20, wilds 50). First to 200 wins. Score: your points, +100 for winning the match.", "cat": "den", "max": 2000},
-{"file": "g_crib.js", "key": "crib", "name": "Cribbage", "icon": "🎯", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "cat": "den", "max": 500},
-{"file": "g_cross.js", "key": "cross", "name": "Dawg Crossing", "icon": "🚗", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
+{"file": "g_crib.js", "key": "crib", "name": "Cribbage", "icon": "📌", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "cat": "den", "max": 500},
+{"file": "g_cross.js", "key": "cross", "name": "Dawgger", "icon": "🐸", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
 {"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.", "max": 999999},
 {"file": "g_dawgball.js", "key": "dawgball", "name": "Dawg Ball", "icon": "🧢", "blurb": "Doodle-style batting vs the Cats.", "how": "You bat, the Alley Cats pitch. Tap anywhere to swing. Any fair ball is a hit - the farther it goes, the more bases. The only way out is swinging and missing: 3 whiffs and the game is over (taking a pitch or fouling one off is free). Early pulls it to left, late goes to right, right on time crushes it. Every 3 runs a nastier pitcher comes in and the timing gets tighter. Score: runs x10.", "cat": "sports", "max": 999},
@@ -1103,7 +1174,7 @@ defGameMeta([{"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "ic
 {"file": "g_duck.js", "key": "duck", "name": "Duck Dawg", "icon": "🦆", "blurb": "Tap the ducks before they fly off.", "how": "Ducks flap up out of the grass. Tap them to pop them with the tennis-ball launcher. 3 shots per release, 10 ducks a round (2 at a time from round 3). Hit at least 6 of 10 to pass (it goes up later). 500+ points a duck, more each round, 10/10 = perfect bonus.", "cat": "sports", "max": 99999},
 {"file": "g_dvz.js", "key": "dvz", "name": "Dawgs vs Zombies", "icon": "🧟", "blurb": "Lane defense. Hold the yard.", "how": "Zombies shuffle in from the right. Tap a defender you've placed to UPGRADE it (★2 from wave 2, ★3 from wave 4) or DIG it up for half your bones back. Tap falling 🦴 to collect bones. Tap a card at the top, then tap a square to post it: 🥣 Bowls make bones, 🎾 Launchers shoot, 🏠 Doghouses block, ❄️ Snow Pups slow them down, 💣 Bark Bombs blow up everything nearby. Each lane has one lawn mower for emergencies. If a zombie gets past it, game over.", "max": 99999},
 {"file": "g_euchre.js", "key": "euchre", "name": "Euchre", "icon": "🃏", "blurb": "You + Biscuit vs the cats. First to 10.", "how": "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.", "cat": "den", "max": 300},
-{"file": "g_fg.js", "key": "fg", "name": "Kick Dawg", "icon": "🏈", "blurb": "Field goals. Read the wind. Split the uprights.", "how": "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. Hit 1,000 points and you're in PRO RANGE: nothing shorter than 40 yards and the wind really picks up. 3 misses and you're done.", "cat": "sports", "max": 9999},
+{"file": "g_fg.js", "key": "fg", "name": "Kick Dawg", "icon": "🥅", "blurb": "Field goals. Read the wind. Split the uprights.", "how": "Two taps per kick. TAP to lock the swinging AIM arrow, then TAP to lock the POWER meter (the white line is about the least power that gets there). WIND (the box, and the flags on the posts) bends the ball, so aim into it. Kicks run 20 to 60 yards and move around the field: first the hashes, then wide angles from out by the numbers. Each make scores its yards plus an angle bonus. Hit 1,000 points and you're in PRO RANGE: nothing shorter than 40 yards and the wind really picks up. 3 misses and you're done.", "cat": "sports", "max": 9999},
 {"file": "g_golf.js", "key": "golf", "name": "Dawg Golf", "icon": "🏌️", "blurb": "Front nine, par 36. Three-tap swing. Mind the wind.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 36: fewest strokes wins.", "cat": "sports", "max": 72, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 36 ? "E" : (n > 36 ? "+" : "") + (n - 36)) + ")" : "—"},
 {"file": "g_golf.js", "key": "golf18", "name": "Dawg Golf 18", "icon": "🏌️", "blurb": "The full 18, par 74. Back nine plays longer and windier.", "how": "Tap to start the swing, tap again while the marker is in the GREEN ZONE around the PIN flag (it already counts wind, lie and roll) to hit it the right distance, then tap the blue spot on the way back to hit it straight. On the green, one tap in the green zone putts. The club is picked for you; tap the yellow CLUB bar to switch. Water costs a stroke, trees knock the ball down, pick up at 8. Par 74 over 18 holes: fewest strokes wins.", "cat": "sports", "max": 144, "low": true, "fmt": n => n > 0 ? n + " (" + (n === 74 ? "E" : (n > 74 ? "+" : "") + (n - 74)) + ")" : "—"},
 {"file": "g_guess.js", "key": "guess", "name": "Guess", "icon": "🔍", "blurb": "Daily: hot or cold? Find the pick.", "how": "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess gets a number: how similar it is to the answer, ranked against everything in the list. #1 is the answer, #2 is the most similar thing, and something like #80 is way off. Lower is warmer. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your latest guess shows on top, and all your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.", "cat": "den", "max": 1000, "puzzle": true},
@@ -1112,7 +1183,7 @@ defGameMeta([{"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "ic
 {"file": "g_hoops.js", "key": "hoops", "name": "Dawg Hoops", "icon": "🏀", "blurb": "60 seconds. Flick it in.", "how": "Flick up from the ball toward the hoop to shoot. Faster flick = more power, aim with the angle. 2 points a bucket, 3 in the last 15 seconds, +1 for a swish, and 3 in a row doubles your points. Past 20 points the hoop starts moving!", "cat": "sports", "max": 9999},
 {"file": "g_hop.js", "key": "hop", "name": "Hydrant Hop", "icon": "🧯", "blurb": "Run, jump the hydrants, grab the bones.", "how": "The pup runs on his own. Tap anywhere to jump, tap again in the air to double jump. Hop hydrants, puddles, mailboxes and the mailman. Stay LOW under pigeons and frisbees. Bones are +10. One bonk and it's over.", "max": 99999},
 {"file": "g_jump.js", "key": "jump", "name": "Pup Jump", "icon": "🐶", "blurb": "Bounce up forever. Don't look down.", "how": "The pup bounces by itself. Hold the left or right side of the screen (or drag) to steer. Fly off one edge to come out the other. Bones launch you sky high, boxes break after one bounce. Land on cats and squirrels to bop them (+50), but don't bump into them. Don't fall!", "max": 999999},
-{"file": "g_kickret.js", "key": "kickret", "name": "Dawg Return", "icon": "🏈", "blurb": "Return the kick. Juke the cats. Score.", "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.", "cat": "sports", "max": 9999},
+{"file": "g_kickret.js", "key": "kickret", "name": "Dawg Return", "icon": "🏃", "blurb": "Return the kick. Juke the cats. Score.", "how": "Catch the kickoff and run it back. Hold and drag anywhere to steer: the dog runs toward your finger and speeds up while you hold. Your pups block cats they touch. DOUBLE-TAP to juke: a quick spin move that makes any cat who dives at you whiff (+1 point each), then it recharges for a few seconds. Touchdown = 7 points and the cats get faster. Tackled = yards/10 points. 3 returns.", "cat": "sports", "max": 9999},
 {"file": "g_leash.js", "key": "leash", "name": "Leash", "icon": "🦮", "blurb": "Daily: one path, every square.", "how": "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_links.js", "key": "links", "name": "Links", "icon": "🔗", "blurb": "Daily: link the word chain.", "how": "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: 900 for finishing, minus 40 for every extra letter shown, plus up to 100 for going quick. No clock on screen.", "cat": "den", "max": 1000, "puzzle": true},
 {"file": "g_mahjong.js", "key": "mahjong", "name": "Mahjong", "icon": "🀄", "blurb": "Daily: match pairs, clear the board.", "how": "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.", "cat": "den", "max": 1500, "puzzle": true},
@@ -1128,7 +1199,7 @@ defGameMeta([{"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "ic
 {"file": "g_pupman.js", "key": "pupman", "name": "Pup-Man", "icon": ":dawgW:", "blurb": "Gobble kibble. Dodge the mailmen.", "how": "Swipe (or tap a side of the dog) to steer through the maze and gobble every kibble. Turns are saved until the next opening. Big bones in the corners scare the chasers, so chomp them for 200, 400, 800, 1600. 3 lives.", "max": 999999},
 {"file": "g_putt.js", "key": "putt", "name": "Putt Pup", "icon": "⛳", "blurb": "9 holes of backyard mini golf.", "how": "9 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.", "max": 450},
 {"file": "g_putt.js", "key": "putt18", "name": "Putt Pup 18", "icon": "⛳", "blurb": "The full 18. Back nine included.", "how": "18 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole. The back nine adds a loop-de-loop, deck tunnels, a sprinkler, a seesaw, lawnmowers, an island green and the doghouse.", "max": 900},
-{"file": "g_pupshot.js", "key": "pupshot", "name": "Pup Shot", "icon": "🏀", "blurb": "Fling it, warp to it, dunk it. 12 courts.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.", "max": 99999},
+{"file": "g_pupshot.js", "key": "pupshot", "name": "Pup Shot", "icon": "🌀", "blurb": "Fling it, warp to it, dunk it. 12 courts.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.", "max": 99999},
 {"file": "g_blumji.js", "key": "blumji", "name": "Blumji Bounce", "icon": "🚩", "blurb": "Bounce platform to platform. Reach the flag. 12 stages.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.", "max":  99999},
 {"file": "g_rummy.js", "key": "rummy", "name": "Rummy Dawgs", "icon": "🧮", "blurb": "Number-tile rummy vs Rex and Duke. 3 rounds, classic scoring.", "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play each round has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Classic scoring, 3 rounds: when someone goes out, everyone else loses the face value of the tiles left in their rack (jokers 30) and the winner gains it all. If the pool runs out first, the lowest rack wins and the others lose the difference. Highest total after 3 rounds wins the match. Score: 300 + your match total, +100 for winning the match.", "cat": "den", "max": 800},
 {"file": "g_skipbo.js", "key": "skipbo", "name": "Skip-Bo Dawgs", "icon": "🔢", "blurb": "The stockpile card game vs Rex and Duke.", "how": "Be the first to empty your stockpile (left, top card face up). The 4 building piles in the middle go up from 1 to 12, any color; at 12 a pile clears. Orange 🐶 cards are wild and count as whatever the pile needs. On your turn you fill up to 5 cards, then play as many cards as you like from your hand, the top of your stockpile, or the tops of your 4 discard piles: tap a card, then tap a building pile. Use your whole hand and you draw 5 more. To end your turn, tap a hand card and then one of your discard piles. Only the top card of each discard pile can be played, so stack them high-to-low. Quick game: 20-card stockpiles; Classic: 30. Win = 25 + 5 for each card left in the pups' stockpiles. Score: win = 100 + that; lose = 5 for every stockpile card you got rid of.", "cat": "den", "max": 500},

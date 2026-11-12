@@ -72,7 +72,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   defGame({
     key: "kickret",
     name: "Dawg Return",
-    icon: "🏈",
+    icon: "🏃",
     max: 9999,
     cat: "sports",
     blurb: "Return the kick. Juke the cats. Score.",

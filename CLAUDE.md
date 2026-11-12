@@ -36,6 +36,9 @@ The `js/` files are classic scripts sharing one global scope, loaded in order da
 ## Home
 Under the greeting, `#daybar` chips: done count, streak, and your place today. An unplayed core game shows today's leader (👑 Max · 0:58) instead of its how-to line. The hub buttons only flag brand-new games (first 3 days); The Den's button shows "x of 13 done today".
 
+## Arcade / Sports hubs
+Top: Game of the Day hero (`.gotd`) and a crowns line (games where you hold the all-time top score, from `arcade.games[k].all[0]`). Then shelves (one sideways row per `ARC_GROUPS` section): 📌 favorites (press and hold a tile, `bdd:favs:<id>`), Jump back in, then the sections. Tiles show your best, or the blurb if you've never played, plus 👑 the champ. `ARC_PAIRS` folds golf/golf18, putt/putt18 and mjrush/mjzen into one tile that asks which (scores stay separate keys). Dawg Crossing is now Dawgger.
+
 ## Den card games
 Unlisted Den games (euchre, crib, crazy, rummy, skipbo, solitaire) fall into the "Card games & more" section. Rummy Dawgs (`g_rummy.js`, Rummikub): 3-round match with traditional plus/minus scoring (out = others' rack totals, jokers 30; dry pool = lowest rack wins the differences); score 300 + match total, +100 for winning (old single-hand scores were converted to old + 200 in the Sheet on Nov 7; phones do the same once via `bdd:rummy2`). Skip-Bo Dawgs (`g_skipbo.js`): vs Rex and Duke, Quick (20) or Classic (30) stockpiles; CPU plays a route to its stockpile card, avoids feeding a pup's stockpile, stacks discards high-to-low; if the deck dries up and everyone passes 3 times, smallest stockpile wins.
 
