@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@600;700&family=Press+Start+2P&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="legacy/styles.css?v=3fbe04c695">
+<link rel="stylesheet" href="legacy/styles.css?v=48e1a5f48e">
 </head>
 <body>
 <div id="app">
@@ -59,6 +59,7 @@
           <span class="gtext"><b>The Mini</b><span class="gsub" id="sub-mini">A quick crossword, timed</span></span>
           <span class="gstat" id="st-mini">Play</span>
         </button>
+        <button class="den-strip" id="den-strip" data-go="den"></button>
         <button class="gcard c-scores" data-go="scores">
           <span class="gicon ic-scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M12 14v3M8.5 20h7l-1-3h-5z"/></svg></span>
           <span class="gtext"><b>Scoreboard</b><span class="gsub" id="sub-scores">See how everyone did today</span></span>
@@ -67,7 +68,6 @@
         <div class="hub3">
           <button class="hub-btn hb-arcade" data-go="arcade"><span class="ab-icon" id="ab-icon"></span><b>Arcade</b><small id="sub-arcade">just for fun</small></button>
           <button class="hub-btn hb-sports" data-go="sports"><span class="ab-icon" id="sb-icon"></span><b>Sports</b><small id="sub-sports">just for fun</small></button>
-          <button class="hub-btn hb-den" data-go="den"><span class="ab-icon" id="db-icon"></span><b>The Den</b><small id="sub-den">puzzles &amp; cards</small></button>
         </div>
       </div>
       <div class="tip" id="install-tip" hidden>
@@ -433,9 +433,9 @@
 <script src="legacy/poly.js?v=3879a39cc4"></script>
 <script src="legacy/js/data.js?v=6ddc30fb32"></script>
 <script src="legacy/js/core.js?v=8f3384c608"></script>
-<script src="legacy/js/daily.js?v=7088aa56c0"></script>
+<script src="legacy/js/daily.js?v=4cd759c65a"></script>
 <script src="legacy/js/social.js?v=c6ceadf7d2"></script>
-<script src="legacy/js/arcade.js?v=3262d5bf91"></script>
+<script src="legacy/js/arcade.js?v=31c4c5be42"></script>
 <script src="legacy/js/boot.js?v=1f812b6462"></script>
 <script>
 (function () { var ac = window.applicationCache, t0 = Date.now(); if (!ac) return;

@@ -294,7 +294,7 @@ let arcAt = 0, arcBusy = false, arcSeq = 0, denBoardFill = null;
 function refreshArcade(auto) {
   if (!me || (auto && arcBusy)) return;
   arcBusy = true; const seq = ++arcSeq;
-  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcBusy = false; if (seq !== arcSeq) return; arcAt = Date.now(); recoverBests(a); arcade = a; syncBests(); if (denBoardFill) denBoardFill(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => { arcBusy = false; });
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcBusy = false; if (seq !== arcSeq) return; arcAt = Date.now(); setTimeout(renderDenStrip); recoverBests(a); arcade = a; syncBests(); if (denBoardFill) denBoardFill(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => { arcBusy = false; });
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
@@ -537,6 +537,45 @@ function den4Note(game) {
   const p = mine.picks.find(x => x[0] === game), pl = placeOf(list, me.id);
   return (p ? `Den Four +${p[1]} · ${ordinal(p[2])} on this one` : "Not in your Den Four yet") + ` · ${ordinal(pl)} today (${mine.n} pts)`;
 }
+// Results card of a core game: point to its look-alike in The Den.
+const DEN_PAIRS = { five: ["waffle", "guess"], groups: ["sgroups", "links"], mini: ["midi"], strands: ["scapes", "hive"] };
+const DEN_PITCH = { waffle: "Liked Five? Try Waffle", guess: "Liked Five? Try Guess", sgroups: "Liked Groups? Try Sports Groups", links: "Liked Groups? Try Links", midi: "Liked the Mini? Try The Midi", scapes: "Liked Strands? Try Scapes", hive: "Liked Strands? Try Hive" };
+const DEN_WHY = { waffle: "Swap letters to fix six words", guess: "Hot or cold, find the pick", sgroups: "Groups, sports edition", links: "Link a chain of compound words", midi: "A bigger 7×7 crossword", scapes: "Swipe letters to fill a crossword", hive: "Make words from 7 letters" };
+function denPairEl(game) {
+  const k = (DEN_PAIRS[game] || []).find(x => ARC[x] && !denStatus(x)[1]); if (!k) return null;
+  const b = el("button", "den-pair"), ic = el("span", "dp-ic"); ic.appendChild(denIcon(k, 24));
+  const tx = el("span", "dp-tx"); tx.append(el("b", null, DEN_PITCH[k]), el("small", null, DEN_WHY[k]));
+  b.append(ic, tx, el("span", "dp-go", "Play")); b.addEventListener("click", () => { closeModal(); playGame(k); });
+  return b;
+}
+// ---- Home: The Den strip under the core four ----
+// The Den is more daily puzzles, so it sits with the core four (not with Arcade/Sports). Once all four are done it
+// grows into a "Want more?" card, since that's when people are in the mood for one more.
+const DEN_TEASE = ["midi", "waffle", "links"];
+function denPeople() {
+  const ids = {}; DEN_PUZ.forEach(k => ((arcade && arcade.games && arcade.games[k] && arcade.games[k].today) || []).forEach(x => { if (!me || x.id !== me.id) ids[x.id] = x.name; }));
+  return Object.values(ids);
+}
+function renderDenStrip() {
+  const b = $("den-strip"); if (!b) return; b.innerHTML = "";
+  if (!arcade && me && !arcBusy) setTimeout(() => { if (!arcade) refreshArcade(true); }, 1200);
+  const ks = DEN_PUZ.filter(k => ARC[k]), done = ks.filter(k => denStatus(k)[1]).length;
+  const all4 = [fiveDone(), groupsDone(), S.strands.done, S.mini.done].every(Boolean);
+  const ppl = denPeople(), lead = arcade ? denToday()[0] : null;
+  const social = ppl.length ? (ppl.length === 1 ? `${ppl[0]} played today` : `${ppl[0]} + ${ppl.length - 1} played today`) : "";
+  const icons = el("span", "ds-icons"); DEN_TEASE.forEach(k => { const i = el("span", "ds-ic"); i.appendChild(denIcon(k, all4 ? 22 : 18)); icons.appendChild(i); });
+  b.classList.toggle("big", all4 && done < ks.length);
+  if (all4 && done < ks.length) {
+    b.append(el("small", "ds-kicker", "That's all 4 ✓  Want more?"), el("b", null, `${ks.length - done} more daily puzzle${ks.length - done === 1 ? "" : "s"} in The Den`));
+    const line = lead && (!me || lead.id !== me.id) ? `👑 ${lead.name} leads today${ppl.length > 1 ? ` · ${ppl.length} friends played` : ""}` : social || "Same idea as the four: crosswords, word chains, logic grids.";
+    b.appendChild(el("span", "ds-sub", line));
+    const row = el("span", "ds-row"); row.append(icons, el("span", "ds-go", done ? "Back to the Den" : "Open the Den")); b.appendChild(row);
+  } else {
+    const tx = el("span", "ds-tx");
+    tx.append(el("b", null, "The Den"), el("span", "ds-sub", [done ? `${done} of ${ks.length} done` : `${ks.length} more daily puzzles`, social].filter(Boolean).join(" · ")));
+    b.append(icons, tx, el("span", "ds-chev", "›"));
+  }
+}
 function renderDenPuz() {
   const box = $("den-puz"); if (!box) return; box.innerHTML = "";
   if (arcade && Date.now() - arcAt > 60000) refreshArcade(true);
@@ -708,7 +747,7 @@ $("den4").addEventListener("click", () => openDenBoard());
 // Coming back to the app (it stays open for hours as a home-screen app): fetch fresh boards in the background, so
 // The Den is already current by the time you open it instead of flipping from old numbers to new ones.
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && arcade && Date.now() - arcAt > 60000) refreshArcade(true); });
-$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
+$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30));
 
 // ================= ARCADE: LONG DAWG (snake) =================
 const SN = { state: "idle", W: 0, H: 0, dpr: 1, cols: 15, rows: 20, cell: 20, ox: 0, oy: 0, body: [], dir: [1, 0], q: [], bone: null, score: 0, acc: 0, last: 0, raf: 0 };

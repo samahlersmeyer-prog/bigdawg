@@ -748,6 +748,7 @@ function refreshArcade(auto) {
     arcBusy = false;
     if (seq !== arcSeq) return;
     arcAt = Date.now();
+    setTimeout(renderDenStrip);
     recoverBests(a);
     arcade = a;
     syncBests();
@@ -1382,6 +1383,94 @@ function den4Note(game) {
     pl = placeOf(list, me.id);
   return (p ? "Den Four +".concat(p[1], " \xB7 ").concat(ordinal(p[2]), " on this one") : "Not in your Den Four yet") + " \xB7 ".concat(ordinal(pl), " today (").concat(mine.n, " pts)");
 }
+var DEN_PAIRS = {
+  five: ["waffle", "guess"],
+  groups: ["sgroups", "links"],
+  mini: ["midi"],
+  strands: ["scapes", "hive"]
+};
+var DEN_PITCH = {
+  waffle: "Liked Five? Try Waffle",
+  guess: "Liked Five? Try Guess",
+  sgroups: "Liked Groups? Try Sports Groups",
+  links: "Liked Groups? Try Links",
+  midi: "Liked the Mini? Try The Midi",
+  scapes: "Liked Strands? Try Scapes",
+  hive: "Liked Strands? Try Hive"
+};
+var DEN_WHY = {
+  waffle: "Swap letters to fix six words",
+  guess: "Hot or cold, find the pick",
+  sgroups: "Groups, sports edition",
+  links: "Link a chain of compound words",
+  midi: "A bigger 7×7 crossword",
+  scapes: "Swipe letters to fill a crossword",
+  hive: "Make words from 7 letters"
+};
+function denPairEl(game) {
+  var k = (DEN_PAIRS[game] || []).find(function (x) {
+    return ARC[x] && !denStatus(x)[1];
+  });
+  if (!k) return null;
+  var b = el("button", "den-pair"),
+    ic = el("span", "dp-ic");
+  ic.appendChild(denIcon(k, 24));
+  var tx = el("span", "dp-tx");
+  tx.append(el("b", null, DEN_PITCH[k]), el("small", null, DEN_WHY[k]));
+  b.append(ic, tx, el("span", "dp-go", "Play"));
+  b.addEventListener("click", function () {
+    closeModal();
+    playGame(k);
+  });
+  return b;
+}
+var DEN_TEASE = ["midi", "waffle", "links"];
+function denPeople() {
+  var ids = {};
+  DEN_PUZ.forEach(function (k) {
+    return (arcade && arcade.games && arcade.games[k] && arcade.games[k].today || []).forEach(function (x) {
+      if (!me || x.id !== me.id) ids[x.id] = x.name;
+    });
+  });
+  return Object.values(ids);
+}
+function renderDenStrip() {
+  var b = $("den-strip");
+  if (!b) return;
+  b.innerHTML = "";
+  if (!arcade && me && !arcBusy) setTimeout(function () {
+    if (!arcade) refreshArcade(true);
+  }, 1200);
+  var ks = DEN_PUZ.filter(function (k) {
+      return ARC[k];
+    }),
+    done = ks.filter(function (k) {
+      return denStatus(k)[1];
+    }).length;
+  var all4 = [fiveDone(), groupsDone(), S.strands.done, S.mini.done].every(Boolean);
+  var ppl = denPeople(),
+    lead = arcade ? denToday()[0] : null;
+  var social = ppl.length ? ppl.length === 1 ? "".concat(ppl[0], " played today") : "".concat(ppl[0], " + ").concat(ppl.length - 1, " played today") : "";
+  var icons = el("span", "ds-icons");
+  DEN_TEASE.forEach(function (k) {
+    var i = el("span", "ds-ic");
+    i.appendChild(denIcon(k, all4 ? 22 : 18));
+    icons.appendChild(i);
+  });
+  b.classList.toggle("big", all4 && done < ks.length);
+  if (all4 && done < ks.length) {
+    b.append(el("small", "ds-kicker", "That's all 4 ✓  Want more?"), el("b", null, "".concat(ks.length - done, " more daily puzzle").concat(ks.length - done === 1 ? "" : "s", " in The Den")));
+    var line = lead && (!me || lead.id !== me.id) ? "\uD83D\uDC51 ".concat(lead.name, " leads today").concat(ppl.length > 1 ? " \xB7 ".concat(ppl.length, " friends played") : "") : social || "Same idea as the four: crosswords, word chains, logic grids.";
+    b.appendChild(el("span", "ds-sub", line));
+    var row = el("span", "ds-row");
+    row.append(icons, el("span", "ds-go", done ? "Back to the Den" : "Open the Den"));
+    b.appendChild(row);
+  } else {
+    var tx = el("span", "ds-tx");
+    tx.append(el("b", null, "The Den"), el("span", "ds-sub", [done ? "".concat(done, " of ").concat(ks.length, " done") : "".concat(ks.length, " more daily puzzles"), social].filter(Boolean).join(" · ")));
+    b.append(icons, tx, el("span", "ds-chev", "›"));
+  }
+}
 function renderDenPuz() {
   var box = $("den-puz");
   if (!box) return;
@@ -1773,7 +1862,6 @@ document.addEventListener("visibilitychange", function () {
 });
 $("ab-icon").appendChild(emo(":dawgpog:", 34));
 $("sb-icon").appendChild(emo("🏆", 30));
-$("db-icon").appendChild(emo("🧩", 28));
 var SN = {
   state: "idle",
   W: 0,

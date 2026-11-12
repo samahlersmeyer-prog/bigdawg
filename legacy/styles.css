@@ -235,22 +235,17 @@ input { -webkit-user-select: text; user-select: text; }
 .sports-btn:active { box-shadow: 0 2px 0 #f4f1e6; }
 .arc-marquee.sports { background: #0f3d22; box-shadow: 0 3px 0 #f4f1e6; } .arc-marquee.sports b { color: #f4f1e6; }
 .hub3 { margin-top: 14px; display: -webkit-flex; display: flex; position: relative; -webkit-flex-direction: row; flex-direction: row; flex-wrap: wrap; }
-.hub3 > :nth-child(3n+1) {
+.hub3 > :nth-child(2n+1) {
   flex: 0 0 auto;
-  width: calc((100% - 2 * 8px) / 3);
+  width: calc((100% - 1 * 8px) / 2);
   margin-left: 0;
 }
-.hub3 > :nth-child(3n+2) {
+.hub3 > :nth-child(2n+2) {
   flex: 0 0 auto;
-  width: calc((100% - 2 * 8px) / 3);
+  width: calc((100% - 1 * 8px) / 2);
   margin-left: 8px;
 }
-.hub3 > :nth-child(3n+3) {
-  flex: 0 0 auto;
-  width: calc((100% - 2 * 8px) / 3);
-  margin-left: 8px;
-}
-.hub3 > :nth-child(n+4) {
+.hub3 > :nth-child(n+3) {
   margin-top: 8px;
 }
 .hub3::before { content: ""; position: absolute; left: 16px; right: 16px; top: -9px; border-top: 1px dashed var(--line); }
@@ -1642,6 +1637,41 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .gotd .gicon { font-size: 34px; } .pair-opt .gicon { font-size: 26px; }
 .arc-cell .favpin { left: auto; right: 7px; }
 .gotd .gicon .emo { font-size: 24px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
+
+/* ---- Home: The Den strip + "Want more?" card; results-card Den pairing ---- */
+.den-strip { display: -webkit-flex; display: flex; align-items: center; width: 100%; padding: 10px 12px; border-radius: 16px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; }
+.den-strip > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 10px;
+}
+.den-strip:active { transform: scale(0.985); }
+.ds-icons { display: -webkit-flex; display: flex; flex: none; }
+.ds-icons > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 3px;
+}
+.ds-ic { width: 26px; height: 26px; border-radius: 7px; background: #121213; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; align-items: center; justify-content: center; }
+.ds-tx { display: -webkit-flex; display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ds-tx > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1px;
+}
+.ds-tx b { font-family: var(--title); font-size: 18px; }
+.ds-sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-chev { font-size: 22px; color: var(--muted); }
+.den-strip.big { flex-direction: column; align-items: stretch; padding: 12px 14px; border: 2px solid #e9b949; }
+.den-strip.big .ds-kicker { font-size: 12.5px; font-weight: 800; color: #c8901a; }
+.den-strip.big b { font-family: var(--title); font-size: 20px; }
+.den-strip.big .ds-ic { width: 32px; height: 32px; }
+.ds-row { display: -webkit-flex; display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.ds-go { background: var(--ink); color: var(--bg); font-weight: 800; font-size: 14px; padding: 7px 14px; border-radius: 999px; }
+.den-pair { display: -webkit-flex; display: flex; align-items: center; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; }
+.den-pair > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 10px;
+}
+.dp-ic { width: 34px; height: 34px; border-radius: 9px; background: #121213; display: -webkit-flex; display: flex; flex: none; -webkit-flex-direction: column; flex-direction: column; align-items: center; justify-content: center; }
+.dp-tx { display: -webkit-flex; display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.dp-tx > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1px;
+} .dp-tx b { font-size: 14px; } .dp-tx small { font-size: 12px; color: var(--muted); }
+.dp-go { font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--bg); }
 
 
 /* ---- legacy.css (hand-tuned for old iPads) ---- */

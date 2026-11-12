@@ -1604,7 +1604,7 @@ input { -webkit-user-select: text; user-select: text; }
 .sports-btn .ab-icon { background: #1f6b3a; } .sports-btn .ab-text b, .sports-btn .ab-go { color: #f4f1e6; }
 .sports-btn:active { box-shadow: 0 2px 0 #f4f1e6; }
 .arc-marquee.sports { background: #0f3d22; box-shadow: 0 3px 0 #f4f1e6; } .arc-marquee.sports b { color: #f4f1e6; }
-.hub3 { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; position: relative; }
+.hub3 { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; position: relative; }
 .hub3::before { content: ""; position: absolute; left: 16px; right: 16px; top: -9px; border-top: 1px dashed var(--line); }
 .hub-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px 10px; border-radius: 16px; background: #1b1440; color: #fff; border: 2px solid #121212; box-shadow: 0 4px 0 #ffd23f; min-width: 0; }
 .hub-btn { position: relative; }
@@ -2105,6 +2105,26 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .arc-cell .favpin { left: auto; right: 7px; }
 .gotd .gicon .emo { font-size: 24px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
 
+/* ---- Home: The Den strip + "Want more?" card; results-card Den pairing ---- */
+.den-strip { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 16px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; }
+.den-strip:active { transform: scale(0.985); }
+.ds-icons { display: flex; gap: 3px; flex: none; }
+.ds-ic { width: 26px; height: 26px; border-radius: 7px; background: #121213; display: grid; place-items: center; }
+.ds-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.ds-tx b { font-family: var(--title); font-size: 18px; }
+.ds-sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-chev { font-size: 22px; color: var(--muted); }
+.den-strip.big { flex-direction: column; align-items: stretch; gap: 3px; padding: 12px 14px; border: 2px solid #e9b949; }
+.den-strip.big .ds-kicker { font-size: 12.5px; font-weight: 800; color: #c8901a; }
+.den-strip.big b { font-family: var(--title); font-size: 20px; }
+.den-strip.big .ds-ic { width: 32px; height: 32px; }
+.ds-row { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.ds-go { background: var(--ink); color: var(--bg); font-weight: 800; font-size: 14px; padding: 7px 14px; border-radius: 999px; }
+.den-pair { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; }
+.dp-ic { width: 34px; height: 34px; border-radius: 9px; background: #121213; display: grid; place-items: center; flex: none; }
+.dp-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; } .dp-tx b { font-size: 14px; } .dp-tx small { font-size: 12px; color: var(--muted); }
+.dp-go { font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--bg); }
+
 </style>
 </head>
 <body>
@@ -2144,6 +2164,7 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
           <span class="gtext"><b>The Mini</b><span class="gsub" id="sub-mini">A quick crossword, timed</span></span>
           <span class="gstat" id="st-mini">Play</span>
         </button>
+        <button class="den-strip" id="den-strip" data-go="den"></button>
         <button class="gcard c-scores" data-go="scores">
           <span class="gicon ic-scores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M12 14v3M8.5 20h7l-1-3h-5z"/></svg></span>
           <span class="gtext"><b>Scoreboard</b><span class="gsub" id="sub-scores">See how everyone did today</span></span>
@@ -2152,7 +2173,6 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
         <div class="hub3">
           <button class="hub-btn hb-arcade" data-go="arcade"><span class="ab-icon" id="ab-icon"></span><b>Arcade</b><small id="sub-arcade">just for fun</small></button>
           <button class="hub-btn hb-sports" data-go="sports"><span class="ab-icon" id="sb-icon"></span><b>Sports</b><small id="sub-sports">just for fun</small></button>
-          <button class="hub-btn hb-den" data-go="den"><span class="ab-icon" id="db-icon"></span><b>The Den</b><small id="sub-den">puzzles &amp; cards</small></button>
         </div>
       </div>
       <div class="tip" id="install-tip" hidden>
@@ -3810,6 +3830,7 @@ function renderHome() {
   $("fast-tip").hidden = !fast;
   if (fast) $("fast-tip").href = fastLink();
   if (typeof renderArcSub === "function") renderArcSub();
+  if (typeof renderDenStrip === "function") renderDenStrip();
   $("install-tip").hidden = fast || standalone || !!store.get("bdd:tipdone") || !/iPhone|iPad/.test(navigator.userAgent);
 }
 $("tip-close").addEventListener("click", () => { store.set("bdd:tipdone", 1); $("install-tip").hidden = true; });
@@ -4412,6 +4433,7 @@ function openResults(game) {
   const ta = el("textarea", "copybox"); ta.rows = 6; ta.readOnly = true; ta.hidden = true;
   share.addEventListener("click", () => copy(shareText(), ta));
   nodes.push(go, share, ta);
+  const dp = typeof denPairEl === "function" && denPairEl(game); if (dp) nodes.push(dp);
   openModal(nodes);
   refreshPostLines();
 }
@@ -5905,7 +5927,7 @@ let arcAt = 0, arcBusy = false, arcSeq = 0, denBoardFill = null;
 function refreshArcade(auto) {
   if (!me || (auto && arcBusy)) return;
   arcBusy = true; const seq = ++arcSeq;
-  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcBusy = false; if (seq !== arcSeq) return; arcAt = Date.now(); recoverBests(a); arcade = a; syncBests(); if (denBoardFill) denBoardFill(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => { arcBusy = false; });
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcBusy = false; if (seq !== arcSeq) return; arcAt = Date.now(); setTimeout(renderDenStrip); recoverBests(a); arcade = a; syncBests(); if (denBoardFill) denBoardFill(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => { arcBusy = false; });
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
@@ -6148,6 +6170,45 @@ function den4Note(game) {
   const p = mine.picks.find(x => x[0] === game), pl = placeOf(list, me.id);
   return (p ? `Den Four +${p[1]} · ${ordinal(p[2])} on this one` : "Not in your Den Four yet") + ` · ${ordinal(pl)} today (${mine.n} pts)`;
 }
+// Results card of a core game: point to its look-alike in The Den.
+const DEN_PAIRS = { five: ["waffle", "guess"], groups: ["sgroups", "links"], mini: ["midi"], strands: ["scapes", "hive"] };
+const DEN_PITCH = { waffle: "Liked Five? Try Waffle", guess: "Liked Five? Try Guess", sgroups: "Liked Groups? Try Sports Groups", links: "Liked Groups? Try Links", midi: "Liked the Mini? Try The Midi", scapes: "Liked Strands? Try Scapes", hive: "Liked Strands? Try Hive" };
+const DEN_WHY = { waffle: "Swap letters to fix six words", guess: "Hot or cold, find the pick", sgroups: "Groups, sports edition", links: "Link a chain of compound words", midi: "A bigger 7×7 crossword", scapes: "Swipe letters to fill a crossword", hive: "Make words from 7 letters" };
+function denPairEl(game) {
+  const k = (DEN_PAIRS[game] || []).find(x => ARC[x] && !denStatus(x)[1]); if (!k) return null;
+  const b = el("button", "den-pair"), ic = el("span", "dp-ic"); ic.appendChild(denIcon(k, 24));
+  const tx = el("span", "dp-tx"); tx.append(el("b", null, DEN_PITCH[k]), el("small", null, DEN_WHY[k]));
+  b.append(ic, tx, el("span", "dp-go", "Play")); b.addEventListener("click", () => { closeModal(); playGame(k); });
+  return b;
+}
+// ---- Home: The Den strip under the core four ----
+// The Den is more daily puzzles, so it sits with the core four (not with Arcade/Sports). Once all four are done it
+// grows into a "Want more?" card, since that's when people are in the mood for one more.
+const DEN_TEASE = ["midi", "waffle", "links"];
+function denPeople() {
+  const ids = {}; DEN_PUZ.forEach(k => ((arcade && arcade.games && arcade.games[k] && arcade.games[k].today) || []).forEach(x => { if (!me || x.id !== me.id) ids[x.id] = x.name; }));
+  return Object.values(ids);
+}
+function renderDenStrip() {
+  const b = $("den-strip"); if (!b) return; b.innerHTML = "";
+  if (!arcade && me && !arcBusy) setTimeout(() => { if (!arcade) refreshArcade(true); }, 1200);
+  const ks = DEN_PUZ.filter(k => ARC[k]), done = ks.filter(k => denStatus(k)[1]).length;
+  const all4 = [fiveDone(), groupsDone(), S.strands.done, S.mini.done].every(Boolean);
+  const ppl = denPeople(), lead = arcade ? denToday()[0] : null;
+  const social = ppl.length ? (ppl.length === 1 ? `${ppl[0]} played today` : `${ppl[0]} + ${ppl.length - 1} played today`) : "";
+  const icons = el("span", "ds-icons"); DEN_TEASE.forEach(k => { const i = el("span", "ds-ic"); i.appendChild(denIcon(k, all4 ? 22 : 18)); icons.appendChild(i); });
+  b.classList.toggle("big", all4 && done < ks.length);
+  if (all4 && done < ks.length) {
+    b.append(el("small", "ds-kicker", "That's all 4 ✓  Want more?"), el("b", null, `${ks.length - done} more daily puzzle${ks.length - done === 1 ? "" : "s"} in The Den`));
+    const line = lead && (!me || lead.id !== me.id) ? `👑 ${lead.name} leads today${ppl.length > 1 ? ` · ${ppl.length} friends played` : ""}` : social || "Same idea as the four: crosswords, word chains, logic grids.";
+    b.appendChild(el("span", "ds-sub", line));
+    const row = el("span", "ds-row"); row.append(icons, el("span", "ds-go", done ? "Back to the Den" : "Open the Den")); b.appendChild(row);
+  } else {
+    const tx = el("span", "ds-tx");
+    tx.append(el("b", null, "The Den"), el("span", "ds-sub", [done ? `${done} of ${ks.length} done` : `${ks.length} more daily puzzles`, social].filter(Boolean).join(" · ")));
+    b.append(icons, tx, el("span", "ds-chev", "›"));
+  }
+}
 function renderDenPuz() {
   const box = $("den-puz"); if (!box) return; box.innerHTML = "";
   if (arcade && Date.now() - arcAt > 60000) refreshArcade(true);
@@ -6319,7 +6380,7 @@ $("den4").addEventListener("click", () => openDenBoard());
 // Coming back to the app (it stays open for hours as a home-screen app): fetch fresh boards in the background, so
 // The Den is already current by the time you open it instead of flipping from old numbers to new ones.
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && arcade && Date.now() - arcAt > 60000) refreshArcade(true); });
-$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
+$("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30));
 
 // ================= ARCADE: LONG DAWG (snake) =================
 const SN = { state: "idle", W: 0, H: 0, dpr: 1, cols: 15, rows: 20, cell: 20, ox: 0, oy: 0, body: [], dir: [1, 0], q: [], bone: null, score: 0, acc: 0, last: 0, raf: 0 };

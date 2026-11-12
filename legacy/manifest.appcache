@@ -1,14 +1,14 @@
 CACHE MANIFEST
-# 277ab4d9a2
+# a04349e385
 
 CACHE:
-styles.css?v=3fbe04c695
+styles.css?v=48e1a5f48e
 poly.js?v=3879a39cc4
 js/data.js?v=6ddc30fb32
 js/core.js?v=8f3384c608
-js/daily.js?v=7088aa56c0
+js/daily.js?v=4cd759c65a
 js/social.js?v=c6ceadf7d2
-js/arcade.js?v=3262d5bf91
+js/arcade.js?v=31c4c5be42
 js/boot.js?v=1f812b6462
 games/g_airhockey.js?v=a8c953e8ef
 games/g_archery.js?v=a8c953e8ef

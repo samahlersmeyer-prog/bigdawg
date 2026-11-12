@@ -151,6 +151,7 @@ function renderHome() {
   $("fast-tip").hidden = !fast;
   if (fast) $("fast-tip").href = fastLink();
   if (typeof renderArcSub === "function") renderArcSub();
+  if (typeof renderDenStrip === "function") renderDenStrip();
   $("install-tip").hidden = fast || standalone || !!store.get("bdd:tipdone") || !/iPhone|iPad/.test(navigator.userAgent);
 }
 $("tip-close").addEventListener("click", function () {
@@ -1500,6 +1501,8 @@ function openResults(game) {
     return copy(shareText(), ta);
   });
   nodes.push(go, share, ta);
+  var dp = typeof denPairEl === "function" && denPairEl(game);
+  if (dp) nodes.push(dp);
   openModal(nodes);
   refreshPostLines();
 }
