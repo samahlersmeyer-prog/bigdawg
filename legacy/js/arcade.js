@@ -733,19 +733,31 @@ document.querySelectorAll(".arc-board").forEach(function (b) {
     renderArcade();
   });
 });
-function refreshArcade() {
-  if (!me) return;
+var arcAt = 0,
+  arcBusy = false,
+  arcSeq = 0,
+  denBoardFill = null;
+function refreshArcade(auto) {
+  if (!me || auto && arcBusy) return;
+  arcBusy = true;
+  var seq = ++arcSeq;
   ownLocal();
   retryArcade();
   API("getArcade", me.id, KEY).then(function (a) {
+    arcBusy = false;
+    if (seq !== arcSeq) return;
+    arcAt = Date.now();
     recoverBests(a);
     arcade = a;
     syncBests();
+    if (denBoardFill) denBoardFill();
     renderArcade();
     renderArcSub();
     if (active === "scores") renderScores();
     if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active);
-  })["catch"](function () {});
+  })["catch"](function () {
+    arcBusy = false;
+  });
 }
 var hofCat = "arcade",
   hofOpen = null;
@@ -1345,7 +1357,11 @@ function openDenBoard(tab) {
     }
   };
   fill();
-  openModal([el("h2", null, "Den board"), seg, body]);
+  denBoardFill = fill;
+  openModal([el("h2", null, "Den board"), seg, body], function () {
+    denBoardFill = null;
+  });
+  if (Date.now() - arcAt > 20000) refreshArcade(true);
 }
 function den4Note(game) {
   var list = denToday(),
@@ -1584,10 +1600,13 @@ function renderArcHub(cat) {
       return list.appendChild(cell(k));
     });
   }
-  if (!arcade) refreshArcade();
+  if (!arcade) refreshArcade();else if (cat === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 }
 $("den4").addEventListener("click", function () {
   return openDenBoard();
+});
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible" && active === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 });
 $("ab-icon").appendChild(emo(":dawgpog:", 34));
 $("sb-icon").appendChild(emo("🏆", 30));

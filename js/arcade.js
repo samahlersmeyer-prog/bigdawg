@@ -288,9 +288,13 @@ $("zwrap").addEventListener("pointerdown", e => { if (e.target.closest("button")
 document.addEventListener("keydown", e => { if (active === "zoomies" && (e.code === "Space" || e.key === "ArrowUp") && Z.state !== "over") { e.preventDefault(); zFlap(); } });
 window.addEventListener("resize", () => { if (active === "zoomies" && Z.state === "idle") zIdle(); });
 document.querySelectorAll(".arc-board").forEach(b => b.addEventListener("click", () => { arcTab = active === "game" ? G.key : ARC[active] ? active : arcTab; hofCat = active === "sports" || active === "den" ? active : active === "game" && ARC[arcTab] ? arcCat(arcTab) : "arcade"; hofOpen = ARC[arcTab] && (active === "game" || ARC[active]) ? arcTab : null; show("scores"); scoreTab("arcade"); refreshArcade(); renderArcade(); }));
-function refreshArcade() {
-  if (!me) return;
-  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { recoverBests(a); arcade = a; syncBests(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => {});
+// arcAt: when the boards last came from the server. The Den re-fetches when it's over a minute old, so other people's
+// plays since you opened the app show up (it used to fetch once per app open and go stale).
+let arcAt = 0, arcBusy = false, arcSeq = 0, denBoardFill = null;
+function refreshArcade(auto) {
+  if (!me || (auto && arcBusy)) return;
+  arcBusy = true; const seq = ++arcSeq;
+  ownLocal(); retryArcade(); API("getArcade", me.id, KEY).then(a => { arcBusy = false; if (seq !== arcSeq) return; arcAt = Date.now(); recoverBests(a); arcade = a; syncBests(); if (denBoardFill) denBoardFill(); renderArcade(); renderArcSub(); if (active === "scores") renderScores(); if (active === "arcade" || active === "sports" || active === "den") renderArcHub(active); }).catch(() => { arcBusy = false; });
 }
 // Hall of Fame: every game as one row with its champion and your best; tap a row for the top 10.
 let hofCat = "arcade", hofOpen = null;
@@ -520,8 +524,9 @@ function openDenBoard(tab) {
       body.appendChild(el("p", "sub d4-how", "This week's best at each puzzle (best 5 days). Each puzzle's full board is under 📊 at the top of The Den."));
     }
   };
-  fill();
-  openModal([el("h2", null, "Den board"), seg, body]);
+  fill(); denBoardFill = fill;
+  openModal([el("h2", null, "Den board"), seg, body], () => { denBoardFill = null; });
+  if (Date.now() - arcAt > 20000) refreshArcade(true);
 }
 // Shown on a Den puzzle's results card: what that puzzle did for your Den Four.
 function den4Note(game) {
@@ -630,9 +635,10 @@ function renderArcHub(cat) {
     if (recent.length >= 2 && cat !== "den") list.appendChild(el("div", "arc-sec", "All games"));
     all.forEach(k => list.appendChild(cell(k)));
   }
-  if (!arcade) refreshArcade();
+  if (!arcade) refreshArcade(); else if (cat === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 }
 $("den4").addEventListener("click", () => openDenBoard());
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && active === "den" && Date.now() - arcAt > 60000) refreshArcade(true); });
 $("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
 
 // ================= ARCADE: LONG DAWG (snake) =================
