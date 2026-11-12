@@ -1,4 +1,4 @@
-// ---------- Dawg Waffle (The Den, daily puzzle) ----------
+// ---------- Waffle (The Den, daily puzzle) ----------
 // A waffle-shaped grid of 6 five-letter words (3 across, 3 down), all letters scrambled. Swap tiles to fix it.
 // Every board can be solved in 10 swaps; you get 15. Each spare swap at the end is a star (up to 5).
 (function () {
@@ -23,8 +23,8 @@
     return col;
   }
   defGame({
-    key: "waffle", name: "Dawg Waffle", icon: "🧇", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: swap letters to fix six words.",
+    key: "waffle", name: "Waffle", icon: "🧇", max: 1000, cat: "den", puzzle: true,
+    blurb: "Daily: swap letters, fix six words.",
     how: "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.",
     reset(G) {
       const [sol, start] = PUZ[pIdx()], s = G.s = { sol, sel: -1, msg: "", msgT: 0, btns: [], postT: 0, anim: null };
@@ -39,7 +39,7 @@
       return { score: sc, grid: sq,
         title: s.won ? (st === 5 ? "Perfect waffle! 🐶" : "Waffle fixed!") : "Out of swaps",
         sub: s.won ? `${s.used} swaps · ${"⭐".repeat(st) || "no stars"} · ${sc} pts.` : `So close. ${sc} pts.`,
-        share: `Dawg Waffle #${dayN() + 1} ${s.won ? st + "/5 ⭐" : "X"}\n${sq}` };
+        share: `Waffle #${dayN() + 1} ${s.won ? st + "/5 ⭐" : "X"}\n${sq}` };
     },
     swap(G, a, b) {
       const s = G.s, t = s.cur.split(""); [t[a], t[b]] = [t[b], t[a]]; s.cur = t.join(""); s.used++; s.anim = { a, b, t: 0.18 };

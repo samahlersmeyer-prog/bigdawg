@@ -27,7 +27,7 @@
   }
   defGame({
     key: "midi", name: "The Midi", icon: "📰", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: a 7×7 crossword. Bigger than the Mini.",
+    blurb: "Daily: a 7×7 crossword.",
     how: "A 7×7 crossword, a step up from the Mini. Tap a square to pick it; tap it again to switch between Across and Down. The clue shows above the keyboard; tap the arrows on either side to jump between clues. Type to fill in. Check marks any wrong squares red, but it costs 150 points, so only if you're stuck. One puzzle a day, the same for everyone. Score: 700 for solving plus up to 300 for speed (it fades over 15 minutes).",
     reset(G) {
       const p = PUZ[pIdx()], { W, num } = words(p), s = G.s = { p, W, num, cur: 0, dir: 0, msg: "", msgT: 0, btns: [], postT: 0, wrong: [] };

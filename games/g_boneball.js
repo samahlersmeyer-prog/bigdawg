@@ -18,7 +18,7 @@
   const scoreOf = el => 700 + speed(el, 240, 300);
   defGame({
     key: "boneball", name: "Bone Ball", icon: "🎾", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: balance the bones and balls.",
+    blurb: "Daily: balance bones and balls.",
     how: "Fill every square with a 🦴 or a 🎾. Each row and each column needs three of each. No more than two of the same can sit next to each other in a row or column. An = between two squares means they're the same; an × means they're different. Tap a square for a bone, again for a ball, again to clear. Gray squares are given. A new board every day, one go, one answer, and you never need to guess. Score: 700 for solving plus up to 300 for going quick. No clock on screen.",
     reset(G) {
       const p = pz(), s = G.s = { sol: p[0].split("").map(Number), giv: p[1].split("").map(ch => ch === "." ? -1 : +ch), h: p[2].split("").map(Number), v: p[3].split("").map(Number), btns: [], hist: [], msgT: 0, msg: "", postT: 0 };

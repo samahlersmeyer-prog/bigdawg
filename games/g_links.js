@@ -1,4 +1,4 @@
-// ---------- Dawg Links (The Den, daily puzzle) ----------
+// ---------- Links (The Den, daily puzzle) ----------
 // A chain of 7 words where each pair makes a compound word or phrase (SNOW-BALL, BALL-PARK, PARK-WAY...).
 // Top and bottom words are given; the 5 in between start with their first letter. A wrong guess (or Hint) shows one more letter.
 (function () {
@@ -31,14 +31,17 @@
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
   const KB = ["QWERTYUIOP", "ASDFGHJKL", ">ZXCVBNM<"];
   const HID = [1, 2, 3, 4, 5];
-  // 900 for finishing, minus 40 per extra letter shown (floor 100), plus up to 100 for going quick.
+  // Scored on how much you got on your own, not time: each of the 5 hidden words is worth 200, minus 40 per extra
+  // letter shown (a wrong guess or a Hint); a word that had to be fully revealed is worth 0. Max 1000.
   const extra = s => HID.reduce((a, i) => a + s.rev[i] - 1, 0);
-  const scoreOf = s => Math.max(100, 900 - 40 * extra(s)) + Math.round(100 * Math.max(0, 1 - s.el / 600));
+  const wordPts = (s, i) => s.rev[i] >= s.w[i].length ? 0 : Math.max(0, 200 - 40 * (s.rev[i] - 1));
+  const clean = s => HID.filter(i => s.rev[i] === 1).length;
+  const scoreOf = s => HID.reduce((a, i) => a + wordPts(s, i), 0);
   const tile = (s, i) => { const n = s.rev[i] - 1, w = s.w[i].length; return s.rev[i] >= w ? "⬛" : n === 0 ? "🟩" : n <= 2 ? "🟨" : "🟧"; };
   defGame({
-    key: "links", name: "Dawg Links", icon: "🔗", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: link the chain, one compound at a time.",
-    how: "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: 900 for finishing, minus 40 for every extra letter shown, plus up to 100 for going quick. No clock on screen.",
+    key: "links", name: "Links", icon: "🔗", max: 1000, cat: "den", puzzle: true,
+    blurb: "Daily: link the word chain.",
+    how: "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: each of the five hidden words is worth 200 if you get it from the first letter alone, minus 40 for every extra letter it needed. No clock, so take your time.",
     reset(G) {
       const w = CH[pIdx()], s = G.s = { w, sel: 1, typed: "", msg: "", msgT: 0, shake: 0, btns: [], postT: 0, flash: -1, flashT: 0 };
       const r = store.get(rk());
@@ -52,8 +55,8 @@
       const s = G.s, grid = HID.map(i => tile(s, i)).join(""), sc = scoreOf(s), ex = extra(s);
       return { score: sc, grid,
         title: ex === 0 ? "Perfect chain! 🐶" : "Chain linked!",
-        sub: `${s.w[0]} to ${s.w[6]} in ${mmss(s.el)} with ${ex} extra letter${ex === 1 ? "" : "s"} shown. ${sc} pts.`,
-        share: `Dawg Links #${dayN() + 1} ${ex === 0 ? "perfect" : ex + " extra"}\n${s.w[0]} ${grid} ${s.w[6]}` };
+        sub: `${clean(s)} of 5 words from the first letter alone${ex ? `, ${ex} extra letter${ex === 1 ? "" : "s"} shown` : ""}. ${sc} pts.`,
+        share: `Links #${dayN() + 1} ${ex === 0 ? "perfect" : ex + " extra"}\n${s.w[0]} ${grid} ${s.w[6]}` };
     },
     solve(G, i, given) {
       const s = G.s; s.ok[i] = true; if (!given) { s.flash = i; s.flashT = 0.6; G.sfx("pop"); }

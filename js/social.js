@@ -486,7 +486,7 @@ function gameBeaten(game, myScore) {
     .map(x => ({ id: x.id, name: x.name || mates[x.id].name, n: x.n }));
 }
 function gameShadeOpts(game, mine, theirs) { return { game: { key: game, name: (ARC[game] && ARC[game].name) || "that game", mine, theirs } }; }
-// "You beat Lauri at Dawg Waffle → 🎯" row for a game-over panel. Fills in once the score has posted.
+// "You beat Lauri at Waffle → 🎯" row for a game-over panel. Fills in once the score has posted.
 function shadeUpRow(game, score, posted) {
   const box = el("div", "shadeup"); box.hidden = true;
   const fill = () => {

@@ -66,7 +66,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   defGame({
     key: "euchre",
-    name: "Dawg Euchre",
+    name: "Euchre",
     icon: "🃏",
     max: 300,
     cat: "den",

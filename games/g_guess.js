@@ -1,4 +1,4 @@
-// ---------- Dawg Guess (The Den, daily puzzle) ----------
+// ---------- Guess (The Den, daily puzzle) ----------
 // Contexto-style: guess today's hidden pick from a category (TV Shows, Movies, Animals, Pro Teams). Each guess shows a
 // similarity rank: #1 is the answer, #2 is the most similar thing, and so on.
 // Similarity comes from the tags below (genre, decade, network, habitat, a team's city...). 15 guesses, one per day.
@@ -86,8 +86,8 @@
   const heat = (n, tot) => n === 1 ? "#6aaa64" : n <= Math.max(5, tot * 0.05) ? "#f5793a" : n <= tot * 0.2 ? "#e6b31e" : n <= tot * 0.5 ? "#7fa7d9" : "#9aa0a6";
   const KB = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM<"];
   defGame({
-    key: "guess", name: "Dawg Guess", icon: "🔍", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: guess today's pick. Hot or cold?",
+    key: "guess", name: "Guess", icon: "🔍", max: 1000, cat: "den", puzzle: true,
+    blurb: "Daily: hot or cold? Find the pick.",
     how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Under each guess are its clues: ✓ means the answer shares it (same genre, same network, same league), ✗ means it doesn't, and things like \"4–9 yrs later\", \"bigger\" or \"~300 mi NE\" tell you which way the answer is from that guess. The number is how close the guess is, ranked against everything in the list: #1 is the answer, and lower is warmer. Things that are exactly as close share a number. Miss 7 and you get one free hint. All your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset(G) {
       const t = today(), s = G.s = { cat: t.cat, ans: t.ans, R: ranks(t.cat, t.ans), typed: "", msg: "", msgT: 0, btns: [], postT: 0, scroll: 0 };
@@ -101,7 +101,7 @@
       const sq = s.guesses.map(g => { const n = s.R[g]; return n === 1 ? "🟩" : n <= Math.max(5, tot * 0.05) ? "🟧" : n <= tot * 0.2 ? "🟨" : n <= tot * 0.5 ? "🟦" : "⬜"; }).join("");
       return { score: sc, grid: sq, title: s.won ? (s.guesses.length === 1 ? "First try! 🐶" : "Got it!") : "So close!",
         sub: (s.won ? `${s.ans} in ${s.guesses.length} guess${s.guesses.length === 1 ? "" : "es"}.` : `It was ${s.ans}.`) + ` ${sc} pts.`,
-        share: `Dawg Guess #${dayN() + 1} · ${s.cat.name} ${s.won ? s.guesses.length : "X"}/${MAXG}\n${sq}` };
+        share: `Guess #${dayN() + 1} · ${s.cat.name} ${s.won ? s.guesses.length : "X"}/${MAXG}\n${sq}` };
     },
     matches(s) {
       const q = norm(s.typed), t = s.typed.trim(); if (!q) return [];

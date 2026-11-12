@@ -42,7 +42,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return Math.round(pts * Math.max(0, 1 - sec / limit));
   };
   var scoreOf = function scoreOf(s) {
-    return s.won ? 900 - 100 * s.mist + speed(s.el, 600, 100) : 50 + 100 * s.found;
+    return s.won ? 1000 - 100 * s.mist : 50 + 100 * s.found;
   };
   function fitText(c, str, x, y, w, maxSz, col, one) {
     c.fillStyle = col;
@@ -68,8 +68,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: find four groups of four, sports edition.",
-    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 900, minus 100 per mistake, plus a small bonus (up to 100) for going quick, so a perfect solve beats a fast sloppy one. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
+    blurb: "Daily: Groups, sports edition.",
+    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 1000, minus 100 per mistake. Time doesn't count. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
     reset: function reset(G) {
       var p = PUZ[pIdx()],
         s = G.s = {
@@ -134,7 +134,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: scoreOf(s),
         grid: grid,
         title: !s.won ? "Next time!" : s.mist ? "Solved it!" : "Perfect! 🐶",
-        sub: s.won ? "All four groups with ".concat(s.mist, " mistake").concat(s.mist === 1 ? "" : "s", " in ").concat(mmss(s.el), ". ").concat(scoreOf(s), " pts.") : "You found ".concat(s.found, " of 4 groups. ").concat(scoreOf(s), " pts."),
+        sub: s.won ? "All four groups with ".concat(s.mist, " mistake").concat(s.mist === 1 ? "" : "s", ". ").concat(scoreOf(s), " pts.") : "You found ".concat(s.found, " of 4 groups. ").concat(scoreOf(s), " pts."),
         share: "Sports Groups #".concat(dayN() + 1, " ").concat(s.won ? s.mist ? s.mist + " mistake" + (s.mist > 1 ? "s" : "") : "perfect" : "X", "\n").concat(grid)
       };
     },

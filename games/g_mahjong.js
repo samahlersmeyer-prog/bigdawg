@@ -1,4 +1,4 @@
-// ---------- Dawg Mahjong (The Den, daily tile-matching puzzle) ----------
+// ---------- Mahjong (The Den, daily tile-matching puzzle) ----------
 // Mahjong solitaire: match pairs of free tiles until the board is clear. A tile is free when nothing sits on top of it
 // and its left or right side is open. Same board for everyone each day, always solvable.
 (function () {
@@ -55,11 +55,11 @@
   }
   // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
   const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
-  const scoreOf = s => Math.max(100, 1000 + speed(s.el, 600, 500) - Math.round(s.pen * 1.5));
+  const scoreOf = s => Math.max(100, 700 + speed(s.el, 600, 300) - Math.round(s.pen));
   defGame({
-    key: "mahjong", name: "Dawg Mahjong", icon: "🀄", max: 1500, cat: "den", puzzle: true,
-    blurb: "Daily: match pairs to clear the board.",
-    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
+    key: "mahjong", name: "Mahjong", icon: "🀄", max: 1500, cat: "den", puzzle: true,
+    blurb: "Daily: match pairs, clear the board.",
+    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 700 for clearing the board, plus a bonus of up to 300 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
     reset(G) {
       const s = G.s = { btns: [], sel: -1, msg: "", msgT: 0, postT: 0, hint: null };
       const r = store.get(rk());
@@ -67,7 +67,7 @@
       else { const all = POS.map((p, i) => i), f = deal(rng("dawg-mahjong-" + KEY), all), face = all.map(i => f[i]); Object.assign(s, { face, alive: all, el: 0, pen: 0, done: false, posted: false, shuf: 0 }); }
     },
     persist(G) { const s = G.s; store.set(rk(), { face: s.face, alive: s.alive, el: s.el, pen: s.pen, done: s.done, posted: s.posted, shuf: s.shuf, score: s.done ? scoreOf(s) : 0 }); },
-    info(G) { const s = G.s, t = s.el + s.pen, sc = scoreOf(s); return { score: sc, title: t < 180 ? "Cleared! Speedy 🐶" : "Board cleared! 🀄", sub: `${mmss(t)}${s.pen ? " · with a little help" : ""} · ${sc} pts.`, share: `Dawg Mahjong #${dayN() + 1} · ${mmss(t)} 🀄` }; },
+    info(G) { const s = G.s, t = s.el + s.pen, sc = scoreOf(s); return { score: sc, title: t < 180 ? "Cleared! Speedy 🐶" : "Board cleared! 🀄", sub: `${mmss(t)}${s.pen ? " · with a little help" : ""} · ${sc} pts.`, share: `Mahjong #${dayN() + 1} · ${mmss(t)} 🀄` }; },
     moves(s) { const free = s.alive.filter(i => isFree(i, s.alive)), out = []; for (let a = 0; a < free.length; a++) for (let b = a + 1; b < free.length; b++) if (s.face[free[a]] === s.face[free[b]]) out.push([free[a], free[b]]); return out; },
     pick(G, i) {
       const s = G.s; s.hint = null;

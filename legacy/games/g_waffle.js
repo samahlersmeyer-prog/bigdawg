@@ -71,12 +71,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   defGame({
     key: "waffle",
-    name: "Dawg Waffle",
+    name: "Waffle",
     icon: "🧇",
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: swap letters to fix six words.",
+    blurb: "Daily: swap letters, fix six words.",
     how: "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.",
     reset: function reset(G) {
       var _PUZ$pIdx = _slicedToArray(PUZ[pIdx()], 2),
@@ -131,7 +131,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         grid: sq,
         title: s.won ? st === 5 ? "Perfect waffle! 🐶" : "Waffle fixed!" : "Out of swaps",
         sub: s.won ? "".concat(s.used, " swaps \xB7 ").concat("⭐".repeat(st) || "no stars", " \xB7 ").concat(sc, " pts.") : "So close. ".concat(sc, " pts."),
-        share: "Dawg Waffle #".concat(dayN() + 1, " ").concat(s.won ? st + "/5 ⭐" : "X", "\n").concat(sq)
+        share: "Waffle #".concat(dayN() + 1, " ").concat(s.won ? st + "/5 ⭐" : "X", "\n").concat(sq)
       };
     },
     swap: function swap(G, a, b) {

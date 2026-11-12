@@ -7570,12 +7570,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   defGame({
     key: "pips",
-    name: "Dawg Pips",
+    name: "Pips",
     icon: "🎲",
     max: 3000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: place the dominoes to match every rule.",
+    blurb: "Daily: dominoes that fit the rules.",
     how: "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, plus a small bonus for going quick. No clock on screen, so take your time.",
     reset: function reset(G) {
       this.reset0(G);
@@ -7624,7 +7624,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: r.score || 0,
         title: "".concat(nm, " solved!"),
         sub: "".concat(mm).concat(r.mist ? ", ".concat(r.mist, " mistake").concat(r.mist > 1 ? "s" : "") : "", " \xB7 ").concat(r.score || 0, " pts. ").concat(done === 3 ? "All three done today. 🐶" : "".concat(done, " of 3 done today.")),
-        share: "Dawg Pips #".concat(dayIdx() + 1, " \xB7 ").concat(nm, " ").concat(mm).concat(r.mist ? " (".concat(r.mist, "\u2717)") : "")
+        share: "Pips #".concat(dayIdx() + 1, " \xB7 ").concat(nm, " ").concat(mm).concat(r.mist ? " (".concat(r.mist, "\u2717)") : "")
       };
     },
     open: function open(G, d) {

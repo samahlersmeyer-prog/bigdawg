@@ -62,7 +62,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: balance the bones and balls.",
+    blurb: "Daily: balance bones and balls.",
     how: "Fill every square with a 🦴 or a 🎾. Each row and each column needs three of each. No more than two of the same can sit next to each other in a row or column. An = between two squares means they're the same; an × means they're different. Tap a square for a bone, again for a ball, again to clear. Gray squares are given. A new board every day, one go, one answer, and you never need to guess. Score: 700 for solving plus up to 300 for going quick. No clock on screen.",
     reset: function reset(G) {
       var p = pz(),

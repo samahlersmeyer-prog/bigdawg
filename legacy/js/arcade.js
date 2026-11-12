@@ -1,4 +1,8 @@
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
@@ -948,13 +952,9 @@ function markFreshHubs() {
     var old = b.querySelector(".fresh");
     if (old) old.remove();
     var ks = Object.keys(ARC).filter(function (k) {
-      return arcCat(k) === cat && freshTag(k);
+      return arcCat(k) === cat && freshTag(k) === "new" && (Date.now() - new Date(FRESH[k][1] + "T00:00:00").getTime()) / 864e5 < 3;
     });
-    if (ks.length) b.appendChild(el("span", "fresh hub " + (ks.some(function (k) {
-      return freshTag(k) === "new";
-    }) ? "new" : "upd"), ks.some(function (k) {
-      return freshTag(k) === "new";
-    }) ? "NEW" : "UPDATED"));
+    if (ks.length) b.appendChild(el("span", "fresh hub new", "NEW"));
   });
 }
 var ARC_GROUPS = {
@@ -1015,7 +1015,17 @@ function renderArcSub() {
       total = arcOrder().filter(function (k) {
         return arcCat(k) === cat;
       }).length;
-    if ($("sub-" + cat)) $("sub-" + cat).textContent = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
+    var txt = n ? "\uD83C\uDFAF ".concat(n, " dare").concat(n > 1 ? "s" : "") : "".concat(total, " games");
+    if (cat === "den" && !n) {
+      var ks = DEN_PUZ.filter(function (k) {
+          return ARC[k];
+        }),
+        d = ks.filter(function (k) {
+          return denStatus(k)[1];
+        }).length;
+      txt = d ? "".concat(d, " of ").concat(ks.length, " done today") : "".concat(ks.length, " new puzzles today");
+    }
+    if ($("sub-" + cat)) $("sub-" + cat).textContent = txt;
   });
 }
 var DEN_SECTIONS = [{
@@ -1075,10 +1085,285 @@ function denStatus(k) {
   }).length;
   return n === 3 ? ["Done", true, "All 3 solved"] : n ? ["Continue", false, "".concat(n, " of 3 solved")] : ["Play", false, null];
 }
+var DEN_ICONS = {
+  midi: '<rect x="3" y="3" width="30" height="30" rx="2" fill="var(--ink)"/>' + [[0, 0], [1, 0], [2, 0], [4, 0], [0, 1], [2, 1], [3, 1], [4, 1], [0, 2], [1, 2], [3, 2], [4, 2], [0, 3], [1, 3], [2, 3], [4, 3], [1, 4], [2, 4], [3, 4], [4, 4]].map(function (_ref3) {
+    var _ref4 = _slicedToArray(_ref3, 2),
+      x = _ref4[0],
+      y = _ref4[1];
+    return "<rect x=\"".concat(4.5 + x * 5.6, "\" y=\"").concat(4.5 + y * 5.6, "\" width=\"4.6\" height=\"4.6\" fill=\"var(--bg)\"/>");
+  }).join(""),
+  waffle: [0, 1, 2, 3, 4].flatMap(function (y) {
+    return [0, 1, 2, 3, 4].filter(function (x) {
+      return !(x % 2 && y % 2);
+    }).map(function (x) {
+      return "<rect x=\"".concat(3 + x * 6.2, "\" y=\"").concat(3 + y * 6.2, "\" width=\"5.2\" height=\"5.2\" rx=\"1\" fill=\"").concat((x + y * 3) % 4 ? "var(--hit)" : "var(--near)", "\"/>");
+    });
+  }).join(""),
+  links: '<path d="M18 9v18" stroke="var(--ink)" stroke-width="2.5"/>' + [3, 14, 25].map(function (y, i) {
+    return "<rect x=\"6\" y=\"".concat(y, "\" width=\"24\" height=\"8\" rx=\"4\" fill=\"").concat(i === 1 ? "var(--near)" : "var(--hit)", "\"/>");
+  }).join(""),
+  scapes: '<circle cx="18" cy="18" r="14" fill="none" stroke="var(--ink)" stroke-width="2.5"/>' + [[18, 9], [10, 22], [26, 22]].map(function (_ref5) {
+    var _ref6 = _slicedToArray(_ref5, 2),
+      x = _ref6[0],
+      y = _ref6[1];
+    return "<circle cx=\"".concat(x, "\" cy=\"").concat(y, "\" r=\"3.6\" fill=\"var(--st-span)\"/>");
+  }).join("") + '<path d="M18 9L10 22L26 22" stroke="var(--st-span)" stroke-width="2" fill="none"/>',
+  hive: [[18, 18, "var(--g0)"], [18, 6.5, "var(--ink)"], [28, 12.2, "var(--ink)"], [28, 23.8, "var(--ink)"], [18, 29.5, "var(--ink)"], [8, 23.8, "var(--ink)"], [8, 12.2, "var(--ink)"]].map(function (_ref7) {
+    var _ref8 = _slicedToArray(_ref7, 3),
+      x = _ref8[0],
+      y = _ref8[1],
+      f = _ref8[2];
+    return "<polygon points=\"".concat([0, 1, 2, 3, 4, 5].map(function (a) {
+      return (x + 5.6 * Math.cos(a * Math.PI / 3)).toFixed(1) + "," + (y + 5.6 * Math.sin(a * Math.PI / 3)).toFixed(1);
+    }).join(" "), "\" fill=\"").concat(f, "\" ").concat(f === "var(--ink)" ? 'opacity=".55"' : "", "/>");
+  }).join(""),
+  guess: '<circle cx="18" cy="18" r="15" fill="#5b8def"/><circle cx="18" cy="18" r="10.5" fill="#e9b949"/><circle cx="18" cy="18" r="6" fill="#e5603f"/><circle cx="18" cy="18" r="2" fill="var(--bg)"/>',
+  sgroups: [[3, 3, "var(--g0)"], [19, 3, "var(--g1)"], [3, 19, "var(--g2)"], [19, 19, "var(--g3)"]].map(function (_ref9) {
+    var _ref0 = _slicedToArray(_ref9, 3),
+      x = _ref0[0],
+      y = _ref0[1],
+      f = _ref0[2];
+    return "<circle cx=\"".concat(x + 7, "\" cy=\"").concat(y + 7, "\" r=\"7\" fill=\"").concat(f, "\"/>");
+  }).join(""),
+  sudoku: '<rect x="3" y="3" width="30" height="30" rx="3" fill="none" stroke="var(--ink)" stroke-width="2.2"/><path d="M13 3v30M23 3v30M3 13h30M3 23h30" stroke="var(--ink)" stroke-width="1.2" opacity=".6"/>' + [[8, 11, "5"], [28, 11, "1"], [18, 21, "9"], [8, 31, "3"], [28, 31, "7"]].map(function (_ref1) {
+    var _ref10 = _slicedToArray(_ref1, 3),
+      x = _ref10[0],
+      y = _ref10[1],
+      t = _ref10[2];
+    return "<text x=\"".concat(x, "\" y=\"").concat(y, "\" font-size=\"8.5\" font-weight=\"800\" text-anchor=\"middle\" fill=\"var(--ink)\" font-family=\"sans-serif\">").concat(t, "</text>");
+  }).join(""),
+  pips: '<rect x="4" y="10" width="28" height="16" rx="3" fill="var(--ink)"/><path d="M18 12v12" stroke="var(--bg)" stroke-width="1.5"/>' + [[9, 15], [13, 21], [11, 18], [23, 15], [27, 15], [23, 21], [27, 21]].map(function (_ref11) {
+    var _ref12 = _slicedToArray(_ref11, 2),
+      x = _ref12[0],
+      y = _ref12[1];
+    return "<circle cx=\"".concat(x, "\" cy=\"").concat(y, "\" r=\"1.7\" fill=\"var(--bg)\"/>");
+  }).join(""),
+  topdogs: [[0, 0, "var(--g2)"], [1, 0, "var(--g2)"], [2, 0, "var(--g0)"], [0, 1, "var(--g3)"], [1, 1, "var(--g1)"], [2, 1, "var(--g0)"], [0, 2, "var(--g3)"], [1, 2, "var(--g1)"], [2, 2, "var(--g1)"]].map(function (_ref13) {
+    var _ref14 = _slicedToArray(_ref13, 3),
+      x = _ref14[0],
+      y = _ref14[1],
+      f = _ref14[2];
+    return "<rect x=\"".concat(3 + x * 10.2, "\" y=\"").concat(3 + y * 10.2, "\" width=\"9.6\" height=\"9.6\" fill=\"").concat(f, "\"/>");
+  }).join("") + [[0, 0], [2, 1], [1, 2]].map(function (_ref15) {
+    var _ref16 = _slicedToArray(_ref15, 2),
+      x = _ref16[0],
+      y = _ref16[1];
+    return "<circle cx=\"".concat(7.8 + x * 10.2, "\" cy=\"").concat(7.8 + y * 10.2, "\" r=\"2.6\" fill=\"var(--g-ink)\"/>");
+  }).join(""),
+  leash: '<path d="M7 7h22v7.3H7v7.4h22V29H7" stroke="var(--hit)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="7" r="4" fill="var(--ink)"/><circle cx="7" cy="29" r="4" fill="var(--ink)"/>',
+  boneball: [[0, 0, 1], [1, 0, 0], [0, 1, 0], [1, 1, 1]].map(function (_ref17) {
+    var _ref18 = _slicedToArray(_ref17, 3),
+      x = _ref18[0],
+      y = _ref18[1],
+      b = _ref18[2];
+    return b ? "<circle cx=\"".concat(10 + x * 16, "\" cy=\"").concat(10 + y * 16, "\" r=\"6\" fill=\"#c8dc3c\"/>") : "<g transform=\"translate(".concat(10 + x * 16, " ").concat(10 + y * 16, ") rotate(-35)\"><rect x=\"-6\" y=\"-1.8\" width=\"12\" height=\"3.6\" fill=\"var(--ink)\"/><circle cx=\"-6\" cy=\"-1.8\" r=\"2.2\" fill=\"var(--ink)\"/><circle cx=\"-6\" cy=\"1.8\" r=\"2.2\" fill=\"var(--ink)\"/><circle cx=\"6\" cy=\"-1.8\" r=\"2.2\" fill=\"var(--ink)\"/><circle cx=\"6\" cy=\"1.8\" r=\"2.2\" fill=\"var(--ink)\"/></g>");
+  }).join(""),
+  mahjong: [[10, 4, "var(--g2)"], [4, 12, "var(--g-tile)"], [16, 12, "var(--g-tile)"]].map(function (_ref19) {
+    var _ref20 = _slicedToArray(_ref19, 3),
+      x = _ref20[0],
+      y = _ref20[1],
+      f = _ref20[2];
+    return "<rect x=\"".concat(x, "\" y=\"").concat(y, "\" width=\"15\" height=\"20\" rx=\"2.5\" fill=\"").concat(f, "\" stroke=\"var(--ink)\" stroke-width=\"1.6\"/>");
+  }).join("") + '<circle cx="11.5" cy="22" r="3" fill="none" stroke="#e5603f" stroke-width="1.6"/><path d="M23.5 18v8" stroke="var(--hit)" stroke-width="2"/>'
+};
+function denIcon(k, px) {
+  if (!DEN_ICONS[k]) return emo(ARC[k].icon, px);
+  var sp = document.createElement("span");
+  sp.className = "den-svg";
+  sp.style.width = sp.style.height = px + "px";
+  sp.innerHTML = "<svg viewBox=\"0 0 36 36\" width=\"".concat(px, "\" height=\"").concat(px, "\" aria-hidden=\"true\">").concat(DEN_ICONS[k], "</svg>");
+  return sp;
+}
+var denName = function denName(k) {
+  return ARC[k] ? ARC[k].name.replace(/^The /, "") : k;
+};
+function myDenScore(k) {
+  if (!me) return 0;
+  if (k === "pips" || k === "sudoku") return Math.max.apply(Math, [0].concat(_toConsumableArray([0, 1, 2].map(function (d) {
+    var r = denRec(k, d);
+    return r && r.done && r.score || 0;
+  }))));
+  var r = denRec(k);
+  return r && (r.done || k === "hive") && r.score || 0;
+}
+function denToday() {
+  var pts = {},
+    names = {};
+  DEN_PUZ.forEach(function (k) {
+    var list = (arcade && arcade.games && arcade.games[k] && arcade.games[k].today || []).map(function (x) {
+      return {
+        id: x.id,
+        name: x.name,
+        n: x.n
+      };
+    });
+    var mine = myDenScore(k);
+    if (me && mine > 0) {
+      var m = list.find(function (x) {
+        return x.id === me.id;
+      });
+      if (!m) list.push({
+        id: me.id,
+        name: me.name,
+        n: mine
+      });else m.n = Math.max(m.n, mine);
+    }
+    list.forEach(function (x) {
+      names[x.id] = x.name;
+      var better = list.filter(function (o) {
+        return o.n > x.n;
+      }).length;
+      (pts[x.id] = pts[x.id] || []).push([k, Math.max(1, 5 - better), better + 1]);
+    });
+  });
+  return Object.keys(pts).map(function (id) {
+    var p = pts[id].sort(function (a, b) {
+      return b[1] - a[1];
+    }).slice(0, 4);
+    return {
+      id: id,
+      name: me && id === me.id ? me.name : names[id],
+      n: p.reduce(function (a, x) {
+        return a + x[1];
+      }, 0),
+      picks: p
+    };
+  }).sort(function (a, b) {
+    return b.n - a.n;
+  });
+}
+var ordinal = function ordinal(n) {
+  return n + (n % 100 > 10 && n % 100 < 14 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+};
+var placeOf = function placeOf(list, id) {
+  var x = list.find(function (y) {
+    return y.id === id;
+  });
+  return x ? list.filter(function (y) {
+    return y.n > x.n;
+  }).length + 1 : 0;
+};
+function renderDen4() {
+  var box = $("den4");
+  if (!box) return;
+  box.innerHTML = "";
+  var list = denToday(),
+    mine = me && list.find(function (x) {
+      return x.id === me.id;
+    }),
+    picks = mine ? mine.picks : [];
+  var head = el("div", "d4-head");
+  head.append(el("b", null, "Your Den Four"), el("small", null, "Best 4 puzzles count"));
+  box.appendChild(head);
+  var slots = el("div", "d4-slots");
+  for (var i = 0; i < 4; i++) {
+    var p = picks[i],
+      s = el("span", "d4-slot" + (p ? " on" : ""));
+    s.append(el("small", null, p ? denName(p[0]) : "open"), el("b", null, p ? "+" + p[1] : "–"));
+    slots.appendChild(s);
+  }
+  box.appendChild(slots);
+  var foot = el("div", "d4-foot"),
+    lead = list[0];
+  if (mine) {
+    var pl = placeOf(list, me.id);
+    foot.appendChild(el("span", "d4-rank" + (pl === 1 ? " top" : ""), "".concat(pl === 1 ? "👑 " : "").concat(ordinal(pl), " today \xB7 ").concat(mine.n, " pts")));
+    if (lead && lead.id !== me.id) foot.appendChild(el("span", "d4-lead", "".concat(lead.name, " leads with ").concat(lead.n)));else if (picks.length < 4) foot.appendChild(el("span", "d4-lead", "".concat(4 - picks.length, " more puzzle").concat(picks.length === 3 ? "" : "s", " can count")));
+  } else foot.appendChild(el("span", "d4-lead", lead ? "".concat(lead.name, " leads with ").concat(lead.n, ". Play any puzzle to get on the board.") : "Nobody's on the board yet. Play any puzzle to start it."));
+  foot.appendChild(el("span", "d4-go", "›"));
+  box.appendChild(foot);
+}
+function openDenBoard(tab) {
+  tab = tab || "today";
+  var seg = el("div", "seg d4-seg"),
+    body = el("div", "d4-body");
+  [["today", "Today"], ["week", "Week"], ["spec", "Specialists"]].forEach(function (_ref21) {
+    var _ref22 = _slicedToArray(_ref21, 2),
+      k = _ref22[0],
+      l = _ref22[1];
+    var b = el("button", k === tab ? "on" : "", l);
+    b.addEventListener("click", function () {
+      tab = k;
+      _toConsumableArray(seg.children).forEach(function (c) {
+        return c.classList.toggle("on", c === b);
+      });
+      fill();
+    });
+    seg.appendChild(b);
+  });
+  var row = function row(i, id, name, n, extra, lead) {
+    var li = el("li", (me && id === me.id ? "me " : "") + (lead ? "lead" : "")),
+      nm = el("button", "nm", name);
+    nm.dataset.card = id;
+    nm.style.textAlign = "left";
+    li.append(el("span", "rk", i), nm);
+    if (extra) li.appendChild(el("span", "d4-picks", extra));
+    li.appendChild(el("span", "ct", n));
+    return li;
+  };
+  var fill = function fill() {
+    body.innerHTML = "";
+    var ol = el("ol", "rank-list pboard");
+    body.appendChild(ol);
+    if (tab === "today") {
+      var list = denToday();
+      if (!list.length) ol.appendChild(el("li", "dim", "Nobody's on the board yet today."));
+      list.forEach(function (x) {
+        var pl = placeOf(list, x.id);
+        ol.appendChild(row(pl, x.id, x.name, x.n, x.picks.map(function (p) {
+          return denName(p[0]);
+        }).join(" · "), pl === 1));
+      });
+      body.appendChild(el("p", "sub d4-how", "Every Den puzzle ranks the crew: 5 points for 1st, 4 for 2nd, 3, 2, and 1 just for finishing. Your best 4 count, so pick your favorites."));
+    } else if (tab === "week") {
+      var _list = arcade && arcade.den && arcade.den.week || [];
+      if (!_list.length) ol.appendChild(el("li", "dim", arcade && arcade.den ? "No Den points yet this week." : "Loading the week…"));
+      _list.forEach(function (x) {
+        var pl = placeOf(_list, x.id);
+        ol.appendChild(row(pl, x.id, x.name, x.n, "".concat(x.days, " day").concat(x.days === 1 ? "" : "s"), pl === 1));
+      });
+      body.appendChild(el("p", "sub d4-how", "Your best 5 days this week, like the league. Resets Monday."));
+    } else {
+      DEN_PUZ.filter(function (k) {
+        return ARC[k];
+      }).forEach(function (k) {
+        var g = arcade && arcade.games && arcade.games[k],
+          top = g && g.week && g.week[0];
+        var li = el("li", top && me && top.id === me.id ? "me" : ""),
+          ic = el("span", "d4-ic");
+        ic.appendChild(denIcon(k, 22));
+        var nm = el("span", "nm", denName(k));
+        li.append(ic, nm);
+        if (top) {
+          var who = el("button", "d4-who", "👑 " + top.name);
+          who.dataset.card = top.id;
+          li.appendChild(who);
+        } else li.appendChild(el("span", "ct", "—"));
+        ol.appendChild(li);
+      });
+      body.appendChild(el("p", "sub d4-how", "This week's best at each puzzle (best 5 days). Each puzzle's full board is under 📊 at the top of The Den."));
+    }
+  };
+  fill();
+  openModal([el("h2", null, "Den board"), seg, body]);
+}
+function den4Note(game) {
+  var list = denToday(),
+    mine = me && list.find(function (x) {
+      return x.id === me.id;
+    });
+  if (!mine) return "";
+  var p = mine.picks.find(function (x) {
+      return x[0] === game;
+    }),
+    pl = placeOf(list, me.id);
+  return (p ? "Den Four +".concat(p[1], " \xB7 ").concat(ordinal(p[2]), " on this one") : "Not in your Den Four yet") + " \xB7 ".concat(ordinal(pl), " today (").concat(mine.n, " pts)");
+}
 function renderDenPuz() {
   var box = $("den-puz");
   if (!box) return;
   box.innerHTML = "";
+  renderDen4();
   var ci = 0;
   DEN_SECTIONS.forEach(function (sec) {
     var keys = sec.keys.filter(function (k) {
@@ -1099,30 +1384,37 @@ function renderDenPuz() {
     }).sort(function (x, y) {
       return y.hot - x.hot || x.i - y.i;
     });
+    var big = 0;
     rows.filter(function (r) {
       return !r.st[1];
     }).concat(rows.filter(function (r) {
       return r.st[1];
-    })).forEach(function (_ref3) {
-      var k = _ref3.k,
-        st = _ref3.st,
-        ci = _ref3.ci;
+    })).forEach(function (_ref23) {
+      var k = _ref23.k,
+        st = _ref23.st,
+        ci = _ref23.ci;
       var _st = _slicedToArray(st, 3),
         label = _st[0],
         done = _st[1],
         line = _st[2],
         td = arcade && arcade.games && arcade.games[k] && arcade.games[k].today;
-      var b = el("button", "gcard c-den" + ci % 7 + (done ? " gdone" : sec.compact ? " gcompact" : ""));
+      var compact = !done && (sec.compact || big++ >= 4);
+      var b = el("button", "gcard c-den" + ci % 7 + (done ? " gdone" : compact ? " gcompact" : ""));
       b.dataset.play = k;
       var ic = el("span", "gicon den");
-      ic.appendChild(emo(ARC[k].icon, done || sec.compact ? 24 : 36));
+      ic.appendChild(denIcon(k, done || compact ? 24 : 34));
       var tx = el("span", "gtext");
       var nm = el("b", null, ARC[k].name),
         fr = freshEl(k, "inline");
       if (fr && !done) nm.appendChild(fr);
-      tx.append(nm, el("span", "gsub", [line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
+      tx.append(nm, el("span", "gsub", line || ARC[k].blurb.replace(/^Daily: (.)/, function (m, ch) {
         return ch.toUpperCase();
-      }), !done && td && td[0] ? "\uD83D\uDC51 ".concat(td[0].name) : ""].filter(Boolean).join(" · ")));
+      }).replace(/\.$/, "")));
+      var n = (td || []).length + (me && myDenScore(k) > 0 && !(td || []).some(function (x) {
+        return x.id === me.id;
+      }) ? 1 : 0);
+      var meta = [!done && td && td[0] && !(me && td[0].id === me.id) ? "\uD83D\uDC51 ".concat(td[0].name) : "", n ? "".concat(n, " played") : ""].filter(Boolean).join(" · ");
+      if (meta && !done) tx.appendChild(el("span", "gmeta", meta));
       b.append(ic, tx, el("span", "gstat" + (done ? " done" : ""), done ? "✓" : label));
       box.appendChild(b);
     });
@@ -1132,6 +1424,11 @@ function puzzleResults(game, info) {
   var nodes = [el("h2", null, info.title || ARC[game].name)];
   if (info.sub) nodes.push(el("p", "sub", info.sub));
   if (info.grid) nodes.push(el("div", "preview pshare", info.grid));
+  var d4 = DEN_PUZ.includes(game) ? el("p", "d4-note", den4Note(game)) : null;
+  if (d4) {
+    d4.hidden = !d4.textContent;
+    nodes.push(d4);
+  }
   nodes.push(el("h3", null, "Today's leaderboard"));
   var ol = el("ol", "rank-list pboard");
   nodes.push(ol);
@@ -1160,6 +1457,10 @@ function puzzleResults(game, info) {
       li.append(el("span", "rk", i + 1), nm, el("span", "ct", "".concat(x.n, " pts")));
       ol.appendChild(li);
     });
+    if (d4) {
+      d4.textContent = den4Note(game);
+      d4.hidden = !d4.textContent;
+    }
   };
   fill();
   if (info.next) {
@@ -1285,6 +1586,9 @@ function renderArcHub(cat) {
   }
   if (!arcade) refreshArcade();
 }
+$("den4").addEventListener("click", function () {
+  return openDenBoard();
+});
 $("ab-icon").appendChild(emo(":dawgpog:", 34));
 $("sb-icon").appendChild(emo("🏆", 30));
 $("db-icon").appendChild(emo("🧩", 28));
@@ -2687,7 +2991,7 @@ defGameMeta([{
   "key": "boneball",
   "name": "Bone Ball",
   "icon": "🎾",
-  "blurb": "Daily: balance the bones and balls.",
+  "blurb": "Daily: balance bones and balls.",
   "how": "Fill every square with a 🦴 or a 🎾. Each row and each column needs three of each. No more than two of the same can sit next to each other in a row or column. An = between two squares means they're the same; an × means they're different. Tap a square for a bone, again for a ball, again to clear. Gray squares are given. A new board every day, one go, one answer, and you never need to guess. Score: 700 for solving plus up to 300 for going quick. No clock on screen.",
   "cat": "den",
   "max": 1000,
@@ -2713,7 +3017,7 @@ defGameMeta([{
 }, {
   "file": "g_crib.js",
   "key": "crib",
-  "name": "Dawg Cribbage",
+  "name": "Cribbage",
   "icon": "🎯",
   "blurb": "Cribbage vs Old Tom the cat. First to 121.",
   "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).",
@@ -2806,7 +3110,7 @@ defGameMeta([{
 }, {
   "file": "g_euchre.js",
   "key": "euchre",
-  "name": "Dawg Euchre",
+  "name": "Euchre",
   "icon": "🃏",
   "blurb": "You + Biscuit vs the cats. First to 10.",
   "how": "Classic euchre with you and your partner Biscuit (top) against two cats. Round 1: order up the turned card for trump, or pass. Round 2: name a different suit (the dealer has to call: stick the dealer). Tap ALONE to play without your partner for 4 points. Follow suit if you can; the jack of trump (right bower) and the other jack of the same color (left bower) are the top trumps. 3-4 tricks = 1 point, all 5 = 2, euchred = 2 for the other team. First to 10. Score: win = 100 + 10 for every point you win by.",
@@ -2850,9 +3154,9 @@ defGameMeta([{
 }, {
   "file": "g_guess.js",
   "key": "guess",
-  "name": "Dawg Guess",
+  "name": "Guess",
   "icon": "🔍",
-  "blurb": "Daily: guess today's pick. Hot or cold?",
+  "blurb": "Daily: hot or cold? Find the pick.",
   "how": "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Each guess gets a number: how similar it is to the answer, ranked against everything in the list. #1 is the answer, #2 is the most similar thing, and something like #80 is way off. Lower is warmer. Similar means things like genre, decade and network for shows and movies, class and habitat for animals, and league and city for teams. Your latest guess shows on top, and all your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
   "cat": "den",
   "max": 1000,
@@ -2868,7 +3172,7 @@ defGameMeta([{
 }, {
   "file": "g_hive.js",
   "key": "hive",
-  "name": "Dawg Hive",
+  "name": "Hive",
   "icon": "🐝",
   "blurb": "Daily: make words from 7 letters.",
   "how": "Make words of 4 or more letters using the 7 letters. Every word must use the center letter, and letters can be used more than once. 4-letter words are worth 1 point; longer words are worth 1 point per letter. A word that uses all 7 letters is a pangram and earns 7 extra points. Climb the ranks from Pup to Big Dawg. Come back any time today; your score posts to the leaderboard as you go.",
@@ -2914,7 +3218,7 @@ defGameMeta([{
   "key": "leash",
   "name": "Leash",
   "icon": "🦮",
-  "blurb": "Daily: one path through every square.",
+  "blurb": "Daily: one path, every square.",
   "how": "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
   "cat": "den",
   "max": 1000,
@@ -2922,9 +3226,9 @@ defGameMeta([{
 }, {
   "file": "g_links.js",
   "key": "links",
-  "name": "Dawg Links",
+  "name": "Links",
   "icon": "🔗",
-  "blurb": "Daily: link the chain, one compound at a time.",
+  "blurb": "Daily: link the word chain.",
   "how": "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: 900 for finishing, minus 40 for every extra letter shown, plus up to 100 for going quick. No clock on screen.",
   "cat": "den",
   "max": 1000,
@@ -2932,9 +3236,9 @@ defGameMeta([{
 }, {
   "file": "g_mahjong.js",
   "key": "mahjong",
-  "name": "Dawg Mahjong",
+  "name": "Mahjong",
   "icon": "🀄",
-  "blurb": "Daily: match pairs to clear the board.",
+  "blurb": "Daily: match pairs, clear the board.",
   "how": "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
   "cat": "den",
   "max": 1500,
@@ -2944,7 +3248,7 @@ defGameMeta([{
   "key": "midi",
   "name": "The Midi",
   "icon": "📰",
-  "blurb": "Daily: a 7×7 crossword. Bigger than the Mini.",
+  "blurb": "Daily: a 7×7 crossword.",
   "how": "A 7×7 crossword, a step up from the Mini. Tap a square to pick it; tap it again to switch between Across and Down. The clue shows above the keyboard; tap the arrows on either side to jump between clues. Type to fill in. Check marks any wrong squares red, but it costs 150 points, so only if you're stuck. One puzzle a day, the same for everyone. Score: 700 for solving plus up to 300 for speed (it fades over 15 minutes).",
   "cat": "den",
   "max": 1000,
@@ -2976,9 +3280,9 @@ defGameMeta([{
 }, {
   "file": "g_pips.js",
   "key": "pips",
-  "name": "Dawg Pips",
+  "name": "Pips",
   "icon": "🎲",
-  "blurb": "Daily: place the dominoes to match every rule.",
+  "blurb": "Daily: dominoes that fit the rules.",
   "how": "Three new domino puzzles every day: Easy, Medium and Hard. Tap a domino, tap ROTATE to turn it, then tap the board to drop it. Tap a placed domino to pick it back up. Every colored region has a rule: a number means its pips add up to that, = means all the same, ≠ means all different, < and > mean the total is under or over. Use every domino. One try each per day; progress is saved. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, plus a small bonus for going quick. No clock on screen, so take your time.",
   "cat": "den",
   "max": 3000,
@@ -3079,9 +3383,9 @@ defGameMeta([{
 }, {
   "file": "g_waffle.js",
   "key": "waffle",
-  "name": "Dawg Waffle",
+  "name": "Waffle",
   "icon": "🧇",
-  "blurb": "Daily: swap letters to fix six words.",
+  "blurb": "Daily: swap letters, fix six words.",
   "how": "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.",
   "cat": "den",
   "max": 1000,
@@ -3089,9 +3393,9 @@ defGameMeta([{
 }, {
   "file": "g_scapes.js",
   "key": "scapes",
-  "name": "Dawgscapes",
+  "name": "Scapes",
   "icon": "🍂",
-  "blurb": "Daily: swipe the letters to fill the crossword.",
+  "blurb": "Daily: swipe to fill the crossword.",
   "how": "Drag your finger from letter to letter on the wheel to spell a word, then let go. Words that fit the crossword drop into place. Every word uses only the wheel's letters, each letter once. Slide back over a letter to undo it. Real words that aren't in the crossword count as bonus words (🔍). 🔀 shuffles the wheel for a fresh look. 💡 shows one letter (it costs 50 pts). One board a day. Score: 700 for filling the board, minus 50 per hint (never below 300), plus 50 per bonus word, up to 6.",
   "cat": "den",
   "max": 1000,
@@ -3110,7 +3414,7 @@ defGameMeta([{
   "key": "sgroups",
   "name": "Sports Groups",
   "icon": "🏟️",
-  "blurb": "Daily: find four groups of four, sports edition.",
+  "blurb": "Daily: Groups, sports edition.",
   "how": "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 900, minus 100 per mistake, plus a small bonus (up to 100) for going quick, so a perfect solve beats a fast sloppy one. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
   "cat": "den",
   "max": 1000,
@@ -3135,7 +3439,7 @@ defGameMeta([{
 }, {
   "file": "g_solitaire.js",
   "key": "solitaire",
-  "name": "Dawg Solitaire",
+  "name": "Solitaire",
   "icon": "🂡",
   "blurb": "Classic solitaire. Get every card home.",
   "how": "Build four piles at the top, one per suit, from Ace up to King. Down below, stack cards in descending order, alternating red and black (a red 7 on a black 8). Only a King can go in an empty column. Tap the deck to flip a card; tap the empty deck to turn the pile back over (as many times as you like). Tap any card to send it to its best spot, or drag it where you want. Undo as much as you want. Score: 10 for every card you get home, plus 300 for clearing the board and a small bonus for finishing quick. Max 1000.",
@@ -3152,9 +3456,9 @@ defGameMeta([{
 }, {
   "file": "g_sudoku.js",
   "key": "sudoku",
-  "name": "Dawg Sudoku",
+  "name": "Sudoku",
   "icon": "🔢",
-  "blurb": "Daily: Easy, Medium and Hard sudoku.",
+  "blurb": "Daily: Easy, Medium and Hard.",
   "how": "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick. A wrong number just bounces back; it doesn't cost you anything. No clock on screen, so take your time. Your best of the three counts.",
   "cat": "den",
   "max": 3000,
@@ -3198,7 +3502,7 @@ defGameMeta([{
   "key": "topdogs",
   "name": "Top Dogs",
   "icon": "👑",
-  "blurb": "Daily: one dog per row, column and color.",
+  "blurb": "Daily: one dog per row and column.",
   "how": "Place a 🐶 so every row, every column and every colored area has exactly one dog. Dogs can't touch each other, not even diagonally. Tap a square once to mark it ✕ (no dog here), twice for a dog, three times to clear. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
   "cat": "den",
   "max": 1000,

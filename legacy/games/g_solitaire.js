@@ -41,7 +41,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   };
   defGame({
     key: "solitaire",
-    name: "Dawg Solitaire",
+    name: "Solitaire",
     icon: "🂡",
     max: 1000,
     cat: "den",

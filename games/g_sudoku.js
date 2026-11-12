@@ -1,4 +1,4 @@
-// ---------- Dawg Sudoku (The Den, daily) ----------
+// ---------- Sudoku (The Den, daily) ----------
 // Three daily sudokus (Easy / Medium / Hard), same for everyone. One try each per day; your best counts.
 (function () {
   const DIFF = [["EASY", 1000, 38], ["MEDIUM", 2000, 30], ["HARD", 3000, 25]];
@@ -38,8 +38,8 @@
   // Like the NYT: a wrong number doesn't cost anything (we still bounce it so you know). Solving + a speed bonus.
   const scoreOf = (d, st) => Math.round(DIFF[d][1] * 0.7) + speed(st.el, LIM[d], DIFF[d][1] * 0.3);
   defGame({
-    key: "sudoku", name: "Dawg Sudoku", icon: "🔢", max: 3000, cat: "den", puzzle: true,
-    blurb: "Daily: Easy, Medium and Hard sudoku.",
+    key: "sudoku", name: "Sudoku", icon: "🔢", max: 3000, cat: "den", puzzle: true,
+    blurb: "Daily: Easy, Medium and Hard.",
     how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick. A wrong number just bounces back; it doesn't cost you anything. No clock on screen, so take your time. Your best of the three counts.",
     reset(G) { this.reset0(G); const cur = typeof store !== "undefined" && me ? store.get(this.curKey()) : null; if (cur !== null && cur !== undefined && !(this.rec(cur) || {}).done && this.rec(cur)) this.open(G, cur); },
     reset0(G) { G.s = { phase: "pick", btns: [], sel: -1, notes: false, msg: "", msgT: 0, bad: -1, badT: 0, endT: 0 }; },
@@ -50,7 +50,7 @@
       const done = [0, 1, 2].filter(k => (this.rec(k) || {}).done).length;
       const nx = [d + 1, d + 2, d - 1, d - 2].map(k => (k + 3) % 3).find(k => k !== d && !(this.rec(k) || {}).done);
       const next = nx === undefined ? null : { label: `Play ${DIFF[nx][0][0] + DIFF[nx][0].slice(1).toLowerCase()} →`, go: () => this.open(G, nx) };
-      return { next, score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Dawg Sudoku #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
+      return { next, score: r.score || 0, title: `${nm} solved!`, sub: `${mm}${r.mist ? `, ${r.mist} mistake${r.mist > 1 ? "s" : ""}` : ""} · ${r.score || 0} pts. ${done === 3 ? "All three done today. 🐶" : `${done} of 3 done today.`}`, share: `Sudoku #${dayIdx() + 1} · ${nm} ${mm}${r.mist ? ` (${r.mist}✗)` : ""}` };
     },
     open(G, d) {
       const s = G.s, r = this.rec(d);

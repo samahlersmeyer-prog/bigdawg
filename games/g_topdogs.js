@@ -14,7 +14,7 @@
   const scoreOf = el => 700 + speed(el, 300, 300);
   defGame({
     key: "topdogs", name: "Top Dogs", icon: "👑", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: one dog per row, column and color.",
+    blurb: "Daily: one dog per row and column.",
     how: "Place a 🐶 so every row, every column and every colored area has exactly one dog. Dogs can't touch each other, not even diagonally. Tap a square once to mark it ✕ (no dog here), twice for a dog, three times to clear. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
     reset(G) {
       const p = pz(), n = p.n, s = G.s = { n, reg: p.r.split("").map(ch => ch.charCodeAt(0) - 97), btns: [], hist: [], msg: "", msgT: 0, postT: 0 };

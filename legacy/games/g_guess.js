@@ -199,12 +199,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var KB = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM<"];
   defGame({
     key: "guess",
-    name: "Dawg Guess",
+    name: "Guess",
     icon: "🔍",
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: guess today's pick. Hot or cold?",
+    blurb: "Daily: hot or cold? Find the pick.",
     how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Under each guess are its clues: ✓ means the answer shares it (same genre, same network, same league), ✗ means it doesn't, and things like \"4–9 yrs later\", \"bigger\" or \"~300 mi NE\" tell you which way the answer is from that guess. The number is how close the guess is, ranked against everything in the list: #1 is the answer, and lower is warmer. Things that are exactly as close share a number. Miss 7 and you get one free hint. All your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset: function reset(G) {
       var t = today(),
@@ -254,7 +254,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         grid: sq,
         title: s.won ? s.guesses.length === 1 ? "First try! 🐶" : "Got it!" : "So close!",
         sub: (s.won ? "".concat(s.ans, " in ").concat(s.guesses.length, " guess").concat(s.guesses.length === 1 ? "" : "es", ".") : "It was ".concat(s.ans, ".")) + " ".concat(sc, " pts."),
-        share: "Dawg Guess #".concat(dayN() + 1, " \xB7 ").concat(s.cat.name, " ").concat(s.won ? s.guesses.length : "X", "/").concat(MAXG, "\n").concat(sq)
+        share: "Guess #".concat(dayN() + 1, " \xB7 ").concat(s.cat.name, " ").concat(s.won ? s.guesses.length : "X", "/").concat(MAXG, "\n").concat(sq)
       };
     },
     matches: function matches(s) {

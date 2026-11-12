@@ -1056,7 +1056,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: one path through every square.",
+    blurb: "Daily: one path, every square.",
     how: "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
     reset: function reset(G) {
       var p = pz(),

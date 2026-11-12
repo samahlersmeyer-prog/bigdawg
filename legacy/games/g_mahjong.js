@@ -149,17 +149,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return Math.round(pts * Math.max(0, 1 - sec / limit));
   };
   var scoreOf = function scoreOf(s) {
-    return Math.max(100, 1000 + speed(s.el, 600, 500) - Math.round(s.pen * 1.5));
+    return Math.max(100, 700 + speed(s.el, 600, 300) - Math.round(s.pen));
   };
   defGame({
     key: "mahjong",
-    name: "Dawg Mahjong",
+    name: "Mahjong",
     icon: "🀄",
     max: 1500,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: match pairs to clear the board.",
-    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 1000 for clearing the board, plus a bonus of up to 500 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
+    blurb: "Daily: match pairs, clear the board.",
+    how: "Clear the board by matching pairs of the same tile. You can only take a tile that's free: nothing stacked on top of it, and its left or right side open. Free tiles are bright; blocked ones are shaded. Stuck? Hint shows a pair and Shuffle mixes the tiles left; each costs a few points. Same board for everyone, one go per day, always solvable. Score: 700 for clearing the board, plus a bonus of up to 300 for going quick, minus a little for each hint or shuffle. No clock on screen, so take your time.",
     reset: function reset(G) {
       var s = G.s = {
         btns: [],
@@ -218,7 +218,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: sc,
         title: t < 180 ? "Cleared! Speedy 🐶" : "Board cleared! 🀄",
         sub: "".concat(mmss(t)).concat(s.pen ? " · with a little help" : "", " \xB7 ").concat(sc, " pts."),
-        share: "Dawg Mahjong #".concat(dayN() + 1, " \xB7 ").concat(mmss(t), " \uD83C\uDC04")
+        share: "Mahjong #".concat(dayN() + 1, " \xB7 ").concat(mmss(t), " \uD83C\uDC04")
       };
     },
     moves: function moves(s) {

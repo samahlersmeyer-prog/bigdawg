@@ -1,4 +1,4 @@
-// ---------- Dawg Solitaire (The Den: classic Klondike, draw one) ----------
+// ---------- Solitaire (The Den: classic Klondike, draw one) ----------
 // Tap a card to send it to its best spot (home first, then another column), or drag it where you want.
 // Tap the deck to flip one card; tap the empty deck to turn the pile back over. Unlimited passes, unlimited undo.
 // Score: 10 for every card you get home, +300 for clearing the board, + up to 180 for finishing quick. Max 1000.
@@ -10,7 +10,7 @@
   const scoreOf = s => { const n = homeN(s); return n * 10 + (n === 52 ? 300 + Math.round(180 * Math.max(0, 1 - s.el / 900)) : 0); };
   const snap = s => JSON.stringify({ stock: s.stock, waste: s.waste, found: s.found, tab: s.tab, moves: s.moves });
   defGame({
-    key: "solitaire", name: "Dawg Solitaire", icon: "🂡", max: 1000, cat: "den",
+    key: "solitaire", name: "Solitaire", icon: "🂡", max: 1000, cat: "den",
     blurb: "Classic solitaire. Get every card home.",
     how: "Build four piles at the top, one per suit, from Ace up to King. Down below, stack cards in descending order, alternating red and black (a red 7 on a black 8). Only a King can go in an empty column. Tap the deck to flip a card; tap the empty deck to turn the pile back over (as many times as you like). Tap any card to send it to its best spot, or drag it where you want. Undo as much as you want. Score: 10 for every card you get home, plus 300 for clearing the board and a small bonus for finishing quick. Max 1000.",
     reset(G) {

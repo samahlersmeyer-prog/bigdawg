@@ -12,7 +12,7 @@
   const scoreOf = el => 700 + speed(el, 300, 300);
   defGame({
     key: "leash", name: "Leash", icon: "🦮", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: one path through every square.",
+    blurb: "Daily: one path, every square.",
     how: "Walk the dog! Drag from 1 and draw a single path that hits the numbers in order (1, 2, 3…) and fills every square on the board. Move up, down, left or right, never diagonally. Drag back over your path to undo, or tap any square on it to cut the path there. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
     reset(G) {
       const p = pz(), n = p.n, nums = {}; Object.keys(p.nums).forEach(k => nums[+k] = p.nums[k]);

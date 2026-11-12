@@ -1,4 +1,4 @@
-// ---------- Dawgscapes (The Den, daily puzzle) ----------
+// ---------- Scapes (The Den, daily puzzle) ----------
 // Wordscapes-style: swipe letters on the wheel to spell words and fill the little crossword.
 // Boards: [wheel letters, [[WORD, row, col, dir(0 across / 1 down)], ...], "bonus words"] — built by a word-list
 // generator (common words in the grid, a wider list for bonus words). Day 1 = Nov 8, 2026.
@@ -146,8 +146,8 @@
   const seeded = n => { let x = (n * 2654435761) % 4294967296; return () => (x = (x * 1664525 + 1013904223) % 4294967296) / 4294967296; };
 
   defGame({
-    key: "scapes", name: "Dawgscapes", icon: "🍂", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: swipe the letters to fill the crossword.",
+    key: "scapes", name: "Scapes", icon: "🍂", max: 1000, cat: "den", puzzle: true,
+    blurb: "Daily: swipe to fill the crossword.",
     how: "Drag your finger from letter to letter on the wheel to spell a word, then let go. Words that fit the crossword drop into place. Every word uses only the wheel's letters, each letter once. Slide back over a letter to undo it. Real words that aren't in the crossword count as bonus words (🔍). 🔀 shuffles the wheel for a fresh look. 💡 shows one letter (it costs 50 pts). One board a day. Score: 700 for filling the board, minus 50 per hint (never below 300), plus 50 per bonus word, up to 6.",
     reset(G) {
       const [wheel, words, bonus] = PUZ[pIdx()];
@@ -177,7 +177,7 @@
       return { score: sc,
         title: s.hints ? "Board filled!" : "Clean sweep! 🐶",
         sub: `${s.words.length} words · ${nb} bonus · ${s.hints} hint${s.hints === 1 ? "" : "s"} · ${sc} pts.`,
-        share: `Dawgscapes #${dayN() + 1} 🍂\n✅ ${s.words.length} words · 🔍 ${nb} bonus · 💡 ${s.hints}\n${sc} pts` };
+        share: `Scapes #${dayN() + 1} 🍂\n✅ ${s.words.length} words · 🔍 ${nb} bonus · 💡 ${s.hints}\n${sc} pts` };
     },
     submit(G) {
       const s = G.s, w = s.path.map(i => s.wheel[i]).join(""); s.path = [];

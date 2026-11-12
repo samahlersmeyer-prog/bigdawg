@@ -222,7 +222,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: one dog per row, column and color.",
+    blurb: "Daily: one dog per row and column.",
     how: "Place a 🐶 so every row, every column and every colored area has exactly one dog. Dogs can't touch each other, not even diagonally. Tap a square once to mark it ✕ (no dog here), twice for a dog, three times to clear. A new board every day, one go, and there's only one answer. Score: 700 for solving, plus a bonus of up to 300 for going quick. No clock on screen, so take your time.",
     reset: function reset(G) {
       var p = pz(),

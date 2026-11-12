@@ -40,8 +40,18 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return a + s.rev[i] - 1;
     }, 0);
   };
+  var wordPts = function wordPts(s, i) {
+    return s.rev[i] >= s.w[i].length ? 0 : Math.max(0, 200 - 40 * (s.rev[i] - 1));
+  };
+  var clean = function clean(s) {
+    return HID.filter(function (i) {
+      return s.rev[i] === 1;
+    }).length;
+  };
   var scoreOf = function scoreOf(s) {
-    return Math.max(100, 900 - 40 * extra(s)) + Math.round(100 * Math.max(0, 1 - s.el / 600));
+    return HID.reduce(function (a, i) {
+      return a + wordPts(s, i);
+    }, 0);
   };
   var tile = function tile(s, i) {
     var n = s.rev[i] - 1,
@@ -50,13 +60,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   defGame({
     key: "links",
-    name: "Dawg Links",
+    name: "Links",
     icon: "🔗",
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: link the chain, one compound at a time.",
-    how: "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: 900 for finishing, minus 40 for every extra letter shown, plus up to 100 for going quick. No clock on screen.",
+    blurb: "Daily: link the word chain.",
+    how: "Seven words in a chain. Each word plus the next one makes a compound word or phrase: SNOW → BALL (snowball) → PARK (ballpark) → WAY (parkway)… The top and bottom words are given, and every word in between shows its first letter. Tap a row, type your guess, and hit Enter. A wrong guess shows one more letter; stuck? Hint shows one too. Work from either end. Every chain can be finished, and you get one per day. Score: each of the five hidden words is worth 200 if you get it from the first letter alone, minus 40 for every extra letter it needed. No clock, so take your time.",
     reset: function reset(G) {
       var w = CH[pIdx()],
         s = G.s = {
@@ -121,8 +131,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: sc,
         grid: grid,
         title: ex === 0 ? "Perfect chain! 🐶" : "Chain linked!",
-        sub: "".concat(s.w[0], " to ").concat(s.w[6], " in ").concat(mmss(s.el), " with ").concat(ex, " extra letter").concat(ex === 1 ? "" : "s", " shown. ").concat(sc, " pts."),
-        share: "Dawg Links #".concat(dayN() + 1, " ").concat(ex === 0 ? "perfect" : ex + " extra", "\n").concat(s.w[0], " ").concat(grid, " ").concat(s.w[6])
+        sub: "".concat(clean(s), " of 5 words from the first letter alone").concat(ex ? ", ".concat(ex, " extra letter").concat(ex === 1 ? "" : "s", " shown") : "", ". ").concat(sc, " pts."),
+        share: "Links #".concat(dayN() + 1, " ").concat(ex === 0 ? "perfect" : ex + " extra", "\n").concat(s.w[0], " ").concat(grid, " ").concat(s.w[6])
       };
     },
     solve: function solve(G, i, given) {

@@ -70,6 +70,70 @@ function renderHome() {
     $("sub-mini").textContent = "A quick crossword, timed";
     setStat("mini", "Play");
   }
+  if (board && me) {
+    var others = board.players.filter(function (p) {
+      return p.id !== me.id && p.t;
+    });
+    var best = function best(k, ok, val) {
+      var b = null;
+      others.forEach(function (p) {
+        var x = p.t[k];
+        if (x && ok(x) && (!b || val(x) < val(b.t[k]))) b = p;
+      });
+      return b;
+    };
+    var f = best("f", function (x) {
+        return x.w;
+      }, function (x) {
+        return x.n;
+      }),
+      g = best("g", function (x) {
+        return x.w;
+      }, function (x) {
+        return x.m;
+      }),
+      c = best("c", function (x) {
+        return x.t;
+      }, function (x) {
+        return x.t + (x.k ? 30 : 0);
+      }),
+      st = best("s", function (x) {
+        return x.t;
+      }, function (x) {
+        return x.t + 30 * (x.h || 0);
+      });
+    var beat = function beat(id, p, txt) {
+      if (p && !$("st-" + id).classList.contains("done") && $("st-" + id).textContent === "Play") $("sub-" + id).textContent = "\uD83D\uDC51 ".concat(p.name, " \xB7 ").concat(txt);
+    };
+    beat("five", f, f && "".concat(f.t.f.n, " guess").concat(f.t.f.n > 1 ? "es" : ""));
+    beat("groups", g, g && (g.t.g.m ? "".concat(g.t.g.m, " mistake").concat(g.t.g.m > 1 ? "s" : "") : "perfect"));
+    beat("mini", c, c && fmtTime(c.t.c.t));
+    beat("strands", st, st && fmtTime(st.t.s.t));
+  }
+  var db = $("daybar");
+  if (db) {
+    db.innerHTML = "";
+    var done = [fiveDone(), groupsDone(), S.strands.done, S.mini.done].filter(Boolean).length;
+    db.appendChild(el("span", "dchip" + (done === 4 ? " all" : ""), done === 4 ? "✓ All 4 done" : "".concat(done, " of 4 done")));
+    if (board && me && typeof todayList === "function") {
+      var mine = board.players.find(function (p) {
+          return p.id === me.id;
+        }),
+        sk = mine && mine.s || (done ? 1 : 0);
+      if (sk > 1) db.appendChild(el("span", "dchip", "\uD83D\uDD25 ".concat(sk, "-day streak")));
+      if (done) {
+        var list = todayList().filter(function (x) {
+            return x.t.f || x.t.g || x.t.c || x.t.s;
+          }),
+          pts = dayPts(list),
+          myP = pts[me.id] || 0;
+        var pl = list.filter(function (x) {
+          return (pts[x.id] || 0) > myP;
+        }).length + 1;
+        db.appendChild(el("span", "dchip" + (pl === 1 ? " lead" : ""), "".concat(pl === 1 ? "👑 " : "").concat(pl).concat(pl === 1 ? "st" : pl === 2 ? "nd" : pl === 3 ? "rd" : "th", " of ").concat(list.length, " \xB7 ").concat(myP, " pts")));
+      }
+    }
+  }
   if (board) {
     var n = board.players.filter(function (p) {
       return p.t && (p.t.f || p.t.g || p.t.c || p.t.s);
@@ -86,6 +150,7 @@ function renderHome() {
   var fast = hasServer() && FAST_URL;
   $("fast-tip").hidden = !fast;
   if (fast) $("fast-tip").href = fastLink();
+  if (typeof renderArcSub === "function") renderArcSub();
   $("install-tip").hidden = fast || standalone || !!store.get("bdd:tipdone") || !/iPhone|iPad/.test(navigator.userAgent);
 }
 $("tip-close").addEventListener("click", function () {

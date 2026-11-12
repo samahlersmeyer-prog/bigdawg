@@ -23,6 +23,31 @@ function renderHome() {
   if (S.mini.done) { $("sub-mini").textContent = `Solved in ${fmtTime(S.mini.el)}`; setStat("mini", "Results", true); }
   else if (S.mini.started) { $("sub-mini").textContent = `Paused at ${fmtTime(S.mini.el)}`; setStat("mini", "Continue"); }
   else { $("sub-mini").textContent = "A quick crossword, timed"; setStat("mini", "Play"); }
+  // Someone already played? Show the mark to beat instead of the how-to line.
+  if (board && me) {
+    const others = board.players.filter(p => p.id !== me.id && p.t);
+    const best = (k, ok, val) => { let b = null; others.forEach(p => { const x = p.t[k]; if (x && ok(x) && (!b || val(x) < val(b.t[k]))) b = p; }); return b; };
+    const f = best("f", x => x.w, x => x.n), g = best("g", x => x.w, x => x.m), c = best("c", x => x.t, x => x.t + (x.k ? 30 : 0)), st = best("s", x => x.t, x => x.t + 30 * (x.h || 0));
+    const beat = (id, p, txt) => { if (p && !$("st-" + id).classList.contains("done") && $("st-" + id).textContent === "Play") $("sub-" + id).textContent = `👑 ${p.name} · ${txt}`; };
+    beat("five", f, f && `${f.t.f.n} guess${f.t.f.n > 1 ? "es" : ""}`); beat("groups", g, g && (g.t.g.m ? `${g.t.g.m} mistake${g.t.g.m > 1 ? "s" : ""}` : "perfect"));
+    beat("mini", c, c && fmtTime(c.t.c.t)); beat("strands", st, st && fmtTime(st.t.s.t));
+  }
+  // Today at a glance: progress, streak, and where you stand.
+  const db = $("daybar");
+  if (db) {
+    db.innerHTML = "";
+    const done = [fiveDone(), groupsDone(), S.strands.done, S.mini.done].filter(Boolean).length;
+    db.appendChild(el("span", "dchip" + (done === 4 ? " all" : ""), done === 4 ? "✓ All 4 done" : `${done} of 4 done`));
+    if (board && me && typeof todayList === "function") {
+      const mine = board.players.find(p => p.id === me.id), sk = (mine && mine.s) || (done ? 1 : 0);
+      if (sk > 1) db.appendChild(el("span", "dchip", `🔥 ${sk}-day streak`));
+      if (done) {
+        const list = todayList().filter(x => x.t.f || x.t.g || x.t.c || x.t.s), pts = dayPts(list), myP = pts[me.id] || 0;
+        const pl = list.filter(x => (pts[x.id] || 0) > myP).length + 1;
+        db.appendChild(el("span", "dchip" + (pl === 1 ? " lead" : ""), `${pl === 1 ? "👑 " : ""}${pl}${pl === 1 ? "st" : pl === 2 ? "nd" : pl === 3 ? "rd" : "th"} of ${list.length} · ${myP} pts`));
+      }
+    }
+  }
   // Scores
   if (board) {
     const n = board.players.filter(p => p.t && (p.t.f || p.t.g || p.t.c || p.t.s)).length;
@@ -34,6 +59,7 @@ function renderHome() {
   const fast = hasServer() && FAST_URL;
   $("fast-tip").hidden = !fast;
   if (fast) $("fast-tip").href = fastLink();
+  if (typeof renderArcSub === "function") renderArcSub();
   $("install-tip").hidden = fast || standalone || !!store.get("bdd:tipdone") || !/iPhone|iPad/.test(navigator.userAgent);
 }
 $("tip-close").addEventListener("click", () => { store.set("bdd:tipdone", 1); $("install-tip").hidden = true; });

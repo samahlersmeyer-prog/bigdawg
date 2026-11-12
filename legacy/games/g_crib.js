@@ -99,7 +99,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   defGame({
     key: "crib",
-    name: "Dawg Cribbage",
+    name: "Cribbage",
     icon: "🎯",
     max: 500,
     cat: "den",

@@ -1172,7 +1172,28 @@ function getArcade(id, dateKey) {
       y: { game: yg, win: bestBy(rowsAll.filter(r => (r.game || 'zoomies') === yg && r.date === yk), yg)[0] || null } };
   });
   const z = games.zoomies;
-  return { games: games, week: z.week, all: z.all, myBest: z.myBest, weekStart: ws, gotd: gotds.arcade, gotds: gotds };
+  return { games: games, week: z.week, all: z.all, myBest: z.myBest, weekStart: ws, gotd: gotds.arcade, gotds: gotds, den: denFour_(rowsAll, names, dateKey, ws) };
+}
+// Den Four: each Den daily ranks the crew that day (5 for 1st, 4, 3, 2, then 1 for finishing; ties share the higher
+// points), your best 4 count for the day, and the week is your best 5 days (like the league). Scales don't matter.
+function denDay_(rows, names) {
+  const byGame = {}, pts = {};
+  rows.forEach(r => { if (!DEN_DAILY[r.game] || !(r.best > 0)) return; const m = byGame[r.game] = byGame[r.game] || {}; if (!m[r.id] || r.best > m[r.id]) m[r.id] = r.best; });
+  Object.keys(byGame).forEach(g => {
+    const m = byGame[g], ids = Object.keys(m);
+    ids.forEach(id => { const better = ids.filter(o => m[o] > m[id]).length; (pts[id] = pts[id] || []).push([g, Math.max(1, 5 - better), better + 1]); });
+  });
+  return Object.keys(pts).map(id => { const p = pts[id].sort((a, b) => b[1] - a[1]).slice(0, 4); return { id: id, name: names[id], n: p.reduce((a, x) => a + x[1], 0), picks: p }; })
+    .sort((a, b) => b.n - a.n);
+}
+function denFour_(rowsAll, names, dateKey, ws) {
+  const per = {};
+  for (let d = ws; d <= dateKey; d = addDays_(d, 1)) {
+    denDay_(rowsAll.filter(r => r.date === d), names).forEach(x => { (per[x.id] = per[x.id] || []).push(x.n); });
+  }
+  const week = Object.keys(per).map(id => { const best = per[id].sort((a, b) => b - a).slice(0, 5); return { id: id, name: names[id], n: best.reduce((a, b) => a + b, 0), days: per[id].length }; })
+    .sort((a, b) => b.n - a.n);
+  return { today: denDay_(rowsAll.filter(r => r.date === dateKey), names), week: week };
 }
 // Dare a friend to beat a score. Up to 3 dares per friend per day.
 function sendDare(fromId, toId, dateKey, score, game) {

@@ -560,3 +560,36 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---- Home: today at a glance ---- */
+.daybar { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 2px; }
+.daybar:empty { display: none; }
+.dchip { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--raise); color: var(--ink); }
+.dchip.all { background: var(--hit); color: #fff; }
+.dchip.lead { background: var(--g0); color: var(--g-ink); }
+
+/* ---- The Den: Den Four strip + board ---- */
+.den4 { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; width: 100%; }
+.den4:active { transform: scale(0.985); }
+.d4-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.d4-head b { font-family: var(--title); font-size: 20px; }
+.d4-head small, .d4-lead { font-size: 12.5px; color: var(--muted); }
+.d4-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.d4-slot { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 9px; border: 1.5px dashed var(--muted); opacity: .7; min-width: 0; }
+.d4-slot small { font-size: 11px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d4-slot b { font-size: 17px; font-weight: 800; }
+.d4-slot.on { border: 0; background: var(--hit); color: #fff; opacity: 1; }
+.d4-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.d4-rank { font-size: 13px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: var(--bg); }
+.d4-rank.top { background: var(--g0); color: var(--g-ink); }
+.d4-go { margin-left: auto; font-size: 22px; line-height: 1; color: var(--muted); }
+.d4-seg { margin: 4px 0 12px; }
+.d4-picks { font-size: 11.5px; color: var(--muted); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d4-how { margin-top: 12px; font-size: 13px; }
+.d4-ic { width: 26px; display: grid; place-items: center; flex: none; }
+.d4-who { font-weight: 700; font-size: 13.5px; }
+.d4-note { margin: 2px 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--raise); font-size: 13.5px; font-weight: 700; text-align: center; }
+.gmeta { font-size: 12px; font-weight: 600; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.den-svg { display: block; }
+.den-svg svg { display: block; }
+.d4-body .d4-how { margin-top: 16px; }

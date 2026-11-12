@@ -11,8 +11,8 @@
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
   // Chill scoring: solving is most of it; a speed bonus fades over a few minutes and never goes negative.
   const speed = (sec, limit, pts) => Math.round(pts * Math.max(0, 1 - sec / limit));
-  // Mistakes matter most (like the main Groups); time is only a small tiebreaker. A miss still beats nothing.
-  const scoreOf = s => s.won ? 900 - 100 * s.mist + speed(s.el, 600, 100) : 50 + 100 * s.found;
+  // Like the main Groups: only mistakes count, no hidden clock. A miss still beats nothing.
+  const scoreOf = s => s.won ? 1000 - 100 * s.mist : 50 + 100 * s.found;
   function fitText(c, str, x, y, w, maxSz, col, one) {
     c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle";
     const lines = !one && str.length > 9 && str.includes(" ") ? str.split(" ") : [str];
@@ -22,8 +22,8 @@
   }
   defGame({
     key: "sgroups", name: "Sports Groups", icon: "🏟️", max: 1000, cat: "den", puzzle: true,
-    blurb: "Daily: find four groups of four, sports edition.",
-    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 900, minus 100 per mistake, plus a small bonus (up to 100) for going quick, so a perfect solve beats a fast sloppy one. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
+    blurb: "Daily: Groups, sports edition.",
+    how: "Find four groups of four sports things that share something. Tap four tiles, then Submit. Watch for tiles that seem to fit more than one group. Gold is the easiest group, then green, blue, and purple. You get 4 mistakes and one go per day. Score: a solve is 1000, minus 100 per mistake. Time doesn't count. Missing it is 50, plus 100 per group you found. No clock on screen, so take your time.",
     reset(G) {
       const p = PUZ[pIdx()], s = G.s = { p, sel: [], msg: "", msgT: 0, shake: 0, btns: [], postT: 0 };
       const r = store.get(rk());
@@ -35,7 +35,7 @@
       const s = G.s, grid = s.guesses.map(k => k.split("|").map(w => EMO[s.p.findIndex(g => g[1].includes(w))]).join("")).join("\n");
       return { score: scoreOf(s), grid,
         title: !s.won ? "Next time!" : s.mist ? "Solved it!" : "Perfect! 🐶",
-        sub: s.won ? `All four groups with ${s.mist} mistake${s.mist === 1 ? "" : "s"} in ${mmss(s.el)}. ${scoreOf(s)} pts.` : `You found ${s.found} of 4 groups. ${scoreOf(s)} pts.`,
+        sub: s.won ? `All four groups with ${s.mist} mistake${s.mist === 1 ? "" : "s"}. ${scoreOf(s)} pts.` : `You found ${s.found} of 4 groups. ${scoreOf(s)} pts.`,
         share: `Sports Groups #${dayN() + 1} ${s.won ? (s.mist ? s.mist + " mistake" + (s.mist > 1 ? "s" : "") : "perfect") : "X"}\n${grid}` };
     },
     finish(G, won) {

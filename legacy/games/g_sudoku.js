@@ -172,12 +172,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   defGame({
     key: "sudoku",
-    name: "Dawg Sudoku",
+    name: "Sudoku",
     icon: "🔢",
     max: 3000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: Easy, Medium and Hard sudoku.",
+    blurb: "Daily: Easy, Medium and Hard.",
     how: "Three new sudokus every day, the same for everyone. Fill the grid so every row, column and 3x3 box has 1-9. Tap a square, then a number. NOTES lets you pencil in options. One try at each per day; your progress is saved if you leave. Score: solving is worth most of Easy 1000 / Medium 2000 / Hard 3000, with a small bonus for going quick. A wrong number just bounces back; it doesn't cost you anything. No clock on screen, so take your time. Your best of the three counts.",
     reset: function reset(G) {
       this.reset0(G);
@@ -228,7 +228,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: r.score || 0,
         title: "".concat(nm, " solved!"),
         sub: "".concat(mm).concat(r.mist ? ", ".concat(r.mist, " mistake").concat(r.mist > 1 ? "s" : "") : "", " \xB7 ").concat(r.score || 0, " pts. ").concat(done === 3 ? "All three done today. 🐶" : "".concat(done, " of 3 done today.")),
-        share: "Dawg Sudoku #".concat(dayIdx() + 1, " \xB7 ").concat(nm, " ").concat(mm).concat(r.mist ? " (".concat(r.mist, "\u2717)") : "")
+        share: "Sudoku #".concat(dayIdx() + 1, " \xB7 ").concat(nm, " ").concat(mm).concat(r.mist ? " (".concat(r.mist, "\u2717)") : "")
       };
     },
     open: function open(G, d) {

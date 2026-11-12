@@ -46,12 +46,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   defGame({
     key: "scapes",
-    name: "Dawgscapes",
+    name: "Scapes",
     icon: "🍂",
     max: 1000,
     cat: "den",
     puzzle: true,
-    blurb: "Daily: swipe the letters to fill the crossword.",
+    blurb: "Daily: swipe to fill the crossword.",
     how: "Drag your finger from letter to letter on the wheel to spell a word, then let go. Words that fit the crossword drop into place. Every word uses only the wheel's letters, each letter once. Slide back over a letter to undo it. Real words that aren't in the crossword count as bonus words (🔍). 🔀 shuffles the wheel for a fresh look. 💡 shows one letter (it costs 50 pts). One board a day. Score: 700 for filling the board, minus 50 per hint (never below 300), plus 50 per bonus word, up to 6.",
     reset: function reset(G) {
       var _PUZ$pIdx = _slicedToArray(PUZ[pIdx()], 3),
@@ -166,7 +166,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         score: sc,
         title: s.hints ? "Board filled!" : "Clean sweep! 🐶",
         sub: "".concat(s.words.length, " words \xB7 ").concat(nb, " bonus \xB7 ").concat(s.hints, " hint").concat(s.hints === 1 ? "" : "s", " \xB7 ").concat(sc, " pts."),
-        share: "Dawgscapes #".concat(dayN() + 1, " \uD83C\uDF42\n\u2705 ").concat(s.words.length, " words \xB7 \uD83D\uDD0D ").concat(nb, " bonus \xB7 \uD83D\uDCA1 ").concat(s.hints, "\n").concat(sc, " pts")
+        share: "Scapes #".concat(dayN() + 1, " \uD83C\uDF42\n\u2705 ").concat(s.words.length, " words \xB7 \uD83D\uDD0D ").concat(nb, " bonus \xB7 \uD83D\uDCA1 ").concat(s.hints, "\n").concat(sc, " pts")
       };
     },
     submit: function submit(G) {

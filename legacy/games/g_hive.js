@@ -35,7 +35,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   defGame({
     key: "hive",
-    name: "Dawg Hive",
+    name: "Hive",
     icon: "🐝",
     max: 999,
     cat: "den",
@@ -105,7 +105,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         sub: "".concat(s.score, " pts \xB7 ").concat(s.found.length, " word").concat(s.found.length === 1 ? "" : "s").concat(s.found.some(function (w) {
           return new Set(w).size === 7;
         }) ? " · pangram ✓" : "", ". Keep going any time today."),
-        share: "Dawg Hive #".concat(dayN() + 1, ": ").concat(r, " \xB7 ").concat(s.score, " pts")
+        share: "Hive #".concat(dayN() + 1, ": ").concat(r, " \xB7 ").concat(s.score, " pts")
       };
     },
     leave: function leave(G) {
