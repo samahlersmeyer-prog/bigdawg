@@ -1637,13 +1637,12 @@ function renderArcHub(cat) {
     card.dataset.play = gd.game;
     var lead = gd.board[0];
     var ic = el("span", "gicon");
-    ic.appendChild(emo(ARC[gd.game].icon, 34));
+    ic.appendChild(emo(ARC[gd.game].icon, 24));
     var tx = el("span", "gotd-tx"),
       mine = me && gd.board.find(function (x) {
         return x.id === me.id;
       });
-    tx.append(el("small", "gotd-k", "Game of the day"), el("b", null, ARC[gd.game].name), el("span", null, lead ? "\uD83D\uDC51 ".concat(lead.name, " ").concat(fmtG(gd.game, lead.n)).concat(mine && lead.id !== me.id ? " \xB7 you ".concat(fmtG(gd.game, mine.n)) : mine ? " · that's you" : "") : "Nobody's played it yet today. Be first."));
-    if (gd.y && gd.y.win && ARC[gd.y.game]) tx.append(el("small", null, "\uD83C\uDFC6 Yesterday: ".concat(gd.y.win.name, " won ").concat(ARC[gd.y.game].name)));
+    tx.append(el("b", null, "Game of the day: ".concat(ARC[gd.game].name)), el("span", null, lead ? "\uD83D\uDC51 ".concat(lead.name, " ").concat(fmtG(gd.game, lead.n)).concat(mine && lead.id !== me.id ? " \xB7 you ".concat(fmtG(gd.game, mine.n)) : mine ? " · that's you" : "") : "Nobody's played it yet. Be first."));
     card.append(ic, tx, el("span", "gotd-go", "Play"));
     box.prepend(card);
   }
@@ -1732,19 +1731,12 @@ function renderArcHub(cat) {
     });
     return r;
   };
-  var shelves = cat !== "den";
-  list.classList.toggle("shelves", shelves);
   var section = function section(head, keys) {
     if (!keys.length) return;
     list.appendChild(head);
-    if (!shelves) return keys.forEach(function (k) {
+    keys.forEach(function (k) {
       return list.appendChild(cell(k));
     });
-    var sh = el("div", "shelf");
-    keys.forEach(function (k) {
-      return sh.appendChild(cell(k));
-    });
-    list.appendChild(sh);
   };
   var plain = function plain(t, sub) {
     var h = el("div", "arc-sec arc-grp");

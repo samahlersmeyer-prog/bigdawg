@@ -2084,23 +2084,17 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .den4.stale .d4-slots, .den4.stale .d4-head small { opacity: .35; }
 
 /* ---- Arcade / Sports hubs: shelves, hero, crowns, favorites ---- */
-.arc-list.shelves { display: flex; flex-direction: column; gap: 8px; }
-.arc-list.shelves .arc-sec.arc-grp { margin-top: 10px; }
-.shelf { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scroll-snap-type: x proximity; scroll-padding: 0 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.shelf::-webkit-scrollbar { display: none; }
-.shelf .arc-cell { flex: 0 0 108px; scroll-snap-align: start; }
 .arc-cell { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .arc-cell small.blurb { white-space: normal; text-align: center; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 600; }
 .arc-cell .today.mine { color: #e0a800; }
 .arc-cell.fav { border-color: #ffd23f; }
 .arc-cell .favpin { position: absolute; top: 5px; left: 7px; font-size: 12px; }
 .arc-foot { font-size: 12.5px; color: var(--muted); text-align: center; margin: 14px 0 4px; }
-.gotd { flex-direction: row; align-items: center; gap: 12px; }
-.gotd .gicon { width: 52px; height: 52px; flex: none; background: rgba(0,0,0,.22); border-radius: 12px; display: grid; place-items: center; }
+.gotd { flex-direction: row; align-items: center; gap: 10px; padding: 8px 10px; }
+.gotd .gicon { width: 38px; height: 38px; flex: none; background: rgba(0,0,0,.22); border-radius: 12px; display: grid; place-items: center; }
 .gotd-tx { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.gotd-tx b { font-family: var(--title); font-size: 19px; }
-.gotd .gotd-k { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .9; }
-.gotd-go { flex: none; background: #fff; color: #222; font-weight: 800; font-size: 15px; padding: 8px 14px; border-radius: 999px; }
+.gotd-tx b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .gotd-tx span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+.gotd-go { flex: none; background: #fff; color: #222; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px; }
 .crowns { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 9px 13px; border-radius: 12px; background: var(--raise); border: 1px solid var(--line); }
 .crowns b { font-size: 14px; } .crowns small { font-size: 12.5px; color: var(--muted); text-align: right; }
 .pair-pick { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
@@ -2109,7 +2103,7 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .pair-opt span:last-child { display: flex; flex-direction: column; gap: 2px; } .pair-opt b { font-size: 16px; } .pair-opt small { font-size: 12.5px; color: var(--muted); }
 .gotd .gicon { font-size: 34px; } .pair-opt .gicon { font-size: 26px; }
 .arc-cell .favpin { left: auto; right: 7px; }
-.gotd .gicon .emo { font-size: 34px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
+.gotd .gicon .emo { font-size: 24px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
 
 </style>
 </head>
@@ -6223,7 +6217,7 @@ function openPairPicker(k) {
   });
   openModal([el("h2", null, p.name), col]);
 }
-// Favorites: press and hold a tile to pin it to the top shelf.
+// Favorites: press and hold a tile to pin it to the top section.
 const arcFavs = () => (me && store.get("bdd:favs:" + me.id)) || [];
 function toggleFav(k, cat) {
   if (!me) return;
@@ -6255,11 +6249,11 @@ function renderArcHub(cat) {
   if (gd) {
     const card = el("button", "gotd"); card.dataset.play = gd.game;
     const lead = gd.board[0];
-    const ic = el("span", "gicon"); ic.appendChild(emo(ARC[gd.game].icon, 34));
+    // One slim row: icon, name, today's leader, Play.
+    const ic = el("span", "gicon"); ic.appendChild(emo(ARC[gd.game].icon, 24));
     const tx = el("span", "gotd-tx"), mine = me && gd.board.find(x => x.id === me.id);
-    tx.append(el("small", "gotd-k", "Game of the day"), el("b", null, ARC[gd.game].name),
-      el("span", null, lead ? `👑 ${lead.name} ${fmtG(gd.game, lead.n)}${mine && lead.id !== me.id ? ` · you ${fmtG(gd.game, mine.n)}` : mine ? " · that's you" : ""}` : "Nobody's played it yet today. Be first."));
-    if (gd.y && gd.y.win && ARC[gd.y.game]) tx.append(el("small", null, `🏆 Yesterday: ${gd.y.win.name} won ${ARC[gd.y.game].name}`));
+    tx.append(el("b", null, `Game of the day: ${ARC[gd.game].name}`),
+      el("span", null, lead ? `👑 ${lead.name} ${fmtG(gd.game, lead.n)}${mine && lead.id !== me.id ? ` · you ${fmtG(gd.game, mine.n)}` : mine ? " · that's you" : ""}` : "Nobody's played it yet. Be first."));
     card.append(ic, tx, el("span", "gotd-go", "Play"));
     box.prepend(card);
   }
@@ -6301,16 +6295,8 @@ function renderArcHub(cat) {
     longPress(r, () => toggleFav(k, cat));
     return r;
   };
-  // Arcade and Sports: one sideways shelf per section, so the whole hub fits in about two screens.
-  // The Den's card games stay a small grid.
-  const shelves = cat !== "den";
-  list.classList.toggle("shelves", shelves);
-  const section = (head, keys) => {
-    if (!keys.length) return;
-    list.appendChild(head);
-    if (!shelves) return keys.forEach(k => list.appendChild(cell(k)));
-    const sh = el("div", "shelf"); keys.forEach(k => sh.appendChild(cell(k))); list.appendChild(sh);
-  };
+  // 3-across grid, one block per section.
+  const section = (head, keys) => { if (!keys.length) return; list.appendChild(head); keys.forEach(k => list.appendChild(cell(k))); };
   const plain = (t, sub) => { const h = el("div", "arc-sec arc-grp"); h.append(el("b", null, t)); if (sub) h.appendChild(el("small", null, sub)); return h; };
   if (cat !== "den") {
     section(plain("📌 Your favorites"), favs);

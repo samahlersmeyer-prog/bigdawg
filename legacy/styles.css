@@ -1607,32 +1607,20 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .den4.stale .d4-slots, .den4.stale .d4-head small { opacity: .35; }
 
 /* ---- Arcade / Sports hubs: shelves, hero, crowns, favorites ---- */
-.arc-list.shelves { display: -webkit-flex; display: flex; flex-direction: column; }
-.arc-list.shelves > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 8px;
-}
-.arc-list.shelves .arc-sec.arc-grp { margin-top: 10px; }
-.shelf { display: -webkit-flex; display: flex; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scroll-snap-type: x proximity; scroll-padding: 0 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.shelf > :not([hidden]) ~ :not([hidden]) {
-  margin-left: 8px;
-}
-.shelf::-webkit-scrollbar { display: none; }
-.shelf .arc-cell { flex: 0 0 108px; scroll-snap-align: start; }
 .arc-cell { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .arc-cell small.blurb { white-space: normal; text-align: center; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 600; }
 .arc-cell .today.mine { color: #e0a800; }
 .arc-cell.fav { border-color: #ffd23f; }
 .arc-cell .favpin { position: absolute; top: 5px; left: 7px; font-size: 12px; }
 .arc-foot { font-size: 12.5px; color: var(--muted); text-align: center; margin: 14px 0 4px; }
-.gotd { flex-direction: row; align-items: center; }
-.gotd .gicon { width: 52px; height: 52px; flex: none; background: rgba(0,0,0,.22); border-radius: 12px; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; align-items: center; justify-content: center; }
+.gotd { flex-direction: row; align-items: center; padding: 8px 10px; }
+.gotd .gicon { width: 38px; height: 38px; flex: none; background: rgba(0,0,0,.22); border-radius: 12px; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; align-items: center; justify-content: center; }
 .gotd-tx { display: -webkit-flex; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .gotd-tx > :not([hidden]) ~ :not([hidden]) {
   margin-top: 2px;
 }
-.gotd-tx b { font-family: var(--title); font-size: 19px; }
-.gotd .gotd-k { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .9; }
-.gotd-go { flex: none; background: #fff; color: #222; font-weight: 800; font-size: 15px; padding: 8px 14px; border-radius: 999px; }
+.gotd-tx b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .gotd-tx span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+.gotd-go { flex: none; background: #fff; color: #222; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 999px; }
 .crowns { display: -webkit-flex; display: flex; align-items: baseline; justify-content: space-between; padding: 9px 13px; border-radius: 12px; background: var(--raise); border: 1px solid var(--line); }
 .crowns > :not([hidden]) ~ :not([hidden]) {
   margin-left: 8px;
@@ -1653,7 +1641,7 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 } .pair-opt b { font-size: 16px; } .pair-opt small { font-size: 12.5px; color: var(--muted); }
 .gotd .gicon { font-size: 34px; } .pair-opt .gicon { font-size: 26px; }
 .arc-cell .favpin { left: auto; right: 7px; }
-.gotd .gicon .emo { font-size: 34px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
+.gotd .gicon .emo { font-size: 24px; opacity: 1; } .pair-opt .gicon .emo { font-size: 26px; display: inline; }
 
 
 /* ---- legacy.css (hand-tuned for old iPads) ---- */

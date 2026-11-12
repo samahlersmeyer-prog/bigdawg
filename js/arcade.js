@@ -606,7 +606,7 @@ function openPairPicker(k) {
   });
   openModal([el("h2", null, p.name), col]);
 }
-// Favorites: press and hold a tile to pin it to the top shelf.
+// Favorites: press and hold a tile to pin it to the top section.
 const arcFavs = () => (me && store.get("bdd:favs:" + me.id)) || [];
 function toggleFav(k, cat) {
   if (!me) return;
@@ -638,11 +638,11 @@ function renderArcHub(cat) {
   if (gd) {
     const card = el("button", "gotd"); card.dataset.play = gd.game;
     const lead = gd.board[0];
-    const ic = el("span", "gicon"); ic.appendChild(emo(ARC[gd.game].icon, 34));
+    // One slim row: icon, name, today's leader, Play.
+    const ic = el("span", "gicon"); ic.appendChild(emo(ARC[gd.game].icon, 24));
     const tx = el("span", "gotd-tx"), mine = me && gd.board.find(x => x.id === me.id);
-    tx.append(el("small", "gotd-k", "Game of the day"), el("b", null, ARC[gd.game].name),
-      el("span", null, lead ? `👑 ${lead.name} ${fmtG(gd.game, lead.n)}${mine && lead.id !== me.id ? ` · you ${fmtG(gd.game, mine.n)}` : mine ? " · that's you" : ""}` : "Nobody's played it yet today. Be first."));
-    if (gd.y && gd.y.win && ARC[gd.y.game]) tx.append(el("small", null, `🏆 Yesterday: ${gd.y.win.name} won ${ARC[gd.y.game].name}`));
+    tx.append(el("b", null, `Game of the day: ${ARC[gd.game].name}`),
+      el("span", null, lead ? `👑 ${lead.name} ${fmtG(gd.game, lead.n)}${mine && lead.id !== me.id ? ` · you ${fmtG(gd.game, mine.n)}` : mine ? " · that's you" : ""}` : "Nobody's played it yet. Be first."));
     card.append(ic, tx, el("span", "gotd-go", "Play"));
     box.prepend(card);
   }
@@ -684,16 +684,8 @@ function renderArcHub(cat) {
     longPress(r, () => toggleFav(k, cat));
     return r;
   };
-  // Arcade and Sports: one sideways shelf per section, so the whole hub fits in about two screens.
-  // The Den's card games stay a small grid.
-  const shelves = cat !== "den";
-  list.classList.toggle("shelves", shelves);
-  const section = (head, keys) => {
-    if (!keys.length) return;
-    list.appendChild(head);
-    if (!shelves) return keys.forEach(k => list.appendChild(cell(k)));
-    const sh = el("div", "shelf"); keys.forEach(k => sh.appendChild(cell(k))); list.appendChild(sh);
-  };
+  // 3-across grid, one block per section.
+  const section = (head, keys) => { if (!keys.length) return; list.appendChild(head); keys.forEach(k => list.appendChild(cell(k))); };
   const plain = (t, sub) => { const h = el("div", "arc-sec arc-grp"); h.append(el("b", null, t)); if (sub) h.appendChild(el("small", null, sub)); return h; };
   if (cat !== "den") {
     section(plain("📌 Your favorites"), favs);
