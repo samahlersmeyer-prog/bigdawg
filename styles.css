@@ -593,3 +593,4 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .den-svg { display: block; }
 .den-svg svg { display: block; }
 .d4-body .d4-how { margin-top: 16px; }
+.den4.stale .d4-slots, .den4.stale .d4-head small { opacity: .35; }

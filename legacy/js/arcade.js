@@ -363,6 +363,7 @@ function postArcade(game, score, day) {
       return !(p.g === game && p.d === day && p.s === score);
     }));
     arcade = a;
+    arcAt = Date.now();
     syncBests();
     renderArcade();
     renderArcSub();
@@ -1259,6 +1260,8 @@ function renderDen4() {
   var box = $("den4");
   if (!box) return;
   box.innerHTML = "";
+  var stale = !arcade || arcBusy && Date.now() - arcAt > 60000;
+  box.classList.toggle("stale", stale);
   var list = denToday(),
     mine = me && list.find(function (x) {
       return x.id === me.id;
@@ -1282,6 +1285,10 @@ function renderDen4() {
     foot.appendChild(el("span", "d4-rank" + (pl === 1 ? " top" : ""), "".concat(pl === 1 ? "👑 " : "").concat(ordinal(pl), " today \xB7 ").concat(mine.n, " pts")));
     if (lead && lead.id !== me.id) foot.appendChild(el("span", "d4-lead", "".concat(lead.name, " leads with ").concat(lead.n)));else if (picks.length < 4) foot.appendChild(el("span", "d4-lead", "".concat(4 - picks.length, " more puzzle").concat(picks.length === 3 ? "" : "s", " can count")));
   } else foot.appendChild(el("span", "d4-lead", lead ? "".concat(lead.name, " leads with ").concat(lead.n, ". Play any puzzle to get on the board.") : "Nobody's on the board yet. Play any puzzle to start it."));
+  if (stale) {
+    foot.innerHTML = "";
+    foot.appendChild(el("span", "d4-lead", "Updating the board…"));
+  }
   foot.appendChild(el("span", "d4-go", "›"));
   box.appendChild(foot);
 }
@@ -1379,6 +1386,7 @@ function renderDenPuz() {
   var box = $("den-puz");
   if (!box) return;
   box.innerHTML = "";
+  if (arcade && Date.now() - arcAt > 60000) refreshArcade(true);
   renderDen4();
   var ci = 0;
   DEN_SECTIONS.forEach(function (sec) {
@@ -1606,7 +1614,7 @@ $("den4").addEventListener("click", function () {
   return openDenBoard();
 });
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState === "visible" && active === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
+  if (document.visibilityState === "visible" && arcade && Date.now() - arcAt > 60000) refreshArcade(true);
 });
 $("ab-icon").appendChild(emo(":dawgpog:", 34));
 $("sb-icon").appendChild(emo("🏆", 30));

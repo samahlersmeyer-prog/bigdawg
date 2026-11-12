@@ -2081,6 +2081,7 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .den-svg { display: block; }
 .den-svg svg { display: block; }
 .d4-body .d4-how { margin-top: 16px; }
+.den4.stale .d4-slots, .den4.stale .d4-head small { opacity: .35; }
 
 </style>
 </head>
@@ -5730,7 +5731,7 @@ function postArcade(game, score, day) {
   pend.push({ g: game, s: score, d: day, id: me.id }); store.set("bdd:apend", pend.slice(-30));
   return API("submitArcade", me.id, day, score, game).then(a => {
     store.set("bdd:apend", (store.get("bdd:apend") || []).filter(p => !(p.g === game && p.d === day && p.s === score)));
-    arcade = a; syncBests(); renderArcade(); renderArcSub();
+    arcade = a; arcAt = Date.now(); syncBests(); renderArcade(); renderArcSub();
   }).catch(e => { if (/newest server/.test(errMsg(e))) store.set("bdd:apend", (store.get("bdd:apend") || []).filter(p => p.g !== game)); });
 }
 function retryArcade() { if (!me) return; (store.get("bdd:apend") || []).filter(p => p.id === me.id).slice(0, 5).forEach(p => postArcade(p.g, p.s, p.d)); }
@@ -6064,6 +6065,8 @@ const ordinal = n => n + (n % 100 > 10 && n % 100 < 14 ? "th" : ["th", "st", "nd
 const placeOf = (list, id) => { const x = list.find(y => y.id === id); return x ? list.filter(y => y.n > x.n).length + 1 : 0; };
 function renderDen4() {
   const box = $("den4"); if (!box) return; box.innerHTML = "";
+  // While old numbers are being replaced, say so instead of showing a rank that's about to jump.
+  const stale = !arcade || (arcBusy && Date.now() - arcAt > 60000); box.classList.toggle("stale", stale);
   const list = denToday(), mine = me && list.find(x => x.id === me.id), picks = mine ? mine.picks : [];
   const head = el("div", "d4-head"); head.append(el("b", null, "Your Den Four"), el("small", null, "Best 4 puzzles count")); box.appendChild(head);
   const slots = el("div", "d4-slots");
@@ -6079,6 +6082,7 @@ function renderDen4() {
     if (lead && lead.id !== me.id) foot.appendChild(el("span", "d4-lead", `${lead.name} leads with ${lead.n}`));
     else if (picks.length < 4) foot.appendChild(el("span", "d4-lead", `${4 - picks.length} more puzzle${picks.length === 3 ? "" : "s"} can count`));
   } else foot.appendChild(el("span", "d4-lead", lead ? `${lead.name} leads with ${lead.n}. Play any puzzle to get on the board.` : "Nobody's on the board yet. Play any puzzle to start it."));
+  if (stale) { foot.innerHTML = ""; foot.appendChild(el("span", "d4-lead", "Updating the board…")); }
   foot.appendChild(el("span", "d4-go", "›")); box.appendChild(foot);
 }
 function openDenBoard(tab) {
@@ -6124,6 +6128,7 @@ function den4Note(game) {
 }
 function renderDenPuz() {
   const box = $("den-puz"); if (!box) return; box.innerHTML = "";
+  if (arcade && Date.now() - arcAt > 60000) refreshArcade(true);
   renderDen4();
   let ci = 0;
   DEN_SECTIONS.forEach(sec => {
@@ -6226,7 +6231,9 @@ function renderArcHub(cat) {
   if (!arcade) refreshArcade(); else if (cat === "den" && Date.now() - arcAt > 60000) refreshArcade(true);
 }
 $("den4").addEventListener("click", () => openDenBoard());
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && active === "den" && Date.now() - arcAt > 60000) refreshArcade(true); });
+// Coming back to the app (it stays open for hours as a home-screen app): fetch fresh boards in the background, so
+// The Den is already current by the time you open it instead of flipping from old numbers to new ones.
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && arcade && Date.now() - arcAt > 60000) refreshArcade(true); });
 $("ab-icon").appendChild(emo(":dawgpog:", 34)); $("sb-icon").appendChild(emo("🏆", 30)); $("db-icon").appendChild(emo("🧩", 28));
 
 // ================= ARCADE: LONG DAWG (snake) =================
