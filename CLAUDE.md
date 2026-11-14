@@ -45,6 +45,9 @@ Unlisted Den games (euchre, crib, crazy, rummy, skipbo, solitaire) fall into the
 ## Retro Classics
 Dawg takes on old arcade games. Unfair Dawg (`g_unfair.js`): troll platformer, 5 hand-built levels from a small tile builder (`LV`), 9 lives; every troll is survivable once you know it (e.g. hidden blocks sit where an early jump clears them), so keep that true when adding levels. Its touch controls listen to raw touch events for multi-touch (run + jump at once). Dawgipede (`g_pede.js`): Centipede-style. Cube Dawg (`g_cube.js`): Q*bert-style, 4 level rules x 4 rounds, then repeats faster.
 
+## Mad Dawg (Drive Mad-style)
+`g_mad.js`: side-view physics car levels (Run & Jump). Its own small rigid-body engine at the top of the file (no library: polygons/circles, sequential impulses, pin / wheel-suspension / rope joints; meters, y up, 1/120 s steps). 30 levels in `LEVELS`, each built from an op list (`f` flat, `c` curve, `gap`, `br` bridge hinge|crumble, `see`, `el` elevator, `mv` slider, `bx`, `bl`, `wr` wrecking ball, `cr` crusher, `sp` spring, `bo` boost, `ce` ceiling); 8 cars in `CARS`. Head/roof touching ground or a static/moving part = restart. Progress per player in `bdd:mad:<id>`; score = career total (best per level, 1000 + up to 500 vs `PAR`), posted with `G.postQuiet`. When changing physics or levels, check every level is still beatable with a headless bot (load the file in Node `vm` with a `defGame` stub; `GAMEDEFS.mad._t` exposes `build`/`LEVELS`), and reset `PAR` to about 1.1x the bot's times. Keep up-steps under ~0.8x the car's wheel radius and slider platforms longer than the longest car.
+
 ## Stale / leftover
 - `server/*_more.json` — puzzle top-up sources, already merged into `js/data.js`.
 - The Apps Script `doGet` serves an old copy of the page from Drive ("Big Dawg Daily page (index.html)"). Everyone uses the GitHub Pages link; the split files won't work if `index.html` is re-uploaded there.

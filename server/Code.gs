@@ -1086,7 +1086,7 @@ function playerStats_(days, dates, id, dateKey) {
 const ZOOMIES_MAX = 999;
 const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, putt: 450, hop: 99999, blocks: 9999999, cross: 99999, jump: 999999, smash: 9999,
   duck: 99999, derby: 99999, dawgball: 999, kickret: 9999, hoops: 9999, pks: 9999, golf: 72, darts: 9999, bowl: 300,
-  punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
+  punch: 99999, volley: 9999, swim: 9999, shred: 99999, fg: 9999, airhockey: 9999, tennis: 9999, drive: 99999, mad: 45000, mow: 99999, drip: 9999, putt18: 900, pool: 9999,
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, skipbo: 500, topdogs: 1000, leash: 1000, mahjong: 1500, mjrush: 999999, mjzen: 999999,
   squad: 999999, dig: 999999, solitaire: 1000, boneball: 1000,

@@ -147,7 +147,8 @@ var MEDALS = {
   mjrush: [2000, 6000, 15000],
   unfair: [2000, 4500, 7500],
   pede: [5000, 15000, 40000],
-  cube: [5000, 15000, 35000]
+  cube: [5000, 15000, 35000],
+  mad: [5000, 15000, 30000]
 };
 var MEDAL_ICON = ["", "🥉", "🥈", "🥇"],
   MEDAL_NAME = ["", "BRONZE", "SILVER", "GOLD"];
@@ -930,8 +931,9 @@ var ARC_BLURB = {
   snake: "Swipe to steer. Eat bones, grow longer.",
   fetch: "Bounce the ball. Smash the treats."
 };
-var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  mad: ["new", "2026-11-14"],
   seven: ["upd", "2026-11-08"],
   scapes: ["new", "2026-11-08"],
   skipbo: ["new", "2026-11-07"],
@@ -981,7 +983,7 @@ var ARC_GROUPS = {
     icon: "🏃",
     name: "Run & Jump",
     sub: "Reflexes. Don't crash.",
-    keys: ["fall", "cliff", "hook", "dash", "drive", "hop", "jump", "zoomies", "snake", "blumji", "pupshot", "harvest"]
+    keys: ["mad", "fall", "cliff", "hook", "dash", "drive", "hop", "jump", "zoomies", "snake", "blumji", "pupshot", "harvest"]
   }, {
     icon: "💥",
     name: "Blast & Battle",
@@ -3359,6 +3361,14 @@ defGameMeta([{
   "icon": "🚙",
   "blurb": "Floor it. Weave through traffic.",
   "how": "Drag or hold anywhere: the car steers toward your finger. Quick tap = TURBO (3 s cooldown). Dodge traffic and oil slicks, stay off the grass, grab ⛽ before the tank runs dry. 🦴 = +50. 3 bonks and you're done.",
+  "max": 99999
+}, {
+  "file": "g_mad.js",
+  "key": "mad",
+  "name": "Mad Dawg",
+  "icon": "🛻",
+  "blurb": "Physics car levels. Don't flip!",
+  "how": "Get the car to the checkered flag. Hold the RIGHT side of the screen to drive and the LEFT side to brake and back up (arrow keys work too). In the air, gas tips the nose up and brake tips it down, so use them to land on your wheels. If the Big Dawg's head (or a closed car's roof) touches anything, or you fall in a pit, the level restarts. Bridges, seesaws, crushers, wrecking balls, elevators and a new car every few levels. ↻ restarts, ☰ picks a level. Score is your career total: every level you beat counts once, 1000 + up to 500 for a fast time.",
   "max": 99999
 }, {
   "file": "g_duck.js",
