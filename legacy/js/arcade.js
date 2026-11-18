@@ -1048,13 +1048,13 @@ var DEN_SECTIONS = [{
   icon: "✏️",
   name: "Words",
   sub: "Crosswords, chains and word hunts.",
-  keys: ["midi", "links", "scapes", "waffle", "hive", "guess", "sgroups"]
+  keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"]
 }, {
   icon: "🧩",
   name: "Logic",
   sub: "Numbers, grids and paths.",
   compact: true,
-  keys: ["sudoku", "pips", "topdogs", "leash", "boneball", "mahjong"]
+  keys: ["leash", "topdogs", "mahjong", "sudoku", "boneball", "pips"]
 }];
 var DEN_PUZ = DEN_SECTIONS.flatMap(function (g) {
   return g.keys;

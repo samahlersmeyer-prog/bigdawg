@@ -414,8 +414,8 @@ function renderArcSub() {
 // order doesn't shift under people's thumbs day to day). NEW games are pinned first for their first week.
 // Finished puzzles sink to the bottom of their section as a slim row.
 const DEN_SECTIONS = [
-  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: ["midi", "links", "scapes", "waffle", "hive", "guess", "sgroups"] },
-  { icon: "🧩", name: "Logic", sub: "Numbers, grids and paths.", compact: true, keys: ["sudoku", "pips", "topdogs", "leash", "boneball", "mahjong"] }
+  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"] },
+  { icon: "🧩", name: "Logic", sub: "Numbers, grids and paths.", compact: true, keys: ["leash", "topdogs", "mahjong", "sudoku", "boneball", "pips"] }
 ];
 const DEN_PUZ = DEN_SECTIONS.flatMap(g => g.keys);
 function denRec(k, d) { return me ? store.get("bdd:den:" + k + ":" + KEY + (d === undefined ? "" : ":" + d) + ":" + me.id) : null; }
