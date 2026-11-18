@@ -40,6 +40,270 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       dir = d > 0 ? "later" : "earlier";
     return ["year", m === 0 ? "same year" : m <= 3 ? "1\u20133 yrs ".concat(dir) : m <= 9 ? "4\u20139 yrs ".concat(dir) : "10+ yrs ".concat(dir), m === 0, w * Math.max(0, 1 - m / span)];
   };
+  var TAGS = {
+    "TV Shows": {
+      "Friends": ["friends", "NYC", "romance", "90s"],
+      "Seinfeld": ["friends", "NYC", "about nothing", "90s"],
+      "The Office": ["workplace", "mockumentary", "romance", "cringe"],
+      "Parks and Recreation": ["workplace", "mockumentary", "small town", "Indiana"],
+      "Cheers": ["workplace", "bar", "Boston", "romance"],
+      "Frasier": ["family", "Seattle", "radio", "spin-off"],
+      "Full House": ["family", "TGIF", "San Francisco", "dads"],
+      "Family Matters": ["family", "TGIF", "nerd", "catchphrase"],
+      "Home Improvement": ["family", "tools", "dads", "catchphrase"],
+      "Boy Meets World": ["family", "school", "TGIF", "coming of age"],
+      "Saved by the Bell": ["high school", "friends", "teen", "Saturday morning"],
+      "The Fresh Prince of Bel-Air": ["family", "LA", "music", "fish out of water"],
+      "Everybody Loves Raymond": ["family", "in-laws", "married", "sports writer"],
+      "The King of Queens": ["married", "NYC", "in-laws", "blue collar"],
+      "Two and a Half Men": ["family", "brothers", "LA", "dads"],
+      "How I Met Your Mother": ["friends", "NYC", "romance", "mystery"],
+      "The Big Bang Theory": ["friends", "nerd", "science", "romance"],
+      "Modern Family": ["family", "mockumentary", "LA", "dads"],
+      "Arrested Development": ["family", "narrator", "cringe", "money"],
+      "Malcolm in the Middle": ["family", "genius", "brothers", "chaos"],
+      "That '70s Show": ["friends", "teen", "retro", "small town"],
+      "Scrubs": ["workplace", "medical", "friends", "daydreams"],
+      "30 Rock": ["workplace", "NYC", "TV business", "satire"],
+      "Brooklyn Nine-Nine": ["workplace", "cops", "NYC", "heists"],
+      "The Wonder Years": ["family", "narrator", "retro", "coming of age"],
+      "Growing Pains": ["family", "dads", "teen", "80s"],
+      "Step by Step": ["family", "TGIF", "blended family", "90s"],
+      "Happy Days": ["retro", "teen", "diner", "catchphrase"],
+      "M*A*S*H": ["war", "medical", "workplace", "classic"],
+      "Ted Lasso": ["sports", "soccer", "coaching", "feel-good"],
+      "Curb Your Enthusiasm": ["cringe", "LA", "improv", "about nothing"],
+      "It's Always Sunny in Philadelphia": ["friends", "bar", "chaos", "cringe"],
+      "Abbott Elementary": ["workplace", "school", "mockumentary", "teachers"],
+      "New Girl": ["friends", "roommates", "LA", "romance"],
+      "The Middle": ["family", "Indiana", "blue collar", "small town"],
+      "Last Man Standing": ["family", "dads", "daughters", "sporting goods"],
+      "The Simpsons": ["animated-adult", "family", "small town", "satire"],
+      "Family Guy": ["animated-adult", "family", "cutaways", "dog"],
+      "South Park": ["animated-adult", "kids", "satire", "small town"],
+      "King of the Hill": ["animated-adult", "family", "Texas", "small town"],
+      "Futurama": ["animated-adult", "sci-fi", "space", "workplace"],
+      "Bob's Burgers": ["animated-adult", "family", "restaurant", "music"],
+      "Rugrats": ["Nickelodeon", "babies", "adventure", "90s"],
+      "SpongeBob SquarePants": ["Nickelodeon", "ocean", "workplace", "buddies"],
+      "Hey Arnold!": ["Nickelodeon", "city", "school", "90s"],
+      "Doug": ["Nickelodeon", "school", "diary", "90s"],
+      "Rocko's Modern Life": ["Nickelodeon", "animals", "weird", "90s"],
+      "The Fairly OddParents": ["Nickelodeon", "magic", "wishes", "school"],
+      "Avatar: The Last Airbender": ["Nickelodeon", "chosen one", "martial arts", "adventure"],
+      "Animaniacs": ["Saturday morning", "sketch", "siblings", "90s"],
+      "Batman: The Animated Series": ["superheroes", "DC", "villains", "90s"],
+      "X-Men: The Animated Series": ["superheroes", "Marvel", "team-up", "90s"],
+      "Teenage Mutant Ninja Turtles": ["superheroes", "martial arts", "brothers", "team-up"],
+      "DuckTales": ["Disney", "treasure", "adventure", "family"],
+      "Pokémon": ["creatures", "adventure", "collecting", "anime"],
+      "Dexter's Laboratory": ["Cartoon Network", "genius", "siblings", "science"],
+      "The Powerpuff Girls": ["Cartoon Network", "superheroes", "siblings", "girls"],
+      "Ed, Edd n Eddy": ["Cartoon Network", "friends", "scams", "weird"],
+      "Adventure Time": ["Cartoon Network", "fantasy", "buddies", "weird"],
+      "Bluey": ["preschool", "dogs", "family", "games"],
+      "PAW Patrol": ["preschool", "dogs", "rescue", "team-up"],
+      "Peppa Pig": ["preschool", "animals", "family", "British"],
+      "Phineas and Ferb": ["Disney", "brothers", "summer", "inventions"],
+      "Gravity Falls": ["Disney", "mystery", "siblings", "summer"],
+      "Scooby-Doo, Where Are You!": ["mystery", "dogs", "ghosts", "classic"],
+      "The Flintstones": ["classic", "family", "prehistoric", "blue collar"],
+      "The Jetsons": ["classic", "family", "space", "robots"],
+      "Yellowstone": ["western", "family", "ranch", "prestige"],
+      "Breaking Bad": ["crime", "prestige", "teacher", "desert"],
+      "The Sopranos": ["crime", "prestige", "family", "NJ"],
+      "Game of Thrones": ["fantasy", "prestige", "dragons", "royalty"],
+      "Lost": ["mystery", "island", "sci-fi", "survival"],
+      "Grey's Anatomy": ["medical", "romance", "Seattle", "workplace"],
+      "ER": ["medical", "Chicago", "workplace", "90s"],
+      "The West Wing": ["politics", "workplace", "prestige", "DC"],
+      "Friday Night Lights": ["football", "sports", "Texas", "small town"],
+      "This Is Us": ["family", "tearjerker", "flashbacks", "siblings"],
+      "Stranger Things": ["sci-fi", "kids on bikes", "retro", "monsters", "small town"],
+      "The Walking Dead": ["monsters", "survival", "zombies", "group"],
+      "Mad Men": ["retro", "workplace", "NYC", "prestige"],
+      "The X-Files": ["sci-fi", "aliens", "mystery", "partners"],
+      "Prison Break": ["prison", "escape", "brothers", "crime"],
+      "House": ["medical", "genius", "mystery", "cranky"],
+      "Law & Order": ["cops", "legal", "NYC", "procedural"],
+      "NCIS": ["cops", "military", "procedural", "partners"],
+      "CSI: Crime Scene Investigation": ["cops", "science", "procedural", "Las Vegas"],
+      "Criminal Minds": ["cops", "procedural", "profilers", "mystery"],
+      "Dallas": ["family", "Texas", "oil", "soap"],
+      "Beverly Hills, 90210": ["teen", "high school", "LA", "soap"],
+      "Dawson's Creek": ["teen", "small town", "romance", "soap"],
+      "Gilmore Girls": ["family", "small town", "mother-daughter", "fast talk"],
+      "Smallville": ["superheroes", "DC", "teen", "small town"],
+      "Buffy the Vampire Slayer": ["monsters", "teen", "high school", "chosen one"],
+      "The Crown": ["royalty", "history", "British", "prestige"],
+      "The Mandalorian": ["space", "Star Wars", "western", "dads"],
+      "Succession": ["family", "money", "prestige", "NYC"],
+      "Ozark": ["crime", "family", "money", "prestige"],
+      "Squid Game": ["games", "survival", "money", "Korea"],
+      "The Wire": ["crime", "cops", "Baltimore", "prestige"],
+      "Star Trek: The Next Generation": ["space", "sci-fi", "crew", "classic"],
+      "Baywatch": ["beach", "rescue", "LA", "90s"],
+      "Walker, Texas Ranger": ["cops", "Texas", "martial arts", "western"],
+      "Little House on the Prairie": ["family", "western", "classic", "small town"],
+      "Survivor": ["competition", "island", "survival", "voting"],
+      "The Amazing Race": ["competition", "travel", "teams", "race"],
+      "American Idol": ["competition", "music", "judges", "voting"],
+      "The Bachelor": ["competition", "romance", "roses", "drama"],
+      "Dancing with the Stars": ["competition", "dancing", "judges", "celebrities"],
+      "Shark Tank": ["business", "money", "judges", "pitches"],
+      "Duck Dynasty": ["family", "Louisiana", "hunting", "beards"],
+      "Pawn Stars": ["business", "money", "Las Vegas", "history"],
+      "Cops": ["cops", "real life", "catchphrase", "chase"],
+      "MythBusters": ["science", "experiments", "explosions", "educational"],
+      "Jeopardy!": ["game show", "trivia", "buzzers", "classic"],
+      "Wheel of Fortune": ["game show", "puzzles", "spinning", "classic"],
+      "The Price Is Right": ["game show", "prizes", "audience", "classic"],
+      "Family Feud": ["game show", "family", "surveys", "teams"],
+      "America's Funniest Home Videos": ["home videos", "family", "prizes", "funny"],
+      "Saturday Night Live": ["sketch", "NYC", "music", "live"],
+      "Sesame Street": ["PBS", "educational", "puppets", "NYC", "preschool"],
+      "Mister Rogers' Neighborhood": ["PBS", "educational", "puppets", "kindness", "preschool"],
+      "Barney & Friends": ["PBS", "educational", "dinosaurs", "music", "preschool"],
+      "Blue's Clues": ["Nickelodeon", "educational", "dogs", "preschool", "clues"],
+      "Bill Nye the Science Guy": ["PBS", "educational", "science", "experiments"],
+      "Reading Rainbow": ["PBS", "educational", "books", "kids"],
+      "Arthur": ["PBS", "educational", "animals", "school"],
+      "SportsCenter": ["sports", "highlights", "news", "live"]
+    },
+    "Movies": {
+      "Toy Story": ["Pixar", "toys", "buddies", "adventure"],
+      "Finding Nemo": ["Pixar", "ocean", "animals", "adventure", "parents"],
+      "The Incredibles": ["Pixar", "superheroes", "family", "action"],
+      "Up": ["Pixar", "adventure", "old age", "tearjerker"],
+      "Inside Out": ["Pixar", "feelings", "growing up", "tearjerker"],
+      "Cars": ["Pixar", "racing", "small town", "buddies"],
+      "Monsters, Inc.": ["Pixar", "monsters", "buddies", "comedy"],
+      "WALL-E": ["Pixar", "robots", "space", "romance"],
+      "Coco": ["Pixar", "music", "family", "tearjerker"],
+      "Ratatouille": ["Pixar", "food", "animals", "Paris"],
+      "The Lion King": ["Disney", "animals", "music", "royalty", "tearjerker"],
+      "Aladdin": ["Disney", "music", "magic", "royalty", "romance"],
+      "Beauty and the Beast": ["Disney", "music", "magic", "romance", "royalty"],
+      "The Little Mermaid": ["Disney", "music", "ocean", "royalty", "romance"],
+      "Frozen": ["Disney", "music", "magic", "royalty", "snow"],
+      "Moana": ["Disney", "music", "ocean", "adventure"],
+      "Encanto": ["Disney", "music", "magic", "family"],
+      "Shrek": ["DreamWorks", "fairy tale", "comedy", "romance"],
+      "Kung Fu Panda": ["DreamWorks", "martial arts", "animals", "underdog"],
+      "Madagascar": ["DreamWorks", "animals", "comedy", "zoo"],
+      "How to Train Your Dragon": ["DreamWorks", "dragons", "creatures", "adventure"],
+      "Despicable Me": ["villains", "comedy", "family", "franchise"],
+      "The Lego Movie": ["toys", "comedy", "adventure", "chosen one"],
+      "Space Jam": ["basketball", "cartoons", "comedy", "sports"],
+      "Star Wars": ["space", "franchise", "adventure", "chosen one", "effects"],
+      "The Empire Strikes Back": ["space", "franchise", "adventure", "effects"],
+      "Jurassic Park": ["dinosaurs", "creatures", "adventure", "effects", "Spielberg"],
+      "Jaws": ["creatures", "ocean", "Spielberg", "suspense"],
+      "E.T. the Extra-Terrestrial": ["aliens", "Spielberg", "kids on bikes", "tearjerker"],
+      "Back to the Future": ["time travel", "comedy", "adventure", "80s"],
+      "Raiders of the Lost Ark": ["adventure", "treasure", "Spielberg", "franchise"],
+      "Top Gun": ["jets", "military", "80s", "rivals"],
+      "Top Gun: Maverick": ["jets", "military", "sequel", "rivals"],
+      "Die Hard": ["action", "holiday", "heist", "one man army"],
+      "The Terminator": ["robots", "time travel", "action", "franchise"],
+      "Terminator 2: Judgment Day": ["robots", "time travel", "action", "effects", "sequel"],
+      "The Matrix": ["chosen one", "effects", "action", "computers"],
+      "Titanic": ["romance", "ocean", "disaster", "true story", "tearjerker"],
+      "Avatar": ["aliens", "effects", "adventure", "nature"],
+      "The Avengers": ["superheroes", "Marvel", "team-up", "effects"],
+      "Iron Man": ["superheroes", "Marvel", "robots", "effects"],
+      "Black Panther": ["superheroes", "Marvel", "royalty", "effects"],
+      "Spider-Man": ["superheroes", "Marvel", "coming of age", "effects"],
+      "The Dark Knight": ["superheroes", "DC", "villains", "crime"],
+      "Batman": ["superheroes", "DC", "villains", "80s"],
+      "Superman": ["superheroes", "DC", "aliens", "classic"],
+      "Ghostbusters": ["ghosts", "comedy", "effects", "team-up", "80s"],
+      "Independence Day": ["aliens", "disaster", "effects", "action"],
+      "Men in Black": ["aliens", "comedy", "buddies", "effects"],
+      "Armageddon": ["space", "disaster", "effects", "action"],
+      "Twister": ["disaster", "weather", "effects", "action"],
+      "Gladiator": ["ancient times", "revenge", "action", "war"],
+      "Braveheart": ["war", "history", "revenge", "epic"],
+      "Forrest Gump": ["Tom Hanks", "history", "tearjerker", "running"],
+      "The Shawshank Redemption": ["prison", "friendship", "escape", "tearjerker"],
+      "Rocky": ["boxing", "underdog", "sports", "training montage"],
+      "Hoosiers": ["basketball", "underdog", "sports", "Indiana", "true story"],
+      "Rudy": ["football", "underdog", "sports", "true story", "Indiana"],
+      "The Sandlot": ["baseball", "kids", "summer", "sports"],
+      "Field of Dreams": ["baseball", "sports", "dads", "magic"],
+      "A League of Their Own": ["baseball", "sports", "true story", "Tom Hanks"],
+      "Remember the Titans": ["football", "sports", "true story", "team"],
+      "Major League": ["baseball", "sports", "comedy", "Cleveland"],
+      "The Mighty Ducks": ["hockey", "sports", "kids", "underdog"],
+      "Cool Runnings": ["bobsled", "sports", "comedy", "underdog", "true story"],
+      "Caddyshack": ["golf", "comedy", "sports", "quotable"],
+      "Happy Gilmore": ["golf", "comedy", "Adam Sandler", "sports"],
+      "Home Alone": ["holiday", "kids", "comedy", "family"],
+      "Elf": ["holiday", "Will Ferrell", "comedy", "family"],
+      "National Lampoon's Christmas Vacation": ["holiday", "comedy", "family", "quotable"],
+      "A Christmas Story": ["holiday", "kids", "family", "quotable"],
+      "Groundhog Day": ["time loop", "comedy", "small town", "romance"],
+      "Dumb and Dumber": ["Jim Carrey", "comedy", "buddies", "road trip"],
+      "Ferris Bueller's Day Off": ["high school", "comedy", "80s", "quotable"],
+      "The Princess Bride": ["fairy tale", "romance", "adventure", "quotable"],
+      "The Goonies": ["kids", "treasure", "adventure", "80s"],
+      "Harry Potter and the Sorcerer's Stone": ["magic", "school", "chosen one", "franchise"],
+      "The Lord of the Rings: The Fellowship of the Ring": ["fantasy", "epic", "quest", "franchise", "effects"],
+      "The Wizard of Oz": ["magic", "music", "classic", "quest"],
+      "The Sound of Music": ["music", "family", "classic", "true story"],
+      "Grease": ["music", "high school", "romance", "classic"],
+      "Mary Poppins": ["magic", "music", "family", "classic"],
+      "The Greatest Showman": ["music", "circus", "true story", "dreams"],
+      "Pirates of the Caribbean": ["pirates", "ocean", "adventure", "franchise"],
+      "Jumanji": ["games", "creatures", "adventure", "effects", "kids"],
+      "Night at the Museum": ["museum", "comedy", "effects", "family"],
+      "Napoleon Dynamite": ["high school", "comedy", "small town", "quotable"],
+      "Anchorman": ["Will Ferrell", "comedy", "quotable", "news"],
+      "Talladega Nights": ["Will Ferrell", "racing", "comedy", "sports"],
+      "Nacho Libre": ["wrestling", "comedy", "sports", "Jack Black"],
+      "School of Rock": ["music", "school", "comedy", "Jack Black"],
+      "Mrs. Doubtfire": ["family", "comedy", "disguise", "Robin Williams"],
+      "Ace Ventura: Pet Detective": ["Jim Carrey", "animals", "comedy", "mystery"],
+      "The Mask": ["Jim Carrey", "comedy", "effects", "magic"],
+      "Rain Man": ["brothers", "road trip", "drama", "Tom Cruise"],
+      "Apollo 13": ["space", "Tom Hanks", "true story", "survival"],
+      "Saving Private Ryan": ["war", "Tom Hanks", "Spielberg", "history"],
+      "Cast Away": ["Tom Hanks", "survival", "island", "ocean"],
+      "The Sixth Sense": ["ghosts", "twist", "suspense", "kids"],
+      "Jerry Maguire": ["football", "Tom Cruise", "sports", "romance"],
+      "Good Will Hunting": ["genius", "friendship", "drama", "Boston"],
+      "Oppenheimer": ["history", "war", "genius", "true story"],
+      "Barbie": ["toys", "comedy", "music", "dreams"],
+      "Inception": ["dreams", "effects", "heist", "twist"],
+      "Interstellar": ["space", "effects", "time travel", "family"]
+    }
+  };
+  var tagged = function tagged() {
+    return KEY >= "2026-11-19";
+  };
+  var TAGN = {};
+  Object.values(TAGS).forEach(function (m) {
+    return Object.values(m).forEach(function (ts) {
+      return ts.forEach(function (t) {
+        TAGN[t] = (TAGN[t] || 0) + 1;
+      });
+    });
+  });
+  var tagClue = function tagClue(cat, A, x) {
+    var ta = TAGS[cat][A[0]] || [],
+      sh = (TAGS[cat][x[0]] || []).filter(function (t) {
+        return ta.includes(t);
+      });
+    return ["tags", sh.length ? sh[0] + (sh.length > 1 ? " +".concat(sh.length - 1) : "") : "no tags", sh.length > 0, 2.5 * Math.min(sh.length, 3)];
+  };
+  var tagHint = function tagHint(cat, A) {
+    var ts = (TAGS[cat][A[0]] || []).filter(function (t) {
+      return TAGN[t] > 2;
+    }).sort(function (a, b) {
+      return TAGN[b] - TAGN[a];
+    });
+    return "one of its tags is \"".concat(ts[0] || (TAGS[cat][A[0]] || ["?"])[0], "\"");
+  };
   var DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
   var zone = function zone(lon) {
     return lon > -86.5 ? "the Eastern time zone" : lon > -101 ? "the Central time zone" : lon > -114.5 ? "the Mountain time zone" : "the Pacific time zone";
@@ -50,10 +314,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     clues: function clues(A, x) {
       var g = A[2] === x[2],
         n = A[3] === x[3];
-      return [["genre", gl(x[2]), g, g ? 5 : 0], ["network", x[3], n, n ? g ? 2 : 0.5 : 0], yrClue(+A[1], +x[1], 20, 3)];
+      var r = [["genre", gl(x[2]), g, g ? 5 : 0], ["network", x[3], n, n ? g ? 2 : 0.5 : 0], yrClue(+A[1], +x[1], 20, 3)];
+      return tagged() ? r.concat([tagClue("TV Shows", A, x)]) : r;
     },
     hints: function hints(A) {
-      return ["it's a ".concat(gl(A[2])), "it aired on ".concat(A[3]), "it started in the ".concat(Math.floor(A[1] / 10) * 10, "s")];
+      return ["it's a ".concat(gl(A[2])), "it aired on ".concat(A[3]), "it started in the ".concat(Math.floor(A[1] / 10) * 10, "s")].concat(tagged() ? [tagHint("TV Shows", A)] : []);
     }
   }, {
     name: "Movies",
@@ -61,10 +326,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     clues: function clues(A, x) {
       var g = A[2] === x[2],
         f = A[3] === x[3];
-      return [["genre", gl(x[2]), g, g ? 5 : 0], ["audience", x[3] === "f" ? "family" : "grown-up", f, f ? 2 : 0], yrClue(+A[1], +x[1], 25, 4)];
+      var r = [["genre", gl(x[2]), g, g ? 5 : 0], ["audience", x[3] === "f" ? "family" : "grown-up", f, f ? 2 : 0], yrClue(+A[1], +x[1], 25, 4)];
+      return tagged() ? r.concat([tagClue("Movies", A, x)]) : r;
     },
     hints: function hints(A) {
-      return ["it's ".concat(/^[aeiou]/.test(gl(A[2])) ? "an" : "a", " ").concat(gl(A[2]), " movie"), "it's a ".concat(A[3] === "f" ? "family" : "grown-up", " movie"), "it came out in the ".concat(Math.floor(A[1] / 10) * 10, "s")];
+      return ["it's ".concat(/^[aeiou]/.test(gl(A[2])) ? "an" : "a", " ").concat(gl(A[2]), " movie"), "it's a ".concat(A[3] === "f" ? "family" : "grown-up", " movie"), "it came out in the ".concat(Math.floor(A[1] / 10) * 10, "s")].concat(tagged() ? [tagHint("Movies", A)] : []);
     }
   }, {
     name: "Animals",
@@ -205,7 +471,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     cat: "den",
     puzzle: true,
     blurb: "Daily: hot or cold? Find the pick.",
-    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Under each guess are its clues: ✓ means the answer shares it (same genre, same network, same league), ✗ means it doesn't, and things like \"4–9 yrs later\", \"bigger\" or \"~300 mi NE\" tell you which way the answer is from that guess. The number is how close the guess is, ranked against everything in the list: #1 is the answer, and lower is warmer. Things that are exactly as close share a number. Miss 7 and you get one free hint. All your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
+    how: "Every day there's a hidden pick from a category: TV Shows, Movies, Animals or Pro Teams (it rotates). Start typing and tap a match to guess. Under each guess are its clues: ✓ means the answer shares it (same genre, same network, same league), ✗ means it doesn't, for movies and shows, \"tags\" names something they have in common (like adventure or Pixar), and things like \"4–9 yrs later\", \"bigger\" or \"~300 mi NE\" tell you which way the answer is from that guess. The number is how close the guess is, ranked against everything in the list: #1 is the answer, and lower is warmer. Things that are exactly as close share a number. Miss 7 and you get one free hint. All your guesses are listed closest first. 15 guesses, one game a day. Score: 1000 for getting it in one, 50 less for each extra guess. Miss it and you get up to 200 for how close you got.",
     reset: function reset(G) {
       var t = today(),
         s = G.s = {
