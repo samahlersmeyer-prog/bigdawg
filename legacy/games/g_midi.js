@@ -153,6 +153,158 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     "g": "###SPUR##PIANO#FOSSILOIL#TOEUNISON#RACER##SLEW###",
     "a": ["Cowboy boot add-on", "Instrument with 88 keys", "Dinosaur bone", "Car fluid", "Foot digit", "All together", "Speedster", "Lots"],
     "d": ["Bro's sibling", "Church leader", "Labor group", "Part in a play", "Cops", "Last", "Not yours", "Use a needle"]
+  }, {
+    "g": "###LUNA##TOPIC#FATHERWAX#ICEEDIBLE#RENAL##EDGY###",
+    "a": ["___ moth", "Subject", "Dad", "Candle stuff", "Rink surface", "Safe to eat", "Of the kidneys", "Nervous"],
+    "d": ["Parking ___", "Like a hard climb", "Sister's daughter", "Farm measure", "Exhausting", "Like old jeans", "\"We ___ robbed!\"", "Body of water by the coast"]
+  }, {
+    "g": "###SWAP##REACH#PETITEAIM#TOWKAISER#INNER##NODE###",
+    "a": ["Trade", "Get to", "Small-sized", "Point at the target", "Pull, as a car", "Crusty roll", "Interior", "Network point"],
+    "d": ["Volleyball move before a spike", "Server", "Oscar nominee, maybe", "\"That was close!\"", "Jog the memory of", "Instrument with 88 keys", "Related (to)", "\"I ___ what you did there\""]
+  }, {
+    "g": "###ITEM##SNARE#MANTRAROD#TOTINDOOR#CELLO##EYED###",
+    "a": ["Thing on a list", "Trap", "Motto", "Fishing pole", "Toddler", "Like a batting cage", "Big string instrument", "Looked at"],
+    "d": ["Place to stay", "Ink on skin", "Mistake", "Burger patty", "Horse seat", "Cash", "Sushi base", "Not new"]
+  }, {
+    "g": "###MUST##LUNAR#RIDDLEWAS#OAKATTEND#SIEGE##HONG###",
+    "a": ["Have to", "Of the moon", "Brain teaser", "Used to be", "Acorn tree", "Go to, as a game", "Castle attack", "___ Kong"],
+    "d": ["Muck", "Untied", "Caesar or Cobb", "Long hike", "Hear out", "3:1, for example", "Clean, as a car", "Omelet need"]
+  }, {
+    "g": "###PEST##RADAR#PETITEJET#TIEUNISON#MANOR##PLAN###",
+    "a": ["Mosquito, to a camper", "Weather tracker", "Small-sized", "Fast plane", "Score of 7-7, e.g.", "All together", "Big country house", "Game ___"],
+    "d": ["Gentle tap", "Newspaper boss", "Smooth, shiny fabric", "Christmas ___", "Part of the eye", "___ code", "Leap", "Boy"]
+  }, {
+    "g": "BASS###ALIKE##RISING#BAT#GOT#SENIOR##RINSE###PEEK",
+    "a": ["Low voice", "Two peas in a pod, so to speak", "Going up", "Slugger's tool", "Received", "Twelfth grader", "Wash off with water", "Quick look"],
+    "d": ["Snide remark", "Fake name", "Sibling", "Slope glider", "Car's heart", "Honker on the pond", "Long hike", "Little bite"]
+  }, {
+    "g": "###EACH##TABLE#TERRORMOM#OWEORPHAN#SALAD##THEM###",
+    "a": ["Every one", "Dinner spot", "Fear", "Mother", "Be in debt", "Annie, for one", "Caesar or Cobb", "Those people"],
+    "d": ["Corn unit", "Overseas", "Circus funnyman", "Present!", "Side of the head", "Hebrew scripture", "Majority", "Easter dinner centerpiece"]
+  }, {
+    "g": "STAG###ORBIT##FORGOT#TOO#MID#PANAMA##DETER###TORN",
+    "a": ["Male deer", "Circle the Earth", "Blanked on", "Also", "Middle", "Straw hat style", "Discourage", "Ripped"],
+    "d": ["Squishy", "Girl Scout group", "Overseas", "Band booking", "Ketchup base", "Kitchen clock", "Mend, as a sock", "Hoop's dangler"]
+  }, {
+    "g": "###GLAD##BEIGE#PELVISRAW#ELKORACLE#ARRAY##DYER###",
+    "a": ["Happy", "Tan shade", "Hip bones", "Uncooked", "Large antlered animal", "Fortune teller", "Impressive display", "Fabric colorer"],
+    "d": ["Hair goop", "Full of energy", "Nimble", "Office furniture", "\"___ of dog\"", "Block, in fencing", "Street", "Sedan or SUV"]
+  }, {
+    "g": "###PASS##BERTH#BIRDIERUG#ENDEDGING#AGENT##PERK###",
+    "a": ["Get through, as an exam", "Bunk on a ship", "One under par", "Floor covering", "Finish", "Lawn border", "Secret ___", "Job bonus"],
+    "d": ["Miles ___ hour", "Passionate", "Bee's attack", "Backyard storage building", "Larger", "Move a little", "Harvest", "Pen filler"]
+  }, {
+    "g": "DUAL###ASSET##TACTIC#AGE#RUN#ENTIRE##TENSE###AGED",
+    "a": ["Twofold", "Valuable thing", "Game plan", "Birthday number", "Home ___", "Whole", "Nervous", "Like fine cheese"],
+    "d": ["Stats", "Data plan amount", "Climb", "Allow", "Exhausting", "Hex", "Must have", "Earl Grey, e.g."]
+  }, {
+    "g": "ROCK###OTHER##STAYED#YES#DEW#RESUME##RECON###TEST",
+    "a": ["Stone", "The ___ side", "Remained", "A nod means this", "Morning moisture on grass", "Job application doc", "Scouting mission", "Pop quiz, for one"],
+    "d": ["Pink-cheeked", "River animal that floats on its back", "Water after a shot, e.g.", "Door opener", "Cut back", "Sample tapes", "Left", "Volleyball move before a spike"]
+  }, {
+    "g": "##SUN###THREW#CHANGEROIL#LAYBELIEVE#FORCE###WET##",
+    "a": ["Daytime star", "Tossed", "Game ___", "Car fluid", "Put down", "Trust", "\"May the ___ be with you\"", "Soggy"],
+    "d": ["Not deep", "Coffee server", "Ignore", "Robber", "Basket-making work", "Corn holder", "Bread for a Reuben", "Anger"]
+  }, {
+    "g": "###PASS##CASTE#GOTTENTEA#REDHERBAL#ASSAY##NEED###",
+    "a": ["Get through, as an exam", "Social class", "Received", "Earl Grey, e.g.", "Stop sign color", "Like chamomile tea", "Test, as ore", "Must have"],
+    "d": ["Gentle tap", "Off course", "Strong metal", "Hit the button on an email", "Rough", "V-shaped flyers", "Compared to", "Not good"]
+  }, {
+    "g": "###GASP##CIRCA#CANTORBUT#ERAATTIRE#SILLY##HEEL###",
+    "a": ["Sharp breath", "Around, with a date", "Synagogue singer", "However", "The '90s, e.g.", "Clothing", "Goofy", "Shoe part"],
+    "d": ["Card game: ___ rummy", "Blood vessel from the heart", "Final tally", "___ legal", "Herd on a ranch", "Adorable one", "Big party", "Sick"]
+  }, {
+    "g": "###TOSS##MOUTH#TATTOOBET#LOTUNUSED#STRUT##THEM###",
+    "a": ["Throw", "River's end", "Ink on skin", "Wager", "Parking ___", "Brand new", "Walk proudly", "Those people"],
+    "d": ["Toddler", "Plug spot", "Rose", "Basketball attempt", "Grown-up", "After ninth", "Flop", "Total"]
+  }, {
+    "g": "###PEST##CASTE#FALCONBUN#OLDENCORE#AGENT##DIRE###",
+    "a": ["Mosquito, to a camper", "Social class", "Atlanta NFL bird", "Hot dog holder", "Not new", "\"One more song!\"", "Secret ___", "Desperate"],
+    "d": ["Buddy", "Walk someone out", "Swiped a base", "Care for", "Zodiac crab", "Mushrooms, e.g.", "Necklace piece", "Single"]
+  }, {
+    "g": "SASH###TULIP##EDITOR#WIG#LIT#THRIVE##TOTAL###WELL",
+    "a": ["Pageant ribbon", "Spring flower from bulbs", "Newspaper boss", "Fake hair", "Turned on, as a lamp", "Flourish", "Sum", "Water source"],
+    "d": ["Beef ___", "IRS review", "Small", "Single or double", "Well-mannered", "Opponent", "Say", "Paddle"]
+  }, {
+    "g": "###HURT##CANOE#NATIVETAN#TENHITTER#AVOID##WERE###",
+    "a": ["Injured", "Paddled boat", "Local", "Beach color", "Perfect score", "Batter", "Steer clear of", "\"We ___ robbed!\""],
+    "d": ["Ball cap, e.g.", "Joined", "Mars explorer", "High schooler", "Synagogue singer", "Overly trusting", "Melt", "Score of 7-7, e.g."]
+  }, {
+    "g": "###GIFT##MANIA#GOLDENBET#ELKUNITED#LIVED##KEEN###",
+    "a": ["Birthday present", "Craze", "Retriever type", "Wager", "Large antlered animal", "Joined", "Resided", "Eager"],
+    "d": ["Gallon, for short", "Certainly", "Diamond or gridiron", "Fish home", "Reason for a crime", "Wish granter", "Costco buying style", "Perfect score"]
+  }, {
+    "g": "###SPAT##BIRCH#POTATOFLU#YOURANGER#OCCUR##MEET###",
+    "a": ["Little fight", "Tree with white bark", "French fry source", "Winter bug", "Not me", "Park worker", "Happen", "Track event"],
+    "d": ["Dog command", "Bedtime talk with God", "Oscar nominee, maybe", "You, in old hymns", "Dribble", "Spot", "Not to", "Instinct"]
+  }, {
+    "g": "SOFA###TULIP##ATOMIC#YEW#RUN#RELATE##RATIO###BEEN",
+    "a": ["Couch", "Spring flower from bulbs", "___ bomb", "Evergreen shrub", "Home ___", "Connect", "3:1, for example", "Has ___ there, done that"],
+    "d": ["Dog command", "Exterior", "Daisy or rose", "Point at the target", "Captain Hook, e.g.", "Adorable one", "Bright sign gas", "Science room"]
+  }, {
+    "g": "###STAB##SURGE#GENERAYEW#BEDENABLE#ARGUE##REED###",
+    "a": ["Try", "Rush", "Plural of genus", "Evergreen shrub", "Where you sleep", "Make possible", "Bicker", "Clarinet part"],
+    "d": ["Daytime star", "___ clef", "See eye to eye", "Necklace piece", "Sewer contents", "Country or hip-hop, e.g.", "Twelve months", "Flower before it opens"]
+  }, {
+    "g": "###EMIT##CRANE#TRANCEFEE#NUNLEADER#OTTER##PHEW###",
+    "a": ["Give off", "Construction lifter", "Daze", "Charge", "Convent sister", "Captain", "River animal that floats on its back", "\"That was close!\""],
+    "d": ["The '90s, e.g.", "Way", "Run up, as a debt", "High schooler", "Make", "Chompers", "Box office bomb", "Morning moisture on grass"]
+  }, {
+    "g": "SLAB###CONES##ACIDIC#RUM#LAW#SALINE##LOCAL###WALL",
+    "a": ["Thick piece of concrete", "Orange traffic markers", "Sour, like lemon juice", "Pirate's drink", "Rule", "Salty solution", "Nearby", "Green Monster, e.g."],
+    "d": ["Reminder of an old cut", "Center point", "Zoo resident", "Where you sleep", "Sand compound", "Panama waterway", "Water source", "Not high"]
+  }, {
+    "g": "###ALUM##ARENA#ENTAILIVY#DOTREOPEN#INNER##STEP###",
+    "a": ["Graduate, for short", "Sports venue", "Involve", "Wrigley wall plant", "Period, online", "Open again", "Interior", "Stair part"],
+    "d": ["Museum display", "Captain", "Labor group", "Shake's cousin", "Somebody", "Concert or game, e.g.", "Colored part of the eye", "Energy"]
+  }, {
+    "g": "HERE###ARENA##TRADER#HOP#RID#RETINA##ROAST###PLEA",
+    "a": ["Present!", "Sports venue", "Deal maker", "Bunny move", "Free (of)", "Part of the eye", "Pot ___", "Request"],
+    "d": ["Has, in old hymns", "Mistake", "Grim ___", "Finish", "From the air", "Wash off with water", "Stats", "Spinning toy"]
+  }, {
+    "g": "###LESS##MONTH#TATTOORUN#IREATTIRE#FORCE##TRAY###",
+    "a": ["Not as much", "December, e.g.", "Ink on skin", "Home ___", "Anger", "Clothing", "\"May the ___ be with you\"", "Lunch carrier"],
+    "d": ["Parking ___", "Whole", "Shop", "Sneaker", "Motto", "Homework helper", "River floater", "Slippery, like winter roads"]
+  }, {
+    "g": "###ROOF##SAUNA#SEPTICDOT#COTINTERN#RALLY##TREK###",
+    "a": ["Top of a house", "Hot room at the gym", "___ tank", "Period, online", "Camp bed", "Summer office helper", "Comeback", "Long hike"],
+    "d": ["Hip-hop music", "Public uproar", "Ring maker", "True thing", "Agree out of court", "Sub's sound system", "Soil", "Large antlered animal"]
+  }, {
+    "g": "###AMID##DRONE#SETTLEOWN#HEMVIOLET#ENTER##REED###",
+    "a": ["In the middle of", "Flying camera", "Agree out of court", "Have", "Skirt edge", "Purple flower", "Come in", "Clarinet part"],
+    "d": ["Museum display", "Mom", "Small bay", "Consider", "Stand for", "Pigs", "Finished", "Was ahead"]
+  }, {
+    "g": "###IRIS##SCENT#ROYALEZOO#PEPOUTLET#OTHER##MEET###",
+    "a": ["Colored part of the eye", "Smell", "Battle ___", "Animal park", "Energy", "Plug spot", "The ___ side", "Track event"],
+    "d": ["Slippery, like winter roads", "Grim ___", "Small bay", "Stair part", "Calm", "Paper ___", "Video call app", "Allow"]
+  }, {
+    "g": "###SPEC##SOLAR#SENATEBUS#NEWLEADER#ADMIT##HEED###",
+    "a": ["Detail, for short", "Sun-powered", "Congress chamber", "School ride", "Brand-___", "Captain", "Let in", "Listen to"],
+    "d": ["Boy", "Earth, e.g.", "Picky ___", "Ship's staff", "___ Street", "Soft leather", "Boring", "Pulled off"]
+  }, {
+    "g": "###PAPA##MIMIC#NATIONFIT#DUEACROSS#SHIFT##TEXT###",
+    "a": ["Daddy", "Copycat", "Country", "In shape", "Owed", "Clue direction opposite of down", "Work schedule block", "Phone message"],
+    "d": ["Peach center", "Surrounded by", "Devout", "Teen skin problem", "Grid of numbers", "Specialty", "Quick", "Often, in poems"]
+  }, {
+    "g": "###BOSS##CARAT#SENATEDIN#NIPENSIGN#ACUTE##LESS###",
+    "a": ["Person who signs your paycheck", "Diamond weight", "Congress chamber", "Racket", "Little bite", "Naval officer", "Sharp, like an angle under 90°", "Not as much"],
+    "d": ["Forbid", "Bowl game fruit", "Smooth, shiny fabric", "Stair part", "Population count", "\"Ever ___ I was a kid...\"", "Pass out cards", "Belonging to it"]
+  }, {
+    "g": "###PACT##CELLO#CARBONSON#EWEOBTAIN#FRONT##TART###",
+    "a": ["Agreement", "Big string instrument", "Element in diamonds", "Boy", "Female sheep", "Get", "Leading side", "Sour"],
+    "d": ["Miles ___ hour", "Even though", "Circus funnyman", "Attitude", "Synagogue singer", "Hooded snake", "Squishy", "Picnic pest"]
+  }, {
+    "g": "###PIPE##RENAL#CENSUSMET#USEEDIBLE#TAROT##AREA###",
+    "a": ["Plumber's tube", "Of the kidneys", "Population count", "Ran into", "Put to work", "Safe to eat", "Fortune-telling cards", "Region"],
+    "d": ["Writer's tool", "Put-down", "Remote button", "\"Or ___!\"", "Hang up the cleats", "Closet wood", "Self-referential", "Feathery scarf"]
+  }, {
+    "g": "##GAB###FOCUS#CRUELTYAIR#LIEREMAINS#DEPOT###TEN##",
+    "a": ["Chat", "Concentrate", "Meanness", "What a tire holds", "Fib", "Leftovers", "Bus station", "Perfect score"],
+    "d": ["Fancy eater", "Serve no one can return", "Gold bars", "Like chicken in a bucket", "Short stay on a team", "Sedan or SUV", "A nod means this", "Copy"]
+  }, {
+    "g": "###WHAT##CHOSE#GROUSEBEE#RANREALLY#ESSAY##WEEP###",
+    "a": ["\"Huh?\"", "Picked", "Complain", "Spelling contest", "Sprinted", "Truly", "School paper", "Cry"],
+    "d": ["Owl's question", "Every 60 minutes", "Test, as ore", "High schooler", "Hockey goal area", "V-shaped flyers", "Make, as coffee", "Once around the track"]
   }];
   var N = 7;
   var dayN = function dayN() {

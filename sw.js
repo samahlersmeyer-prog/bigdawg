@@ -1,6 +1,6 @@
 // Big Dawg Daily service worker: opens instantly from the phone, updates quietly in the background.
-const V = "bdd-1bf220598f";
-const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./styles.css?v=ce7bef2c7d", "./js/data.js?v=a5f1842b8f", "./js/core.js?v=a8123e98ce", "./js/daily.js?v=7774df60f1", "./js/social.js?v=b81db0a3ec", "./js/arcade.js?v=e0446a63df", "./js/boot.js?v=02efb63a08"];
+const V = "bdd-caf8ad66d7";
+const SHELL = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./styles.css?v=ce7bef2c7d", "./js/data.js?v=ebc08ae5d8", "./js/core.js?v=a8123e98ce", "./js/daily.js?v=7774df60f1", "./js/social.js?v=b81db0a3ec", "./js/arcade.js?v=e0446a63df", "./js/boot.js?v=02efb63a08"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== V + "-fonts" && !k.endsWith("-fonts")).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
