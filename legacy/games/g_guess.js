@@ -1,3 +1,4 @@
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
@@ -605,16 +606,94 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var top = 66,
         listBot = s.done ? H - 90 : by - 8,
         n0 = s.guesses.length;
+      var A = rowOf(s, s.ans),
+        bw = 92,
+        cw = W - 44 - bw,
+        sep = " · ";
+      var lay = {};
+      s.guesses.forEach(function (g) {
+        var parts = g === s.ans ? [["That's it! 🎉", true]] : s.cat.clues(A, rowOf(s, g)).map(function (k) {
+          return [k[0] === "year" || k[0] === "size" || k[0] === "distance" ? (k[2] ? "✓ " : "") + k[1] : (k[2] ? "✓ " : "✗ ") + k[1], k[2]];
+        });
+        var fs = 12.5;
+        var wOf = function wOf() {
+          c.font = "600 ".concat(fs, "px ").concat(G.UI);
+          return parts.reduce(function (t, q, i) {
+            return t + c.measureText(q[0] + (i ? sep : "")).width;
+          }, 0);
+        };
+        while (fs > 11 && wOf() > cw) fs -= 0.5;
+        var lines = [parts];
+        if (wOf() > cw) {
+          var _loop = function _loop() {
+            c.font = "600 ".concat(fs, "px ").concat(G.UI);
+            lines = [[]];
+            var x = 0;
+            parts.forEach(function (q) {
+              var w = c.measureText(q[0]).width,
+                sw = c.measureText(sep).width,
+                L = lines[lines.length - 1];
+              if (L.length && x + sw + w > cw && lines.length < 2) {
+                lines.push([q]);
+                x = w;
+              } else {
+                x += (L.length ? sw : 0) + w;
+                L.push(q);
+              }
+            });
+            if (lines.every(function (L) {
+              return L.reduce(function (t, q, i) {
+                return t + c.measureText(q[0] + (i ? sep : "")).width;
+              }, 0) <= cw;
+            })) return 1;
+          };
+          for (fs = 12; fs >= 8; fs -= 0.5) {
+            if (_loop()) break;
+          }
+        }
+        lay[g] = {
+          lines: lines,
+          fs: fs
+        };
+      });
       var rh = Math.max(40, Math.min(48, (listBot - top - 26) / Math.max(n0, 1) - 4)),
-        fit = Math.max(1, Math.floor((listBot - top - 26) / (rh + 4)));
-      var last = s.guesses[n0 - 1];
+        hOf = function hOf(g) {
+          return lay[g].lines.length > 1 ? rh + 15 : rh;
+        };
+      var last = s.guesses[n0 - 1],
+        room = listBot - top - 26;
       var rows = s.guesses.slice().sort(function (a, b) {
           return s.R[a] - s.R[b];
         }),
         more = 0;
-      if (rows.length > fit) {
-        var idx = rows.indexOf(last);
-        rows = s.done || idx < fit - 1 ? rows.slice(0, fit - 1) : [last].concat(rows.slice(0, fit - 2));
+      var sumH = function sumH(L) {
+        return L.reduce(function (t, g) {
+          return t + hOf(g) + 4;
+        }, 0);
+      };
+      if (sumH(rows) > room) {
+        var pin = s.done ? [] : [last],
+          rest = rows.filter(function (g) {
+            return s.done || g !== last;
+          });
+        var pick = pin.slice();
+        var _iterator = _createForOfIteratorHelper(rest),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var g = _step.value;
+            if (sumH(pick.concat(g)) > room - 18) break;
+            pick.push(g);
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+        if (!s.done && rows.indexOf(last) < pick.length) pick = rows.filter(function (g) {
+          return pick.includes(g);
+        });
+        rows = pick.length ? pick : [last];
         more = n0 - rows.length;
       }
       var hint = hintOf(s);
@@ -638,17 +717,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           c.fillText("#1 = it", W - 18, top + 11);
         }
       }
-      var A = rowOf(s, s.ans);
       var y = top + 26;
       rows.forEach(function (g) {
-        var bw = 92,
-          n = s.R[g],
+        var n = s.R[g],
           hit = g === s.ans,
-          isLast = g === last && !s.done;
+          isLast = g === last && !s.done,
+          rh0 = hOf(g),
+          L = lay[g];
         c.fillStyle = dk ? "#1e1e20" : "#fff";
         c.strokeStyle = isLast ? ink : dk ? "#3a3a3c" : "#ddd";
         c.lineWidth = isLast ? 2 : 1;
-        rr(c, 12, y, W - 24, rh, 6);
+        rr(c, 12, y, W - 24, rh0, 6);
         c.fill();
         c.stroke();
         c.fillStyle = ink;
@@ -660,37 +739,29 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           c.font = "".concat(isLast ? 800 : 600, " ").concat(sz, "px ").concat(G.UI);
         }
         c.fillText(g, 20, y + rh * 0.34);
-        var parts = hit ? [["That's it! 🎉", true]] : s.cat.clues(A, rowOf(s, g)).map(function (k) {
-          return [k[0] === "year" || k[0] === "size" || k[0] === "distance" ? (k[2] ? "✓ " : "") + k[1] : (k[2] ? "✓ " : "✗ ") + k[1], k[2]];
-        });
-        var fs = 12.5;
-        var sep = " · ",
-          wOf = function wOf() {
-            c.font = "600 ".concat(fs, "px ").concat(G.UI);
-            return parts.reduce(function (t, q, i) {
-              return t + c.measureText(q[0] + (i ? sep : "")).width;
-            }, 0);
-          };
-        while (fs > 9 && wOf() > W - 48 - bw) fs -= 0.5;
-        var cx = 20;
-        parts.forEach(function (q, i) {
-          if (i) {
-            c.fillStyle = dk ? "#666" : "#bbb";
-            c.fillText(sep, cx, y + rh * 0.73);
-            cx += c.measureText(sep).width;
-          }
-          c.fillStyle = q[1] ? dk ? "#7fd27a" : "#3f8a3b" : dk ? "#9aa0a6" : "#80868b";
-          c.fillText(q[0], cx, y + rh * 0.73);
-          cx += c.measureText(q[0]).width;
+        c.font = "600 ".concat(L.fs, "px ").concat(G.UI);
+        L.lines.forEach(function (parts, li) {
+          var cx = 20;
+          var ly = y + rh * 0.73 + li * 15;
+          parts.forEach(function (q, i) {
+            if (i) {
+              c.fillStyle = dk ? "#666" : "#bbb";
+              c.fillText(sep, cx, ly);
+              cx += c.measureText(sep).width;
+            }
+            c.fillStyle = q[1] ? dk ? "#7fd27a" : "#3f8a3b" : dk ? "#9aa0a6" : "#80868b";
+            c.fillText(q[0], cx, ly);
+            cx += c.measureText(q[0]).width;
+          });
         });
         c.fillStyle = heat(n, tot);
-        rr(c, W - 12 - bw, y, bw, rh, 6);
+        rr(c, W - 12 - bw, y, bw, rh0, 6);
         c.fill();
         c.fillStyle = "#fff";
         c.font = "800 ".concat(Math.min(17, rh * 0.52), "px ").concat(G.UI);
         c.textAlign = "center";
-        c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
-        y += rh + 4;
+        c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh0 / 2 + 1);
+        y += rh0 + 4;
       });
       if (more > 0) {
         c.fillStyle = dk ? "#9aa0a6" : "#777";
@@ -772,8 +843,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           });
         });
       } else if (s.posted) {
-        var bw = Math.min(240, W - 60);
-        s.btns.push(Object.assign(G.pill(c, W / 2 - bw / 2, H - 70, bw, 48, "See results", true), {
+        var _bw = Math.min(240, W - 60);
+        s.btns.push(Object.assign(G.pill(c, W / 2 - _bw / 2, H - 70, _bw, 48, "See results", true), {
           k: "res"
         }));
       }

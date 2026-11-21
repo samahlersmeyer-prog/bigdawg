@@ -148,13 +148,40 @@
       // Contexto-style: every guess sorted closest first, latest one outlined. If they don't all fit, the latest is
       // pinned on top and the farthest ones are trimmed with a "+N more" line.
       const top = 66, listBot = s.done ? H - 90 : by - 8, n0 = s.guesses.length;
-      const rh = Math.max(40, Math.min(48, (listBot - top - 26) / Math.max(n0, 1) - 4)), fit = Math.max(1, Math.floor((listBot - top - 26) / (rh + 4)));
-      const last = s.guesses[n0 - 1];
+      const A = rowOf(s, s.ans), bw = 92, cw = W - 44 - bw, sep = " · ";
+      // clue line for each guess: ✓ shared with the answer, ✗ not; year/size/distance say which way the answer is.
+      // If they don't fit on one line at a readable size, they wrap onto a second line (that row gets taller).
+      const lay = {};
+      s.guesses.forEach(g => {
+        const parts = g === s.ans ? [["That's it! 🎉", true]] : s.cat.clues(A, rowOf(s, g)).map(k => [k[0] === "year" || k[0] === "size" || k[0] === "distance" ? (k[2] ? "✓ " : "") + k[1] : (k[2] ? "✓ " : "✗ ") + k[1], k[2]]);
+        let fs = 12.5; const wOf = () => { c.font = `600 ${fs}px ${G.UI}`; return parts.reduce((t, q, i) => t + c.measureText(q[0] + (i ? sep : "")).width, 0); };
+        while (fs > 11 && wOf() > cw) fs -= 0.5;
+        let lines = [parts];
+        if (wOf() > cw) {
+          // wrap: fill line 1, rest on line 2; shrink until both fit
+          for (fs = 12; fs >= 8; fs -= 0.5) {
+            c.font = `600 ${fs}px ${G.UI}`; lines = [[]]; let x = 0;
+            parts.forEach(q => {
+              const w = c.measureText(q[0]).width, sw = c.measureText(sep).width, L = lines[lines.length - 1];
+              if (L.length && x + sw + w > cw && lines.length < 2) { lines.push([q]); x = w; }
+              else { x += (L.length ? sw : 0) + w; L.push(q); }
+            });
+            if (lines.every(L => L.reduce((t, q, i) => t + c.measureText(q[0] + (i ? sep : "")).width, 0) <= cw)) break;
+          }
+        }
+        lay[g] = { lines, fs };
+      });
+      const rh = Math.max(40, Math.min(48, (listBot - top - 26) / Math.max(n0, 1) - 4)), hOf = g => lay[g].lines.length > 1 ? rh + 15 : rh;
+      const last = s.guesses[n0 - 1], room = listBot - top - 26;
       let rows = s.guesses.slice().sort((a, b) => s.R[a] - s.R[b]), more = 0;
-      if (rows.length > fit) {
-        const idx = rows.indexOf(last);
-        rows = s.done || idx < fit - 1 ? rows.slice(0, fit - 1) : [last].concat(rows.slice(0, fit - 2));
-        more = n0 - rows.length;
+      const sumH = L => L.reduce((t, g) => t + hOf(g) + 4, 0);
+      if (sumH(rows) > room) {
+        // keep the latest pinned on top (unless done), then closest first, leaving room for the "+N more" line
+        const pin = s.done ? [] : [last], rest = rows.filter(g => s.done || g !== last);
+        let pick = pin.slice();
+        for (const g of rest) { if (sumH(pick.concat(g)) > room - 18) break; pick.push(g); }
+        if (!s.done && rows.indexOf(last) < pick.length) pick = rows.filter(g => pick.includes(g));
+        rows = pick.length ? pick : [last]; more = n0 - rows.length;
       }
       const hint = hintOf(s);
       if (hint) {
@@ -166,27 +193,25 @@
         c.fillText(n0 ? "Closest first · ✓ = the answer shares it" : "Lower number = closer. #1 is the answer.", 18, top + 11);
         if (n0) { c.textAlign = "right"; c.fillText("#1 = it", W - 18, top + 11); }
       }
-      const A = rowOf(s, s.ans);
       let y = top + 26;
       rows.forEach(g => {
-        const bw = 92, n = s.R[g], hit = g === s.ans, isLast = g === last && !s.done;
-        c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = isLast ? ink : (dk ? "#3a3a3c" : "#ddd"); c.lineWidth = isLast ? 2 : 1; rr(c, 12, y, W - 24, rh, 6); c.fill(); c.stroke();
+        const n = s.R[g], hit = g === s.ans, isLast = g === last && !s.done, rh0 = hOf(g), L = lay[g];
+        c.fillStyle = dk ? "#1e1e20" : "#fff"; c.strokeStyle = isLast ? ink : (dk ? "#3a3a3c" : "#ddd"); c.lineWidth = isLast ? 2 : 1; rr(c, 12, y, W - 24, rh0, 6); c.fill(); c.stroke();
         c.fillStyle = ink; c.textAlign = "left"; let sz = Math.min(16, rh * 0.5); c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`;
         while (sz > 10 && c.measureText(g).width > W - 48 - bw) { sz--; c.font = `${isLast ? 800 : 600} ${sz}px ${G.UI}`; }
         c.fillText(g, 20, y + rh * 0.34);
-        // the clue line: ✓ shared with the answer, ✗ not; year/size/distance say which way the answer is
-        const parts = hit ? [["That's it! 🎉", true]] : s.cat.clues(A, rowOf(s, g)).map(k => [k[0] === "year" || k[0] === "size" || k[0] === "distance" ? (k[2] ? "✓ " : "") + k[1] : (k[2] ? "✓ " : "✗ ") + k[1], k[2]]);
-        let fs = 12.5; const sep = " · ", wOf = () => { c.font = `600 ${fs}px ${G.UI}`; return parts.reduce((t, q, i) => t + c.measureText(q[0] + (i ? sep : "")).width, 0); };
-        while (fs > 9 && wOf() > W - 48 - bw) fs -= 0.5;
-        let cx = 20;
-        parts.forEach((q, i) => {
-          if (i) { c.fillStyle = dk ? "#666" : "#bbb"; c.fillText(sep, cx, y + rh * 0.73); cx += c.measureText(sep).width; }
-          c.fillStyle = q[1] ? (dk ? "#7fd27a" : "#3f8a3b") : (dk ? "#9aa0a6" : "#80868b"); c.fillText(q[0], cx, y + rh * 0.73); cx += c.measureText(q[0]).width;
+        c.font = `600 ${L.fs}px ${G.UI}`;
+        L.lines.forEach((parts, li) => {
+          let cx = 20; const ly = y + rh * 0.73 + li * 15;
+          parts.forEach((q, i) => {
+            if (i) { c.fillStyle = dk ? "#666" : "#bbb"; c.fillText(sep, cx, ly); cx += c.measureText(sep).width; }
+            c.fillStyle = q[1] ? (dk ? "#7fd27a" : "#3f8a3b") : (dk ? "#9aa0a6" : "#80868b"); c.fillText(q[0], cx, ly); cx += c.measureText(q[0]).width;
+          });
         });
-        c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh, 6); c.fill();
+        c.fillStyle = heat(n, tot); rr(c, W - 12 - bw, y, bw, rh0, 6); c.fill();
         c.fillStyle = "#fff"; c.font = `800 ${Math.min(17, rh * 0.52)}px ${G.UI}`; c.textAlign = "center";
-        c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh / 2 + 1);
-        y += rh + 4;
+        c.fillText(hit ? "✓" : "#" + n, W - 12 - bw / 2, y + rh0 / 2 + 1);
+        y += rh0 + 4;
       });
       if (more > 0) { c.fillStyle = dk ? "#9aa0a6" : "#777"; c.font = `600 13px ${G.UI}`; c.textAlign = "center"; c.fillText(`+${more} more, farther away`, W / 2, y + 8); }
       if (!s.done) {
