@@ -1134,6 +1134,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return col < 0 || row < 0 || col >= G.s.n || row >= G.s.n ? -1 : row * G.s.n + col;
     },
     step: function step(G, i) {
+      var _this = this;
       var s = G.s,
         p = s.path;
       if (i < 0) return;
@@ -1158,7 +1159,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         p.length = at + 1;
         return;
       }
-      if (!this.adj(s, last, i)) return;
+      if (!this.adj(s, last, i)) {
+        var n = s.n,
+          dr = Math.floor(i / n) - Math.floor(last / n),
+          dc = i % n - last % n;
+        if (Math.abs(dr) !== 1 || Math.abs(dc) !== 1) return;
+        var m = [last + dc, last + dr * n].find(function (m) {
+          return !p.includes(m) && (!s.nums[m] || s.nums[m] === _this.nextNum(s));
+        });
+        if (m === undefined) return;
+        p.push(m);
+      }
       var nv = s.nums[i];
       if (nv && nv !== this.nextNum(s)) {
         s.msg = "Get to ".concat(this.nextNum(s), " first");
@@ -1199,13 +1210,20 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var i = this.cellAt(G, x, y);
       if (i < 0) return;
       s.drag = true;
+      s.px = x;
+      s.py = y;
       var at = s.path.indexOf(i);
       if (at >= 0) s.path.length = at + 1;else this.step(G, i);
     },
     move: function move(G, x, y) {
       var s = G.s;
       if (!s.drag || s.done) return;
-      this.step(G, this.cellAt(G, x, y));
+      var dx = x - s.px,
+        dy = y - s.py,
+        k = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (s.L[2] / 4)));
+      for (var j = 1; j <= k && !s.done; j++) this.step(G, this.cellAt(G, s.px + dx * j / k, s.py + dy * j / k));
+      s.px = x;
+      s.py = y;
     },
     up: function up(G) {
       var s = G.s;

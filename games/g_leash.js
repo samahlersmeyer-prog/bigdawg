@@ -31,7 +31,13 @@
       const last = p[p.length - 1]; if (i === last) return;
       if (p.length > 1 && i === p[p.length - 2]) { p.pop(); return; }           // drag back = undo
       const at = p.indexOf(i); if (at >= 0) { p.length = at + 1; return; }       // jump back onto the path = cut it there
-      if (!this.adj(s, last, i)) return;
+      if (!this.adj(s, last, i)) {
+        // cut a corner (diagonal)? go through the open square at that corner so the leash keeps up with the finger
+        const n = s.n, dr = Math.floor(i / n) - Math.floor(last / n), dc = (i % n) - (last % n);
+        if (Math.abs(dr) !== 1 || Math.abs(dc) !== 1) return;
+        const m = [last + dc, last + dr * n].find(m => !p.includes(m) && (!s.nums[m] || s.nums[m] === this.nextNum(s)));
+        if (m === undefined) return; p.push(m);
+      }
       const nv = s.nums[i]; if (nv && nv !== this.nextNum(s)) { s.msg = `Get to ${this.nextNum(s)} first`; s.msgT = 1; G.buzz(); return; }
       p.push(i);
       if (p.length === s.n * s.n && s.nums[i] === s.last && this.nextNum(s) > s.last) { s.done = true; s.drag = false; s.postT = 1.2; G.sfx("win"); s.msg = "Walked! 🦮"; s.msgT = 1.5; this.persist(G); }
@@ -40,9 +46,15 @@
       const s = G.s, b = s.btns.find(b => b.k && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
       if (b) { if (b.k === "res") return G.results(this.info(G)); if (s.done) return; if (b.k === "undo") { s.path.pop(); this.persist(G); } if (b.k === "clear") { s.path = []; this.persist(G); } return; }
       if (s.done) return; const i = this.cellAt(G, x, y); if (i < 0) return;
-      s.drag = true; const at = s.path.indexOf(i); if (at >= 0) s.path.length = at + 1; else this.step(G, i);
+      s.drag = true; s.px = x; s.py = y; const at = s.path.indexOf(i); if (at >= 0) s.path.length = at + 1; else this.step(G, i);
     },
-    move(G, x, y) { const s = G.s; if (!s.drag || s.done) return; this.step(G, this.cellAt(G, x, y)); },
+    move(G, x, y) {
+      // phones skip squares on a quick drag, so walk every square between the last touch point and this one
+      const s = G.s; if (!s.drag || s.done) return;
+      const dx = x - s.px, dy = y - s.py, k = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (s.L[2] / 4)));
+      for (let j = 1; j <= k && !s.done; j++) this.step(G, this.cellAt(G, s.px + dx * j / k, s.py + dy * j / k));
+      s.px = x; s.py = y;
+    },
     up(G) { const s = G.s; if (s.drag) { s.drag = false; this.persist(G); } },
     update(G, dt) {
       const s = G.s; if (s.msgT > 0) s.msgT -= dt;
