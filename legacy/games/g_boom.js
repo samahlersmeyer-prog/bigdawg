@@ -47,10 +47,32 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     royale: ["🌩️", "BATTLE ROYALE"],
     bam: ["😵", "BAMBOOZLED"]
   };
+  var DIFF = [{
+    t: "PUP",
+    base: 0,
+    max: 0.4,
+    cool: 1.8,
+    spd: 0.82,
+    mult: 0.75
+  }, {
+    t: "DAWG",
+    base: 0.12,
+    max: 0.65,
+    cool: 1.3,
+    spd: 0.92,
+    mult: 1
+  }, {
+    t: "BIG DAWG",
+    base: 0.25,
+    max: 0.95,
+    cool: 1,
+    spd: 1,
+    mult: 1.5
+  }];
   var MODES = [{
     m: "ffa",
     t: "FREE FOR ALL",
-    d: "Everyone for themselves"
+    d: "+1 per knockout, +1 last one standing"
   }, {
     m: "teams",
     t: "TEAMS",
@@ -58,11 +80,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }, {
     m: "gold",
     t: "GOLDEN BOOMERANG",
-    d: "Hold the gold the longest"
+    d: "Hold the gold to fill your score"
   }, {
     m: "seek",
     t: "HIDE & SEEK",
-    d: "Hiders turn into bushes. Swap every round"
+    d: "Hiders become bushes. Swap each round"
   }];
   var PWK = Object.keys(PW);
   var tileAt = function tileAt(s, x, y) {
@@ -441,7 +463,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       });
     }
     if (!f.alive) return;
-    var sp = 4.3 * T * (hasP(f, "speed") ? 1.35 : 1) * (f.charge >= 0 ? 0.6 : 1) * (ice ? 0.55 : 1);
+    var sp = 4.3 * T * (f.cpu ? s.diff.spd : 1) * (hasP(f, "speed") ? 1.35 : 1) * (f.charge >= 0 ? 0.6 : 1) * (ice ? 0.55 : 1);
     var vx = mx * sp,
       vy = my * sp;
     if (f.dashT > 0) {
@@ -806,7 +828,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         A.tg = e;
         A.err = (Math.random() - 0.5) * (0.7 * (1 - sk) + (f.conf > 0 ? 3 : 0));
         A.aim = 0.12 + clamp((ed / T - 4.5) / 7, 0, 1) * 0.8;
-        A.cool = 1.2 + (1 - sk) * 1.8 + Math.random() * 0.8;
+        A.cool = (1.2 + (1 - sk) * 1.8 + Math.random() * 0.8) * s.diff.cool;
         act(s, f, "throw", true);
         return [0, 0];
       }
@@ -878,7 +900,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       rs: 0
     });
     f.ai = {
-      cool: 1 + Math.random() * 1.5,
+      cool: (1 + Math.random() * 1.5) * s.diff.cool,
       aware: 0,
       aim: 0,
       noR: 0,
@@ -908,7 +930,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     s.rt = 0;
     s.phase = "intro";
     s.pt = 1.4;
-    s.skill = clamp(0.2 + s.round * 0.04 + lead(s) * 0.05, 0.15, 0.95);
+    s.skill = clamp(s.diff.base + s.round * 0.03 + lead(s) * 0.04, 0.05, s.diff.max);
     if (s.mode === "seek") {
       s.hide = s.round % 2;
       var rows = s.map.map(function (r) {
@@ -938,6 +960,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       };
     }
   }
+  function setDiff(G, i) {
+    G.s.di = i;
+    G.s.diff = DIFF[i];
+    try {
+      localStorage.setItem("bdd:boomdiff", String(i));
+    } catch (e) {}
+  }
   function pick(G, mode) {
     var s = G.s;
     s.mode = mode;
@@ -953,7 +982,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       L = leader(s),
       won = L[2].team === p.team,
       mine = Math.floor(s.tp[p.team]);
-    G.over(mine * 100 + (won ? 1000 + (mine - L[1]) * 150 : 0), won ? s.kos >= 8 ? "Boomerang master!" : "Top dawg!" : (s.mode === "teams" || s.mode === "seek" ? "Mittens and Rusty win" : L[2].who.name + " wins") + ". Rematch?");
+    G.over(Math.round((mine * 100 + (won ? 1000 + (mine - L[1]) * 150 : 0)) * s.diff.mult), won ? s.kos >= 8 ? "Boomerang master!" : "Top dawg!" : (s.mode === "teams" || s.mode === "seek" ? "Mittens and Rusty win" : L[2].who.name + " wins") + ". Rematch?");
   }
   function step(G, dt) {
     var s = G.s,
@@ -1083,7 +1112,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     }
     if (s.mode === "gold") {
       var g = s.gold;
-      s.skill = clamp(0.45 + lead(s) * 0.05, 0.3, 0.9);
+      s.skill = clamp(s.diff.base + 0.2 + lead(s) * 0.04, 0.05, s.diff.max);
       if (g.held && !g.held.alive) {
         var c = freeSpot(s, g.held.x, g.held.y);
         g.x = c[0];
@@ -1193,8 +1222,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     name: "Boomerang Dawgs",
     icon: "🪃",
     max: 9999,
-    blurb: "Throw, slash, dash. One hit and you're out. 4 modes.",
-    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. Pick a mode at the start. Free For All: everyone for themselves. Teams: you and Bao against Mittens and Rusty, and you can't hurt your partner. Golden Boomerang: pick up the gold one and hang on to it; holding it fills your score, knockouts just make them drop it, and anyone knocked out comes back. Hide & Seek: same teams, 30 second rounds, swapping sides each round. Hiders have no boomerang and turn into a bush whenever they stand still; seekers get 2 for each hider they find and hiders get 2 for each one still hidden at the buzzer. More power-ups: ghost dash (dash through walls), telekinesis (steer your boomerang in the air), decoy (dashing leaves a copy of you), disguise (stand still to look like a bush), battle royale (the walls close in on everyone) and bamboozled (everyone else walks backwards). On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.",
+    blurb: "Throw, slash, dash. One hit and you're out.",
+    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold for a longer throw. It bounces off walls and comes back, and if you're empty-handed, holding THROW calls it home. SLASH cuts whoever is in front of you and bats boomerangs away. DASH is a quick burst that gets you over water (walk in and you're out). Scrolls are power-ups: hold 3, kept all match. Pick how tough the CPUs are and a mode when it starts. Keyboard: arrows or WASD, Space throw, Z slash, X dash.",
     lay: function lay(G) {
       var s = G.s;
       s.T = Math.max(16, Math.floor(Math.min(G.W / COLS, (G.H - HUD - CTRL) / ROWS)));
@@ -1202,14 +1231,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       s.oy = HUD + Math.round((G.H - HUD - CTRL - ROWS * s.T) / 2);
       var y = G.H - CTRL / 2;
       var mw = Math.min(G.W - 36, 330),
-        mh = Math.min(78, (G.H - 150) / 4 - 10);
+        mh = Math.min(74, (G.H - 250) / 4 - 10),
+        mx = (G.W - mw) / 2;
+      s.dbtn = DIFF.map(function (o, i) {
+        return {
+          i: i,
+          t: o.t,
+          x: mx + i * (mw + 8) / 3,
+          y: 84,
+          w: (mw + 8) / 3 - 8,
+          h: 46
+        };
+      });
       s.menu = MODES.map(function (o, i) {
         return {
           m: o.m,
           t: o.t,
           d: o.d,
-          x: (G.W - mw) / 2,
-          y: 110 + i * (mh + 10),
+          x: mx,
+          y: 196 + i * (mh + 10),
           w: mw,
           h: mh
         };
@@ -1267,6 +1307,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           };
         })
       };
+      var di = 1;
+      try {
+        di = clamp(parseInt(localStorage.getItem("bdd:boomdiff") || "1", 10) || 0, 0, 2);
+      } catch (e) {}
+      setDiff(G, di);
       this.lay(G);
       this.hook();
     },
@@ -1334,14 +1379,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     tap: function tap(G, x, y) {
       var s = G.s;
       if (s.phase !== "menu") return;
-      var b = s.menu.find(function (b) {
+      var b = s.menu.concat(s.dbtn).find(function (b) {
         return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
       });
-      if (b) pick(G, b.m);
+      if (!b) return;
+      if (b.m) pick(G, b.m);else {
+        setDiff(G, b.i);
+        G.sfx("pop");
+      }
     },
     onKey: function onKey(G, k, isDown) {
       if (G.s.phase === "menu") {
-        if (isDown && k >= "1" && k <= "4") pick(G, MODES[+k - 1].m);
+        if (!isDown) return;
+        if (k >= "1" && k <= "4") pick(G, MODES[+k - 1].m);else if (k === "ArrowLeft" || k === "ArrowRight") setDiff(G, clamp(G.s.di + (k === "ArrowLeft" ? -1 : 1), 0, 2));
         return;
       }
       var s = G.s,
@@ -1386,7 +1436,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       c.fillStyle = "#1c2a1e";
       c.fillRect(0, 0, W, H);
       if (s.phase === "menu") {
-        G.text(c, "PICK A MODE", W / 2, 64, 14, "#ffd23f");
+        G.text(c, "HOW TOUGH?", W / 2, 58, 12, "#ffd23f");
+        s.dbtn.forEach(function (b) {
+          var on = b.i === s.di;
+          c.fillStyle = on ? "#ffd23f" : "rgba(255,255,255,0.1)";
+          c.fillRect(b.x, b.y, b.w, b.h);
+          G.text(c, b.t, b.x + b.w / 2, b.y + b.h / 2, 10, on ? "#111" : "#fff");
+        });
+        G.text(c, "SCORE x" + s.diff.mult, W / 2, 144, 8, "rgba(255,255,255,0.6)");
+        G.text(c, "PICK A MODE TO START", W / 2, 176, 12, "#ffd23f");
         s.menu.forEach(function (b, i) {
           c.fillStyle = "rgba(255,255,255,0.1)";
           c.fillRect(b.x, b.y, b.w, b.h);
