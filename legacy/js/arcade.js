@@ -933,8 +933,9 @@ var ARC_BLURB = {
   snake: "Swipe to steer. Eat bones, grow longer.",
   fetch: "Bounce the ball. Smash the treats."
 };
-var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
+var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "sevens", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  sevens: ["new", "2026-11-26"],
   boom: ["new", "2026-11-26"],
   cab: ["new", "2026-11-26"],
   dash: ["upd", "2026-11-26"],
@@ -3385,6 +3386,15 @@ defGameMeta([{
   "how": "You vs Rex, Biscuit and Duke. Match the top card by color or by number/symbol. Skip ⊘ skips the next player, Reverse ⇄ flips direction, +2 makes the next player draw 2 and lose their turn, Wild lets you pick the color, Wild +4 picks the color and makes the next player draw 4. Can't play? Tap the deck to draw one (play it if it fits). Down to 2 cards? Tap BARK! before you play, or get caught and draw 2. Win a hand to score the cards left in everyone's hands (numbers = face value, action cards 20, wilds 50). First to 200 wins. Score: your points, +100 for winning the match.",
   "cat": "den",
   "max": 2000
+}, {
+  "file": "g_sevens.js",
+  "key": "sevens",
+  "name": "7 Up 7 Down",
+  "icon": "7️⃣",
+  "blurb": "Build up and down from the 7s. First one out wins.",
+  "how": "You vs Rex, Biscuit and Duke, 13 cards each. Whoever holds the 7 of spades starts with it. On your turn, play a 7 to open a new suit, or add the next card to a suit that's already on the table: up from the 7 (8, 9, 10, J, Q, K) or down from it (6, 5, 4, 3, 2, A). If you have a card that fits you have to play one, but you pick which, so hang on to the cards the pups are waiting for. Nothing fits? You knock and it moves on. First one out of cards wins the hand, and everyone else takes 1 point for each card they're stuck with. Three hands, lowest total wins. Score: 900 minus 25 per card you got stuck with, +100 for winning the match.",
+  "cat": "den",
+  "max": 1000
 }, {
   "file": "g_crib.js",
   "key": "crib",
