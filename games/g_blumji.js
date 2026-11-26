@@ -3,12 +3,13 @@
 // faces the next platform. How long you hold = how far you go. Land on a platform to stand there, then bounce again.
 // Reach the 🚩 platform to clear the stage. Miss and fall = back to the last platform you stood on (still counts).
 // Pink pads bounce you back up, blue platforms slide side to side (you ride them).
-// 12 stages. Each is worth up to 500 (par or better), 100 less per extra bounce, never below 100.
+// 20 stages. Each is worth up to 500 (par or better), 100 less per extra bounce, never below 100.
 (function () {
   const GR = 140, FEET = 2.4;
   // ---- stages (a 100 x 150 screen, y grows downward) ----
-  // p: platforms [x, top y, width, type, move range, move speed]; type "" normal, "b" pink bouncy pad, "m" moving.
-  // The first platform is the start, the last one has the flag.
+  // p: platforms [x, top y, width, type, move range, move speed]; type "" normal, "b" pink bouncy pad, "m" moving,
+  // "s" spikes (land on them and it's back to your last platform). The first platform is the start, the last has the flag.
+  // w: solid walls [x, y, w, h] you bounce off (like the screen edges). New stages: check them with `node tools/blumji.mjs`.
   const LV = [
     { p: [[6, 130, 20], [70, 130, 22]], par: 1, tip: "HOLD TO CHARGE, LET GO" },
     { p: [[6, 136, 18], [42, 112, 16], [76, 86, 18]], par: 2, tip: "HOP UP TO THE FLAG" },
@@ -21,7 +22,15 @@
     { p: [[6, 136, 16], [34, 108, 12, "m", 24, 1.1], [62, 78, 10, "m", 14, 1.6], [36, 48, 22]], par: 3 },
     { p: [[44, 140, 14], [6, 112, 12], [82, 104, 12], [52, 92, 16, "b"], [10, 56, 24]], par: 3 },
     { p: [[4, 136, 14], [34, 140, 10, "b"], [62, 112, 8, "m", 20, 1.3], [24, 72, 10, "m", 16, 1.0], [70, 40, 22]], par: 3 },
-    { p: [[84, 140, 14], [56, 118, 8], [30, 96, 8, "m", 14, 1.4], [6, 70, 10], [40, 140, 10, "b"], [36, 30, 10, "m", 22, 0.8], [76, 20, 20]], par: 4 }
+    { p: [[84, 140, 14], [56, 118, 8], [30, 96, 8, "m", 14, 1.4], [6, 70, 10], [40, 140, 10, "b"], [36, 30, 10, "m", 22, 0.8], [76, 20, 20]], par: 4 },
+    { p: [[6, 136, 16], [34, 139, 26, "s"], [72, 136, 20]], par: 1, tip: "DON'T LAND ON THE SPIKES" },
+    { p: [[10, 136, 16], [30, 110, 18]], w: [[50, 20, 5, 130]], par: 1, tip: "BOUNCE OFF THE WALL" },
+    { p: [[4, 136, 14], [22, 140, 56, "s"], [38, 112, 12, "m", 14, 1.0], [82, 110, 14]], par: 2 },
+    { p: [[4, 136, 14], [24, 139, 12, "s"], [40, 136, 10], [56, 139, 12, "s"], [74, 136, 10], [86, 100, 12]], w: [[20, 0, 62, 92]], par: 3, tip: "SHORT HOPS UNDER THE ROOF" },
+    { p: [[6, 80, 14], [28, 142, 12, "b"], [44, 142, 18, "s"], [66, 142, 12, "b"], [82, 60, 14]], par: 3 },
+    { p: [[40, 138, 16], [10, 110, 12], [26, 84, 12], [10, 56, 12], [24, 26, 16]], w: [[44, 0, 5, 124]], par: 5, tip: "WALL TO WALL" },
+    { p: [[4, 136, 14], [26, 139, 14, "s"], [44, 116, 10, "m", 10, 1.2], [70, 139, 26, "s"], [72, 96, 8], [40, 66, 10, "m", 16, 0.9], [8, 44, 16]], par: 4 },
+    { p: [[82, 138, 14], [54, 141, 24, "s"], [34, 120, 10], [6, 141, 24, "s"], [8, 90, 12], [40, 141, 12, "b"], [34, 58, 10, "m", 10, 1.1], [72, 34, 20]], w: [[60, 50, 5, 50]], par: 5 }
   ];
   // ---- physics (pure, so the stages can be checked off-screen) ----
   function plats(L, t) { return L.p.map((a, i) => { const off = a[3] === "m" ? a[4] * Math.sin(t * a[5]) : 0; return { i, x: a[0] + off, y: a[1], w: a[2], k: a[3] || "", flag: i === L.p.length - 1 }; }); }
@@ -29,9 +38,16 @@
   function step(L, b, t, dt) {
     const py = b.y; b.vy += GR * dt; b.x += b.vx * dt; b.y += b.vy * dt;
     if (b.x < FEET) { b.x = FEET; b.vx = -b.vx * 0.6; } if (b.x > 100 - FEET) { b.x = 100 - FEET; b.vx = -b.vx * 0.6; }
+    for (const w of L.w || []) { // walls: off the sides like the screen edges, a soft bonk off the top or bottom
+      if (b.x <= w[0] - FEET || b.x >= w[0] + w[2] + FEET || b.y <= w[1] || b.y >= w[1] + w[3] + 5) continue;
+      const px = b.x - b.vx * dt;
+      if (px <= w[0] - FEET || px >= w[0] + w[2] + FEET) { b.x = px <= w[0] - FEET ? w[0] - FEET : w[0] + w[2] + FEET; b.vx = -b.vx * 0.6; }
+      else { b.y = py; b.vy = -b.vy * 0.3; }
+    }
     if (b.vy > 0) for (const p of plats(L, t)) {
       if (py <= p.y && b.y >= p.y && b.x >= p.x - 1.5 && b.x <= p.x + p.w + 1.5) {
         b.y = p.y;
+        if (p.k === "s") return "out";
         if (p.k === "b") { b.vy = -Math.min(150, Math.max(105, b.vy * 1.08)); return { bounce: p }; }
         return { land: p };
       }
@@ -45,14 +61,14 @@
   function aimDir(L, on, x, t) { const P = plats(L, t), n = P[Math.min(on + 1, P.length - 1)]; return n.x + n.w / 2 >= x ? 1 : -1; }
   const levelPts = (n, par) => Math.max(100, 500 - 100 * Math.max(0, n - par));
   const stars = (n, par) => n <= par ? 3 : n === par + 1 ? 2 : 1;
-  const ENG = { LV, plats, step, SPEED, GR, ANG, aimDir };
+  const ENG = { LV, plats, step, SPEED, GR, ANG, aimDir, levelPts };
 
   function view(G) { const S = Math.min(G.W / 100, (G.H - 40) / 150); return { S, ox: (G.W - 100 * S) / 2, oy: G.H - 150 * S - 2 }; }
 
   const game = {
     key: "blumji", name: "Blumji Bounce", icon: "🚩", max: 99999,
-    blurb: "Bounce platform to platform. Reach the flag. 12 stages.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.",
+    blurb: "Bounce platform to platform. Reach the flag. 20 stages.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.",
     reset(G) { G.s = { lv: 0, score: 0 }; this.newLevel(G); },
     newLevel(G) { const s = G.s; s.L = LV[s.lv]; s.n = 0; s.fx = []; s.clear = 0; s.tt = 0; s.tipT = 4; s.on = 0; this.home(G); },
     home(G) { const s = G.s, p = plats(s.L, s.tt)[s.on]; s.off = p.w / 2; s.pup = { x: p.x + s.off, y: p.y, vx: 0, vy: 0 }; s.phase = "aim"; s.flyT = 0; s.acc = 0; s.charge = null; s.dir = aimDir(s.L, s.on, s.pup.x, s.tt); },
@@ -86,8 +102,10 @@
       const sky = c.createLinearGradient(0, 0, 0, G.H); if (dk) { sky.addColorStop(0, "#151a3a"); sky.addColorStop(1, "#33265a"); } else { sky.addColorStop(0, "#9edcff"); sky.addColorStop(1, "#e7f7d9"); }
       c.fillStyle = sky; c.fillRect(0, 0, G.W, G.H);
       c.fillStyle = dk ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.55)"; [[18, 30], [64, 18], [40, 64]].forEach(([x, y]) => { c.beginPath(); c.arc(X(x), Y(y), 7 * S, 0, 7); c.arc(X(x + 7), Y(y - 2), 8 * S, 0, 7); c.arc(X(x + 14), Y(y), 6 * S, 0, 7); c.fill(); });
+      (s.L.w || []).forEach(w => { c.fillStyle = dk ? "#4b5675" : "#6b7a99"; c.fillRect(X(w[0]), Y(w[1]), w[2] * S, w[3] * S); c.fillStyle = dk ? "#5d6a8e" : "#8292b3"; c.fillRect(X(w[0]), Y(w[1]), Math.min(w[2] * S, 3), w[3] * S); });
       plats(s.L, s.tt).forEach(p => {
         const th = 4;
+        if (p.k === "s") { c.fillStyle = dk ? "#d7dcea" : "#4a5266"; c.beginPath(); for (let x = 0; x < p.w; x += 3) { c.moveTo(X(p.x + x), Y(p.y + th)); c.lineTo(X(p.x + x + 1.5), Y(p.y - 1)); c.lineTo(X(p.x + Math.min(p.w, x + 3)), Y(p.y + th)); } c.fill(); return; }
         if (p.k === "b") { c.fillStyle = "#ff6fae"; c.fillRect(X(p.x), Y(p.y), p.w * S, th * S); c.strokeStyle = "#fff"; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= p.w; x += 3) c.lineTo(X(p.x + x), Y(p.y + (x / 3 % 2 ? 0.8 : th - 0.8))); c.stroke(); }
         else { c.fillStyle = p.k === "m" ? (dk ? "#3f7fbf" : "#4f9be8") : (dk ? "#5b4a3a" : "#9b6b43"); c.fillRect(X(p.x), Y(p.y), p.w * S, th * S);
           c.fillStyle = p.k === "m" ? "#bfe3ff" : (dk ? "#4c8a4c" : "#6cc24a"); c.fillRect(X(p.x), Y(p.y), p.w * S, 1.4 * S); }

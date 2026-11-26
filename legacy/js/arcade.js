@@ -933,6 +933,9 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  dash: ["upd", "2026-11-26"],
+  blumji: ["upd", "2026-11-26"],
+  pupshot: ["upd", "2026-11-26"],
   feud: ["new", "2026-11-26"],
   mad: ["new", "2026-11-14"],
   seven: ["upd", "2026-11-08"],
@@ -3394,7 +3397,7 @@ defGameMeta([{
   "name": "Dawg Dash",
   "icon": "🛹",
   "blurb": "Endless runner. Swipe to dodge trains.",
-  "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.",
+  "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. Red trains are moving and come at you fast. Swipe sideways into the side of a train and you only stumble, but the dogcatcher closes in, and a second stumble before he drops back gets you caught. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash, 🚀 flies you over everything for a few seconds, 👟 lets you jump right onto train roofs. It gets faster the longer you go.",
   "max": 999999
 }, {
   "file": "g_dawgball.js",
@@ -3707,16 +3710,16 @@ defGameMeta([{
   "key": "pupshot",
   "name": "Pup Shot",
   "icon": "🌀",
-  "blurb": "Fling it, warp to it, dunk it. 12 courts.",
-  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+  "blurb": "Fling it, warp to it, dunk it. 20 courts.",
+  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.",
   "max": 99999
 }, {
   "file": "g_blumji.js",
   "key": "blumji",
   "name": "Blumji Bounce",
   "icon": "🚩",
-  "blurb": "Bounce platform to platform. Reach the flag. 12 stages.",
-  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.",
+  "blurb": "Bounce platform to platform. Reach the flag. 20 stages.",
+  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.",
   "max": 99999
 }, {
   "file": "g_rummy.js",

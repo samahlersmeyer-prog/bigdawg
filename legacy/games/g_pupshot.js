@@ -76,6 +76,55 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     h: [80, 30, "r"],
     w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]],
     par: 3
+  }, {
+    d: [12, 138],
+    h: [74, 50, "r"],
+    w: [[38, 140, 24, 6, 1]],
+    par: 2,
+    tip: "PINK PADS BOUNCE IT HIGHER"
+  }, {
+    d: [12, 138],
+    h: [78, 40, "r"],
+    w: [],
+    bombs: [[52, 96]],
+    par: 2,
+    tip: "BOMBS BLAST THE BALL AWAY"
+  }, {
+    d: [14, 138],
+    h: [70, 60, "r"],
+    w: [[50, 0, 8, 40]],
+    mags: [[60, 96]],
+    par: 2,
+    tip: "MAGNETS BEND THE SHOT"
+  }, {
+    d: [12, 138],
+    h: [78, 124, "r"],
+    w: [[26, 0, 74, 96], [50, 140, 16, 6, 1]],
+    par: 1
+  }, {
+    d: [14, 138],
+    h: [40, 60, "l"],
+    w: [[90, 30, 6, 90, 1]],
+    par: 2
+  }, {
+    d: [10, 138],
+    h: [76, 100, "r"],
+    w: [[46, 70, 8, 76], [22, 140, 20, 6, 1]],
+    par: 2
+  }, {
+    d: [86, 138],
+    h: [10, 70, "l"],
+    w: [[36, 90, 8, 56]],
+    mags: [[30, 50]],
+    bombs: [[60, 100]],
+    par: 2
+  }, {
+    d: [10, 138],
+    h: [80, 26, "r"],
+    w: [[34, 60, 8, 86], [60, 100, 30, 4]],
+    mags: [[46, 40]],
+    bombs: [[20, 90]],
+    par: 2
   }];
   function world(L) {
     var walls = L.w.map(function (a) {
@@ -430,7 +479,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     c.restore();
   }
   function hud(G, c, s, name) {
-    G.hud(c, "COURT ".concat(s.lv + 1, "/12"), "".concat(s.score), "SHOTS ".concat(s.shots));
+    G.hud(c, "COURT ".concat(s.lv + 1, "/").concat(SHOT.length), "".concat(s.score), "SHOTS ".concat(s.shots));
   }
   function banner(G, c, s) {
     if (s.clear > 0) {
@@ -492,9 +541,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       advance: function advance(G) {
         var s = G.s;
         s.lv++;
-        if (s.lv >= 12) {
+        if (s.lv >= SHOT.length) {
           s.done = true;
-          return G.over(s.score, "All 12 courts cleared! 🏀");
+          return G.over(s.score, "All 20 courts cleared! 🏀");
         }
         this.newLevel(G);
       },
@@ -568,8 +617,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     name: "Pup Shot",
     icon: "🌀",
     max: 99999,
-    blurb: "Fling it, warp to it, dunk it. 12 courts.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+    blurb: "Fling it, warp to it, dunk it. 20 courts.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.",
     reset: function reset(G) {
       G.s = {
         lv: 0,

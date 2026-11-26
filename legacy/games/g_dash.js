@@ -7,7 +7,7 @@ defGame({
   icon: "🛹",
   max: 999999,
   blurb: "Endless runner. Swipe to dodge trains.",
-  how: "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.",
+  how: "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. Red trains are moving and come at you fast. Swipe sideways into the side of a train and you only stumble, but the dogcatcher closes in, and a second stumble before he drops back gets you caught. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash, 🚀 flies you over everything for a few seconds, 👟 lets you jump right onto train roofs. It gets faster the longer you go.",
   MISS: {
     bones: ["GRAB {n} BONES", 30, 25],
     jumps: ["JUMP {n} TIMES", 10, 6],
@@ -92,10 +92,15 @@ defGame({
       score: 0,
       objs: [],
       nextZ: 26,
+      rows: [],
       mag: 0,
       dbl: 0,
       shield: 0,
       flash: 0,
+      jet: 0,
+      shoes: 0,
+      stum: 0,
+      safe: 0,
       dead: 0,
       pops: []
     };
@@ -108,8 +113,12 @@ defGame({
   spawnRow: function spawnRow(s, z, easy) {
     var free = Math.floor(Math.random() * 3) - 1,
       lvl = Math.min(1, s.dist / 3000);
+    var end = z;
+    var mvL = (s.objs.find(function (o) {
+      return o.mv && o.z > z - 12;
+    }) || {}).lane;
     for (var ln = -1; ln <= 1; ln++) {
-      if (ln === free) continue;
+      if (ln === free || ln === mvL) continue;
       var r = Math.random();
       if (easy && r < 0.6) continue;
       var k = r < 0.25 - lvl * 0.1 ? null : r < 0.5 ? "low" : r < 0.72 ? "high" : "train";
@@ -145,6 +154,7 @@ defGame({
         zz += len + 1.4;
       }
       s.far = Math.max(s.far || 0, zz - z);
+      end = Math.max(end, zz);
     }
     for (var _i = 0; _i < 5; _i++) s.objs.push({
       k: "bone",
@@ -153,19 +163,73 @@ defGame({
       len: 0.4,
       h: 0
     });
-    if (Math.random() < 0.12) s.objs.push({
-      k: ["mag", "dbl", "shield"][Math.floor(Math.random() * 3)],
+    if (Math.random() < 0.14) s.objs.push({
+      k: ["mag", "dbl", "shield", "jet", "shoes"][Math.floor(Math.random() * 5)],
       lane: free,
       z: z - 11,
       len: 0.4,
       h: 0.4
     });
+    s.rows.push({
+      z: z,
+      free: free,
+      end: end
+    });
+    if (!easy && s.dist > 250 && Math.random() < 0.3 + lvl * 0.25) this.spawnMover(s);
+  },
+  MV: 1.7,
+  spawnMover: function spawnMover(s) {
+    var len = 8,
+      a = this.ZMAX / this.MV - 7,
+      b = a + 14 + len / this.MV,
+      open = s.rows.filter(function (r) {
+        return r.end > a - 2 && r.z - 11 < b;
+      }).map(function (r) {
+        return r.free;
+      });
+    var lanes = [-1, 0, 1].filter(function (l) {
+      return !open.includes(l) && !s.objs.some(function (o) {
+        return o.k === "train" && o.lane === l && !o.gone;
+      });
+    });
+    var lane = lanes[Math.floor(Math.random() * lanes.length)];
+    s.objs.forEach(function (o) {
+      if (o.lane === lane && o.z > a - 8 && o.z < b) o.gone = 1;
+    });
+    s.objs.push({
+      k: "train",
+      lane: lane,
+      z: this.ZMAX,
+      len: len,
+      mv: 1
+    });
   },
   swipe: function swipe(G, dx, dy) {
+    var _this2 = this;
     var s = G.s;
     if (s.dead) return;
-    if (dx) s.lane = Math.max(-1, Math.min(1, s.lane + dx));else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) {
-      s.vy = 9.2;
+    if (dx) {
+      var to = Math.max(-1, Math.min(1, s.lane + dx));
+      if (to !== s.lane && s.safe <= 0 && s.objs.some(function (o) {
+        return o.k === "train" && !o.gone && o.lane === to && o.z < 0.35 && o.z + o.len > -0.35 && s.y < _this2.TOP - 0.6;
+      })) {
+        G.buzz();
+        G.sfx("lose");
+        if (s.stum > 0) {
+          s.dead = 1.1;
+          return;
+        }
+        s.stum = 6;
+        s.flash = 0.6;
+        s.pops.push({
+          t: 1,
+          txt: "OOF! HE'S CLOSE!"
+        });
+        return;
+      }
+      s.lane = to;
+    } else if (s.jet > 0) return;else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) {
+      s.vy = s.shoes > 0 ? 12.2 : 9.2;
       s.roll = 0;
       this.bump(G, "jumps");
     } else if (dy > 0) {
@@ -203,6 +267,7 @@ defGame({
     if (m) this.swipe(G, m[0], m[1]);
   },
   update: function update(G, dt) {
+    var _this3 = this;
     var s = G.s;
     if (s.dead) {
       s.dead -= dt;
@@ -215,8 +280,14 @@ defGame({
     s.lx += (s.lane - s.lx) * Math.min(1, dt * 14);
     var me0 = Math.round(s.lx),
       gnd = this.ground(s, me0);
-    s.vy -= 26 * dt;
-    s.y += s.vy * dt;
+    if (s.jet > 0) {
+      s.vy = 0;
+      s.y += (5.2 - s.y) * Math.min(1, dt * 6);
+      if (s.jet <= dt) s.safe = 1.3;
+    } else {
+      s.vy -= 26 * dt;
+      s.y += s.vy * dt;
+    }
     if (s.y <= gnd + 0.02 && s.vy <= 0) {
       s.y = gnd;
       s.vy = 0;
@@ -230,7 +301,7 @@ defGame({
       this.bump(G, "dist", 0);
     }
     if (s.roll > 0) s.roll -= dt;
-    ["mag", "dbl", "shield", "flash"].forEach(function (k) {
+    ["mag", "dbl", "shield", "flash", "jet", "shoes", "stum", "safe"].forEach(function (k) {
       if (s[k] > 0) s[k] -= dt;
     });
     s.acc = (s.acc || 0) + mv * (s.dbl > 0 ? 2 : 1) * s.miss.mult;
@@ -238,8 +309,13 @@ defGame({
     s.acc -= add;
     s.score += add;
     s.objs.forEach(function (o) {
-      return o.z -= mv;
+      return o.z -= o.mv ? mv * _this3.MV : mv;
     });
+    s.rows.forEach(function (r) {
+      r.z -= mv;
+      r.end -= mv;
+    });
+    if (s.rows.length && s.rows[0].end < 0) s.rows.shift();
     s.nextZ -= mv;
     if (s.nextZ < this.ZMAX - 16) {
       var gap = Math.max(13, (s.far || 0) + 6) + Math.random() * 6;
@@ -254,9 +330,9 @@ defGame({
       for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
         var o = _step2.value;
         if (o.gone) continue;
-        if (o.k === "bone" || o.k === "mag" || o.k === "dbl" || o.k === "shield") {
+        if (o.k !== "train" && o.k !== "low" && o.k !== "high") {
           var pull = o.k === "bone" && s.mag > 0 && o.z < 6;
-          if (o.z < 0.5 && o.z > -0.6 && (o.lane === me || pull) && Math.abs(s.y - (o.h || 0)) < 1.6) {
+          if (o.z < 0.5 && o.z > -0.6 && (pull || o.lane === me && (s.jet > 0 || Math.abs(s.y - (o.h || 0)) < 1.6))) {
             o.gone = 1;
             if (o.k === "bone") {
               var v = (s.dbl > 0 ? 20 : 10) * s.miss.mult;
@@ -266,13 +342,19 @@ defGame({
               this.bump(G, "bones");
             } else {
               this.bump(G, "pups");
-              s[o.k] = o.k === "shield" ? 12 : 9;
+              s[o.k] = {
+                shield: 12,
+                jet: 7,
+                shoes: 10
+              }[o.k] || 9;
               s.pops.push({
                 t: 1,
                 txt: {
                   mag: "MAGNET!",
                   dbl: "2X POINTS!",
-                  shield: "BOARD UP!"
+                  shield: "BOARD UP!",
+                  jet: "ROCKET!",
+                  shoes: "SPRING SHOES!"
                 }[o.k]
               });
               G.sfx("win");
@@ -284,7 +366,7 @@ defGame({
         var inside = o.z < 0.35 && o.z + o.len > -0.35;
         if (!inside) continue;
         var crash = o.k === "train" ? s.y < this.TOP - 0.6 : o.k === "low" ? s.y < 0.65 : s.roll <= 0 && s.y < 1.3;
-        if (!crash) continue;
+        if (!crash || s.safe > 0) continue;
         o.hit = 1;
         if (s.shield > 0) {
           s.shield = 0;
@@ -319,7 +401,7 @@ defGame({
     });
   },
   draw: function draw(G, c) {
-    var _this2 = this;
+    var _this4 = this;
     var s = G.s,
       W = G.W,
       H = G.H,
@@ -352,15 +434,15 @@ defGame({
     var _loop = function _loop(ln) {
       c.fillStyle = dark ? "#3a3740" : "#b9ae9d";
       c.beginPath();
-      c.moveTo(X(ln - 0.45, _this2.ZMAX), hy);
-      c.lineTo(X(ln + 0.45, _this2.ZMAX), hy);
+      c.moveTo(X(ln - 0.45, _this4.ZMAX), hy);
+      c.lineTo(X(ln + 0.45, _this4.ZMAX), hy);
       c.lineTo(X(ln + 0.45, -0.8), H);
       c.lineTo(X(ln - 0.45, -0.8), H);
       c.fill();
       c.fillStyle = dark ? "#4a3a2a" : "#6d5236";
       for (var k = 0; k < 30; k++) {
         var z = k * 2.4 - s.dist % 2.4;
-        if (z > _this2.ZMAX) break;
+        if (z > _this4.ZMAX) break;
         var p = P(z),
           y = Y(z);
         c.fillRect(X(ln - 0.38, z), y, LW * 0.76 * p, Math.max(1, 5 * p));
@@ -369,7 +451,7 @@ defGame({
       c.lineWidth = 2;
       [-0.25, 0.25].forEach(function (o) {
         c.beginPath();
-        c.moveTo(X(ln + o, _this2.ZMAX), hy);
+        c.moveTo(X(ln + o, _this4.ZMAX), hy);
         c.lineTo(X(ln + o, -0.8), H);
         c.stroke();
       });
@@ -381,7 +463,7 @@ defGame({
       return o.k === "train" && o.z < 0 ? o.z + o.len : o.z;
     };
     var objs = s.objs.filter(function (o) {
-      return o.z < _this2.ZMAX && o.z + o.len > -1.5;
+      return o.z < _this4.ZMAX && o.z + o.len > -1.5;
     }).sort(function (a, b) {
       return key(b) - key(a);
     });
@@ -396,7 +478,9 @@ defGame({
       c.beginPath();
       c.ellipse(x, by + 6 - (s.gnd || 0) * U, 26, 8, 0, 0, 7);
       c.fill();
+      if (s.stum > 0 || G.t < 2.5 && !s.dead) G.emoji(c, "👮", x + 6, by + (s.stum > 0 ? 30 : 30 + G.t * 40), 50);
       if (s.shield > 0) G.emoji(c, "🛹", x, by + 2, 46);
+      if (s.jet > 0) G.emoji(c, "🚀", x, y + 10, 34);
       if (!(s.flash > 0 && Math.floor(G.t * 16) % 2)) G.img(c, s.dead ? ":dawgpain:" : s.roll > 0 ? ":dawgsweat:" : ":dawgW:", x, y - sz / 2 + (s.roll > 0 ? 12 : 0), sz);
     };
     var _iterator3 = _createForOfIteratorHelper(objs),
@@ -413,11 +497,13 @@ defGame({
             G.emoji(c, "🦴", x, y - (22 + (o.h || 0) * U) * p, 30 * p);
             return 0;
           }
-          if (o.k === "mag" || o.k === "dbl" || o.k === "shield") {
+          if (o.k !== "low" && o.k !== "high" && o.k !== "train") {
             G.emoji(c, {
               mag: "🧲",
               dbl: "⭐",
-              shield: "🛹"
+              shield: "🛹",
+              jet: "🚀",
+              shoes: "👟"
             }[o.k], x, y - 40 * p + Math.sin(G.t * 5) * 4 * p, 36 * p);
             return 0;
           }
@@ -441,7 +527,7 @@ defGame({
             c.fillStyle = "#222";
             for (var _i3 = 0; _i3 < 5; _i3++) c.fillRect(x - w / 2 + _i3 * w / 5, y - top, w / 10, bh);
           } else if (o.k === "train") {
-            var z2 = Math.min(_this2.ZMAX, o.z + o.len),
+            var z2 = Math.min(_this4.ZMAX, o.z + o.len),
               p2 = P(z2),
               x2 = X(o.lane, z2),
               y2 = Y(z2),
@@ -455,7 +541,7 @@ defGame({
             c.lineTo(x2 + w2 / 2, y2 - h2);
             c.lineTo(x2 - w2 / 2, y2 - h2);
             c.fill();
-            c.fillStyle = dark ? "#3d4b6b" : "#4f6fa8";
+            c.fillStyle = o.mv ? "#c62828" : dark ? "#3d4b6b" : "#4f6fa8";
             c.fillRect(x - w / 2, y - _h, w, _h);
             c.fillStyle = "#cfe8ff";
             c.fillRect(x - w * 0.36, y - _h * 0.86, w * 0.72, _h * 0.3);
@@ -468,7 +554,7 @@ defGame({
               c.fill();
             });
             if (o.ramp) {
-              var zr = Math.max(-0.8, o.z - _this2.RL),
+              var zr = Math.max(-0.8, o.z - _this4.RL),
                 pr = P(zr),
                 xr = X(o.lane, zr),
                 yr = Y(zr),
@@ -486,7 +572,7 @@ defGame({
                 var f = _i4 / 5,
                   zz = zr + (o.z - zr) * f,
                   pp = P(zz),
-                  yy = Y(zz) - _this2.TOP * U * pp * f,
+                  yy = Y(zz) - _this4.TOP * U * pp * f,
                   ww = LW * 0.82 * pp;
                 c.beginPath();
                 c.moveTo(X(o.lane, zz) - ww / 2, yy);
@@ -514,11 +600,11 @@ defGame({
       c.fillRect(16, 48, W - 32, 96);
       G.text(c, "MISSIONS \xB7 MULTIPLIER x".concat(s.miss.mult), W / 2, 62, 10, "#ffd23f");
       s.miss.set.forEach(function (q, i) {
-        return G.text(c, (q.done ? "✓ " : "· ") + _this2.mlabel(q) + (q.done ? "" : " (".concat(Math.min(q.n, s.st[q.k] || 0), "/").concat(q.n, ")")), W / 2, 84 + i * 20, 10, q.done ? "#7cff6b" : "#fff");
+        return G.text(c, (q.done ? "✓ " : "· ") + _this4.mlabel(q) + (q.done ? "" : " (".concat(Math.min(q.n, s.st[q.k] || 0), "/").concat(q.n, ")")), W / 2, 84 + i * 20, 10, q.done ? "#7cff6b" : "#fff");
       });
       c.globalAlpha = 1;
     }
-    G.hud(c, "\uD83E\uDDB4".concat(s.bones, " x").concat(s.miss.mult), "".concat(s.score), [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : ""].join(""));
+    G.hud(c, "\uD83E\uDDB4".concat(s.bones, " x").concat(s.miss.mult), "".concat(s.score), [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : "", s.jet > 0 ? "🚀" : "", s.shoes > 0 ? "👟" : ""].join(""));
     s.pops.forEach(function (p, i) {
       return G.text(c, p.txt, W / 2, H * 0.32 + i * 18 - (1 - p.t) * 12, p.txt.length > 4 ? 12 : 11, "#ffd23f");
     });
