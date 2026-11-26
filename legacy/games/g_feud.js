@@ -306,17 +306,21 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     });
   }
   var HK = "bdd:feud:host",
+    CODE = "bdd:feud:code",
     TEAMS = ["Team Turkey", "Team Gravy"];
   var MODE = "solo",
     HS = null,
     HD = null;
   var deckOf = function deckOf(h) {
     var _ref3;
-    return h.name === "crew" ? crewBoard(h.raw) : (_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
+    if (h.name === "polls") return (_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
       return d <= h.day && Array.isArray(DAYS[d]);
     }).map(function (d) {
       return DAYS[d];
     })).concat([SPARE]));
+    var cb = crewBoard(h.raw),
+      T = DAYS["2026-11-26"];
+    return h.name === "mix" ? [T[1], cb[4], T[2], cb[0], T[0]] : cb;
   };
   var hLoad = function hLoad() {
     HS = store.get(HK);
@@ -357,31 +361,47 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
   };
   var pushing = false,
-    dirty = false;
+    dirty = false,
+    fails = 0,
+    asking = false;
   function hPush() {
-    if (!HS || !HS.code || !me) return;
+    if (!HS || !me) return;
+    if (!HS.code) return askCode();
     if (pushing) {
       dirty = true;
       return;
     }
     pushing = true;
     dirty = false;
-    API("feudPush", me.id, HS.code, view())["catch"](function () {}).then(function () {
+    API("feudPush", me.id, HS.code, view()).then(function () {
+      fails = 0;
+      return 0;
+    }, function (e) {
+      if (/No game/.test(errMsg(e)) && HS) {
+        HS.code = "";
+        store.set(CODE, null);
+        store.set(HK, HS);
+        return 1;
+      }
+      return ++fails < 5 ? 2000 : 0;
+    }).then(function (wait) {
       pushing = false;
-      if (dirty) hPush();
+      if (wait > 1) setTimeout(hPush, wait);else if (wait || dirty) hPush();
     });
   }
   function askCode() {
     var h = HS;
-    if (!h || h.code || h.asking || !me) return;
-    h.asking = true;
+    if (!h || h.code || asking || !me) return;
+    asking = true;
     API("feudHost", me.id, "").then(function (r) {
+      asking = false;
       if (HS === h && r && r.code) {
         h.code = r.code;
+        store.set(CODE, r.code);
         hSave();
       }
-    })["catch"](function () {}).then(function () {
-      delete h.asking;
+    }, function () {
+      asking = false;
     });
   }
   var TV = null;
@@ -905,10 +925,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       });
     },
     hostNew: function hostNew(G, name, raw, code) {
+      code = store.get(CODE) || code || "";
+      if (code) store.set(CODE, code);
+      fails = 0;
       HS = {
         name: name,
         raw: raw || null,
-        code: code || "",
+        code: code,
         day: KEY,
         qi: 0,
         pot: 0,
@@ -989,13 +1012,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var s = G.s,
         h = HS;
       if (b.k === "hpolls") return this.hostNew(G, "polls");
-      if (b.k === "hcrew") {
+      if (b.k === "hcrew" || b.k === "hmix") {
         if (s.hload) return;
         s.hload = true;
         s.hmsg = "";
         API("feudHost", me ? me.id : "", "crew").then(function (r) {
           s.hload = false;
-          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";else _this3.hostNew(G, "crew", r.answers, r.code);
+          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";else _this3.hostNew(G, b.k === "hmix" ? "mix" : "crew", r.answers, r.code);
         })["catch"](function (e) {
           s.hload = false;
           s.hmsg = /Unknown call/.test(errMsg(e)) ? "The server is still updating. Try again in a few minutes." : "Couldn't load the crew's answers. Check your connection.";
@@ -1078,14 +1101,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         bx = W / 2 - bw / 2;
       if (!h) {
         lines("Host a game", TOP + 44, "700 24px ".concat(G.TITLE), ink);
-        var _y2 = lines("One screen for the whole room, two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
-        s.btns.push(Object.assign(G.pill(c, bx, _y2, bw, 50, "Play the crew's answers", true, s.hload), {
+        var _y2 = lines("Two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round. Party mix is America's polls with the crew's own answers mixed in.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, _y2, bw, 50, "Party mix · 5 rounds", true, s.hload), {
+          k: "hmix"
+        }));
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 60, bw, 46, "Crew answers only", false, s.hload), {
           k: "hcrew"
         }));
-        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 62, bw, 50, "Play America's polls", false, s.hload), {
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 114, bw, 46, "America's polls only", false, s.hload), {
           k: "hpolls"
         }));
-        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 144, "600 14px ".concat(G.UI), ink);
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 190, "600 14px ".concat(G.UI), ink);
         return;
       }
       if (h.over) {

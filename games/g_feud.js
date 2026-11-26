@@ -123,11 +123,17 @@
     });
   }
   // ---- host mode state: one game at a time, kept on this device so a reload picks it back up ----
-  const HK = "bdd:feud:host", TEAMS = ["Team Turkey", "Team Gravy"];
+  const HK = "bdd:feud:host", CODE = "bdd:feud:code", TEAMS = ["Team Turkey", "Team Gravy"];
   let MODE = "solo", HS = null, HD = null;
   // Crew deck = the crew's survey answers so far. Polls deck = every daily board up to the day
   // the game started plus the spare board, so hosting never spoils a solo board that hasn't come out yet.
-  const deckOf = h => h.name === "crew" ? crewBoard(h.raw) : [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
+  // Mix = a 5-round party game: three national boards from Thursday (already out, so nothing upcoming is spoiled) with two
+  // of the crew's questions in between, ending on the triple round with the biggest board.
+  const deckOf = h => {
+    if (h.name === "polls") return [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
+    const cb = crewBoard(h.raw), T = DAYS["2026-11-26"];
+    return h.name === "mix" ? [T[1], cb[4], T[2], cb[0], T[0]] : cb;
+  };
   const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; if (HS) { askCode(); hPush(); } };
   const hSave = () => { store.set(HK, HS); hPush(); };
   const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
@@ -138,17 +144,22 @@
     return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
       st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: TEAMS, won: h.won[i], over: h.over };
   };
-  let pushing = false, dirty = false;
+  // A push that fails is sent again (the newest view, up to 5 tries, 2 s apart) so the TV never sticks on an old screen.
+  let pushing = false, dirty = false, fails = 0, asking = false;
   function hPush() {
-    if (!HS || !HS.code || !me) return;
+    if (!HS || !me) return;
+    if (!HS.code) return askCode();
     if (pushing) { dirty = true; return; }
     pushing = true; dirty = false;
-    API("feudPush", me.id, HS.code, view()).catch(() => {}).then(() => { pushing = false; if (dirty) hPush(); });
+    API("feudPush", me.id, HS.code, view()).then(() => { fails = 0; return 0; }, e => {
+      if (/No game/.test(errMsg(e)) && HS) { HS.code = ""; store.set(CODE, null); store.set(HK, HS); return 1; } // code expired: get a new one
+      return ++fails < 5 ? 2000 : 0;
+    }).then(wait => { pushing = false; if (wait > 1) setTimeout(hPush, wait); else if (wait || dirty) hPush(); });
   }
   // Ask the server for a TV code for a game that doesn't have one yet (a polls game starts before the code arrives).
   function askCode() {
-    const h = HS; if (!h || h.code || h.asking || !me) return; h.asking = true;
-    API("feudHost", me.id, "").then(r => { if (HS === h && r && r.code) { h.code = r.code; hSave(); } }).catch(() => {}).then(() => { delete h.asking; });
+    const h = HS; if (!h || h.code || asking || !me) return; asking = true;
+    API("feudHost", me.id, "").then(r => { asking = false; if (HS === h && r && r.code) { h.code = r.code; store.set(CODE, r.code); hSave(); } }, () => { asking = false; });
   }
   let TV = null;
   function tvClose() {
@@ -359,7 +370,8 @@
       API("feudWatch", code).then(v => { s.msgT = 0; tvOpen(code, v); }).catch(e => this.say(G, /No game/.test(errMsg(e)) ? "No game with that code" : /Unknown call/.test(errMsg(e)) ? "Server is updating. Try again in a few minutes." : "Couldn't connect. Try again.", 4));
     },
     hostNew(G, name, raw, code) {
-      HS = { name, raw: raw || null, code: code || "", day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
+      code = store.get(CODE) || code || ""; if (code) store.set(CODE, code); fails = 0;
+      HS = { name, raw: raw || null, code, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
       ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
       G.s.peek = false; G.s.hkb = false; hSave(); askCode();
     },
@@ -386,12 +398,12 @@
     hostTap(G, b) {
       const s = G.s, h = HS;
       if (b.k === "hpolls") return this.hostNew(G, "polls");
-      if (b.k === "hcrew") {
+      if (b.k === "hcrew" || b.k === "hmix") {
         if (s.hload) return; s.hload = true; s.hmsg = "";
         // the crew's answers only ever come down as part of a host game, and the server logs who started it
         API("feudHost", me ? me.id : "", "crew").then(r => {
           s.hload = false;
-          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first."; else this.hostNew(G, "crew", r.answers, r.code);
+          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first."; else this.hostNew(G, b.k === "hmix" ? "mix" : "crew", r.answers, r.code);
         }).catch(e => { s.hload = false; s.hmsg = /Unknown call/.test(errMsg(e)) ? "The server is still updating. Try again in a few minutes." : "Couldn't load the crew's answers. Check your connection."; });
         return;
       }
@@ -422,10 +434,11 @@
       const bw = Math.min(280, W - 60), bx = W / 2 - bw / 2;
       if (!h) {
         lines("Host a game", TOP + 44, `700 24px ${G.TITLE}`, ink);
-        let y = lines("One screen for the whole room, two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
-        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Play the crew's answers", true, s.hload), { k: "hcrew" }));
-        s.btns.push(Object.assign(G.pill(c, bx, y + 62, bw, 50, "Play America's polls", false, s.hload), { k: "hpolls" }));
-        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, y + 144, `600 14px ${G.UI}`, ink);
+        let y = lines("Two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round. Party mix is America's polls with the crew's own answers mixed in.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Party mix · 5 rounds", true, s.hload), { k: "hmix" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 60, bw, 46, "Crew answers only", false, s.hload), { k: "hcrew" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 114, bw, 46, "America's polls only", false, s.hload), { k: "hpolls" }));
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, y + 190, `600 14px ${G.UI}`, ink);
         return;
       }
       if (h.over) {
