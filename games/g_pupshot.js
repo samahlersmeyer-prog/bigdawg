@@ -2,7 +2,7 @@
 // Hold (thumb on the screen, or the space bar) to charge, let go to shoot. The angle is fixed and the pup
 //   always shoots toward the hoop, so it's all about how long you hold. While it flies, TAP to warp the pup to the ball, then shoot
 //   again from right there (even in mid-air). Get it through the hoop in as few shots as you can.
-// 12 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
+// 20 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
 (function () {
   const GR = 140, BR = 2.6, RIM = 13, FLOOR = [-30, 146, 160, 30];
   // ---- levels (a 100 x 150 court, y grows downward) ----
@@ -19,7 +19,15 @@
     { d: [12, 138], h: [74, 118, "r"], w: [[40, 34, 10, 112]], par: 3 },
     { d: [12, 138], h: [14, 72, "l"], w: [[0, 96, 66, 5]], par: 3 },
     { d: [88, 138], h: [10, 120, "l"], w: [[30, 46, 8, 100], [30, 0, 8, 22]], par: 3 },
-    { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 3 }
+    { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 3 },
+    { d: [12, 138], h: [74, 50, "r"], w: [[38, 140, 24, 6, 1]], par: 2, tip: "PINK PADS BOUNCE IT HIGHER" },
+    { d: [12, 138], h: [78, 40, "r"], w: [], bombs: [[52, 96]], par: 2, tip: "BOMBS BLAST THE BALL AWAY" },
+    { d: [14, 138], h: [70, 60, "r"], w: [[50, 0, 8, 40]], mags: [[60, 96]], par: 2, tip: "MAGNETS BEND THE SHOT" },
+    { d: [12, 138], h: [78, 124, "r"], w: [[26, 0, 74, 96], [50, 140, 16, 6, 1]], par: 1 },
+    { d: [14, 138], h: [40, 60, "l"], w: [[90, 30, 6, 90, 1]], par: 2 },
+    { d: [10, 138], h: [76, 100, "r"], w: [[46, 70, 8, 76], [22, 140, 20, 6, 1]], par: 2 },
+    { d: [86, 138], h: [10, 70, "l"], w: [[36, 90, 8, 56]], mags: [[30, 50]], bombs: [[60, 100]], par: 2 },
+    { d: [10, 138], h: [80, 26, "r"], w: [[34, 60, 8, 86], [60, 100, 30, 4]], mags: [[46, 40]], bombs: [[20, 90]], par: 2 }
   ];
   // ---- physics (pure, so it can be tested off-screen) ----
   function world(L) {
@@ -91,7 +99,7 @@
     c.strokeStyle = "#7a3a00"; c.lineWidth = Math.max(1, r * 0.14); c.stroke(); c.beginPath(); c.moveTo(-r, 0); c.lineTo(r, 0); c.moveTo(0, -r); c.lineTo(0, r); c.stroke();
     c.beginPath(); c.arc(-r * 1.25, 0, r * 0.9, -0.9, 0.9); c.stroke(); c.beginPath(); c.arc(r * 1.25, 0, r * 0.9, Math.PI - 0.9, Math.PI + 0.9); c.stroke(); c.restore();
   }
-  function hud(G, c, s, name) { G.hud(c, `COURT ${s.lv + 1}/12`, `${s.score}`, `SHOTS ${s.shots}`); }
+  function hud(G, c, s, name) { G.hud(c, `COURT ${s.lv + 1}/${SHOT.length}`, `${s.score}`, `SHOTS ${s.shots}`); }
   function banner(G, c, s) {
     if (s.clear > 0) { const st = stars(s.shots, s.L.par); c.fillStyle = "rgba(0,0,0,0.45)"; c.fillRect(0, G.H * 0.3 - 40, G.W, 110);
       G.banner(c, s.shots <= s.L.par ? "SWISH!" : "BUCKET!", "#ffd23f", G.H * 0.3); G.text(c, "★".repeat(st) + "☆".repeat(3 - st), G.W / 2, G.H * 0.3 + 34, 18, "#ffd23f"); G.text(c, `+${levelPts(s.shots, s.L.par)}`, G.W / 2, G.H * 0.3 + 58, 11, "#fff"); }
@@ -101,7 +109,7 @@
       newLevel(G) { const s = G.s, L = SHOT[s.lv]; s.L = L; s.W = world(L); s.shots = 0; s.fx = []; s.clear = 0; this.home(G); s.tipT = 4; },
       home(G) { const s = G.s; s.dog = { x: s.L.d[0], y: s.L.d[1] - 4 }; s.ball = { x: s.dog.x + 3, y: s.dog.y - 2, vx: 0, vy: 0 }; s.phase = "aim"; s.rot = 0; s.rest = 0; s.flyT = 0; s.charge = null; s.W.bombs.forEach(q => q.on = true); },
       cleared(G) { const s = G.s; s.score += levelPts(s.shots, s.L.par); s.clear = 1.6; s.phase = "clear"; G.sfx("win"); s.fx.push({ k: "swish", x: s.W.hx + RIM / 2, y: s.W.hy + 4, t: 0 }); },
-      advance(G) { const s = G.s; s.lv++; if (s.lv >= 12) { s.done = true; return G.over(s.score, "All 12 courts cleared! 🏀"); } this.newLevel(G); },
+      advance(G) { const s = G.s; s.lv++; if (s.lv >= SHOT.length) { s.done = true; return G.over(s.score, "All 20 courts cleared! 🏀"); } this.newLevel(G); },
       save(G) { const s = G.s; if (s.done || s.phase === "clear") return null; return { label: `Court ${s.lv + 1} · ${s.score} pts`, v: { lv: s.lv, score: s.score } }; },
       load(G, sv) { G.s.lv = sv.v.lv; G.s.score = sv.v.score; this.newLevel(G); },
       fly(G, dt) {
@@ -122,8 +130,8 @@
   // ======== Pup Shot ========
   const pup = Object.assign(common("pupshot"), {
     key: "pupshot", name: "Pup Shot", icon: "🌀", max: 99999,
-    blurb: "Fling it, warp to it, dunk it. 12 courts.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+    blurb: "Fling it, warp to it, dunk it. 20 courts.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.",
     reset(G) { G.s = { lv: 0, score: 0 }; this.newLevel(G); },
     update(G, dt) {
       const s = G.s; this.tickFx(G, dt);

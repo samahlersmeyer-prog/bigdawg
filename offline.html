@@ -1172,10 +1172,10 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, skipbo: 500, topdogs: 1000, leash: 1000, mahjong: 1500, mjrush: 999999, mjzen: 999999,
   squad: 999999, dig: 999999, solitaire: 1000, boneball: 1000,
-  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000, scapes: 1000, hook: 99999, fall: 99999, cliff: 99999, unfair: 99999, pede: 999999, cube: 999999, boom: 9999, cab: 99999 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
+  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000, scapes: 1000, hook: 99999, fall: 99999, cliff: 99999, unfair: 99999, pede: 999999, cube: 999999, feud: 1000, boom: 9999, cab: 99999 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
 const DEN_SINCE = '2026-10-28'; // daily Den boards start fresh with the chill scoring
-const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true, boneball: true, links: true, midi: true, guess: true, waffle: true, scapes: true }; // daily Den puzzles get a today-only board too
-const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'skipbo', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen', 'solitaire', 'boneball', 'links', 'midi', 'guess', 'waffle', 'scapes'].indexOf(g) < 0); // long or retired games sit out
+const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true, boneball: true, links: true, midi: true, guess: true, waffle: true, scapes: true, feud: true }; // daily Den puzzles get a today-only board too
+const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'skipbo', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen', 'solitaire', 'boneball', 'links', 'midi', 'guess', 'waffle', 'scapes', 'feud'].indexOf(g) < 0); // long or retired games sit out
 // Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
 const SPORTS_GAMES = ['airhockey', 'archery', 'bowl', 'darts', 'dawgball', 'derby', 'duck', 'fg', 'golf', 'hoops', 'kickret', 'pks', 'pool', 'punch', 'shred', 'swim', 'tennis', 'volley', 'seven'];
 const GOTD_FROM = { squad: '2026-10-31', dig: '2026-10-31', seven: '2026-11-01', pupshot: '2026-11-01', blumji: '2026-11-01' }; // new games join the rotation the next day, so today's pick doesn't change
@@ -1321,7 +1321,7 @@ function answerDare(id, dateKey, dareId, score) {
 // When everyone opens the app at once, the same tabs used to be read over and over. Read-only calls now share
 // one copy of the big tabs for up to 30 seconds. Any call that changes data bumps a version number before and
 // after it runs, so nobody sees an old copy after a change, and calls that write always read the sheet fresh.
-const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1 };
+const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1, feudPush: 1, feudWatch: 1 };
 const RC_SECS_ = 30;
 let READONLY_ = false, RC_VER_ = null, TZ_ = null;
 function rcVer_() { if (RC_VER_ == null) { try { RC_VER_ = CacheService.getScriptCache().get('rc:ver') || '0'; } catch (e) { RC_VER_ = 'x' + Date.now(); } } return RC_VER_; }
@@ -1355,6 +1355,76 @@ function tabValues_(tag, getSheet, cols) {
 }
 
 // ---------------- Fast JSON API ----------------
+// ---------------- Feud crew survey (Thanksgiving weekend 2026) ----------------
+// For the Den's temp Feud game: one row per player, 5 short answers. Answers stay on the server until the survey
+// closes (the start of FEUD_CLOSE); after that getFeudSurvey hands them out with no names attached and each phone
+// builds Sunday's Crew Edition board from them.
+const FEUD_CLOSE = '2026-11-29';
+const FEUD_HEADERS = ['date', 'playerId', 'a1', 'a2', 'a3', 'a4', 'a5'];
+function feudSheet_() { return tabSheet_('FeudSurvey', FEUD_HEADERS, 'B:G'); }
+function feudOpen_() { return asDateKey_(new Date(), tz_()) < FEUD_CLOSE; }
+function getFeudSurvey(id) {
+  id = cleanId_(id);
+  const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
+  const out = { n: rows.length, mine: rows.some(r => String(r[1]) === id), open: feudOpen_() };
+  if (!out.open) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+  return out;
+}
+function sendFeudSurvey(id, answers) {
+  id = cleanId_(id);
+  if (!feudOpen_()) throw new Error('The survey is closed.');
+  if (!Array.isArray(answers) || answers.length !== 5) throw new Error('Answer all 5 first.');
+  // no leading = + - @, so a Sheet never reads an answer as a formula
+  const a = answers.map(x => String(x || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().replace(/^[=+\-@\s]+/, '').slice(0, 40));
+  if (a.some(x => !x)) throw new Error('Answer all 5 first.');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+    if (tabValues_('feud', feudSheet_, FEUD_HEADERS.length).some(r => String(r[1]) === id)) throw new Error('You already answered.');
+    feudSheet_().appendRow([new Date(), id].concat(a));
+  } finally { lock.releaseLock(); }
+  return true;
+}
+
+// Feud host games. A host (phone) starts a game and gets a 4-letter TV code; while it plays it pushes what the room may
+// see, and a second screen (a computer on the TV) reads that with the code. Game state lives in the script cache only,
+// so play never touches the Sheet. The crew's survey answers are locked until Sunday except here: starting a host
+// game on the crew deck hands them to that host's phone, and every such start is logged in the FeudHosts tab.
+function feudCode_(code) { code = String(code || '').toUpperCase().replace(/[^A-Z]/g, ''); if (code.length !== 4) throw new Error('No game with that code.'); return code; }
+function feudHost(id, deck) {
+  id = cleanId_(id);
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  const cache = CacheService.getScriptCache(), abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let tries = 0; tries < 20; tries++) {
+    code = ''; for (let k = 0; k < 4; k++) code += abc.charAt(Math.floor(Math.random() * abc.length));
+    if (!cache.get('feudg:' + code)) break;
+  }
+  cache.put('feudg:' + code, id, 21600);
+  const out = { code: code };
+  if (deck === 'crew') {
+    const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
+    out.n = rows.length; out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+    tabSheet_('FeudHosts', ['date', 'playerId', 'code'], 'B:C').appendRow([new Date(), id, code]);
+  }
+  return out;
+}
+function feudPush(id, code, state) {
+  id = cleanId_(id); code = feudCode_(code);
+  const cache = CacheService.getScriptCache();
+  if (cache.get('feudg:' + code) !== id) throw new Error('No game with that code.');
+  const s = JSON.stringify(state || null);
+  if (s.length > 6000) throw new Error('Too big.');
+  cache.put('feudv:' + code, s, 21600); cache.put('feudg:' + code, id, 21600);
+  return true;
+}
+function feudWatch(code) {
+  code = feudCode_(code);
+  const cache = CacheService.getScriptCache(), s = cache.get('feudv:' + code);
+  if (!s && !cache.get('feudg:' + code)) throw new Error('No game with that code.');
+  return s ? JSON.parse(s) : null;
+}
+
 // The game page can live on a fast static host (GitHub Pages) and talk to this script over HTTPS.
 // The page sends {fn, args} as plain text (no CORS preflight); only the functions listed here can be called.
 const API_FNS = {
@@ -1362,7 +1432,8 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview,
+  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey, feudHost: feudHost, feudPush: feudPush, feudWatch: feudWatch
 };
 function doPost(e) {
   let req = {};
@@ -1473,7 +1544,7 @@ function autoUpdate(force) {
 <meta name="theme-color" content="#121213" media="(prefers-color-scheme: dark)">
 
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
-<script>window.GAMES_V="861d4017c3";</script>
+<script>window.GAMES_V="41e7ae18bb";</script>
 <title>Big Dawg Daily (offline)</title>
 <style>
 @font-face{font-family:'Libre Franklin';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,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) format('woff2')}
@@ -2108,6 +2179,39 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 /* ---- Home: The Den strip + "Want more?" card; results-card Den pairing ---- */
 .den-strip { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 16px; background: var(--raise); border: 1px solid var(--line); color: var(--ink); text-align: left; }
 .den-strip:active { transform: scale(0.985); }
+.feud-survey { border: 2px solid #e9b949; }
+.fs-q { display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; font-weight: 600; line-height: 1.3; text-align: left; }
+.fs-in { width: 100%; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px; font-weight: 500; border: 1.5px solid var(--line); border-radius: 10px; background: var(--raise); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.fs-in:focus { outline: none; border-color: var(--ink); }
+/* Feud TV screen (games/g_feud.js): the board on a computer or TV while the host runs the game from a phone. Sized in vh/vw so it fills any screen. */
+.ftv { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; padding: 3vh 4vw 1.5vh; background: #0b1a4a; color: #fff; overflow: hidden; }
+.ftv-top { display: flex; align-items: center; justify-content: space-between; }
+.ftv-team { width: 24vw; padding: 1.2vh 1vw; border-radius: 1.6vh; background: #14286b; text-align: center; }
+.ftv-tn { font-size: 2.6vh; font-weight: 700; color: #b9c4ea; }
+.ftv-ts { font-size: 7vh; font-weight: 800; line-height: 1.1; }
+.ftv-mid { flex: 1; text-align: center; }
+.ftv-rd { font-size: 2.3vh; font-weight: 700; color: #b9c4ea; letter-spacing: 0.06em; }
+.ftv-pot { display: inline-block; min-width: 16vw; margin-top: 0.8vh; padding: 0.2vh 2vw; border: 0.5vh solid #e9b949; border-radius: 2vh; font-size: 7.5vh; font-weight: 800; line-height: 1.15; color: #e9b949; }
+.ftv-q { display: flex; align-items: center; justify-content: center; min-height: 14vh; padding: 1vh 2vw; text-align: center; font-family: var(--title, inherit); font-size: 4.8vh; font-weight: 800; line-height: 1.2; }
+.ftv-board { flex: 1; display: flex; justify-content: center; min-height: 0; }
+.ftv-col { width: 44vw; margin: 0 0.8vw; display: flex; flex-direction: column; }
+.ftv-slot { height: 9.6vh; margin-bottom: 1.3vh; display: flex; align-items: center; justify-content: center; border: 0.45vh solid #e9b949; border-radius: 1.4vh; background: #1f3a8a; font-weight: 800; }
+.ftv-num { width: 6.6vh; height: 6.6vh; line-height: 6.6vh; border-radius: 50%; background: #0b1a4a; text-align: center; font-size: 3.8vh; color: #e9b949; }
+.ftv-slot.on { justify-content: space-between; padding: 0 1.6vw; background: #e9b949; color: #2b1a10; animation: ftv-flip 0.45s ease-out; }
+.ftv-slot.free { background: #31417a; color: #c9d1ee; }
+.ftv-al { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 4.2vh; text-transform: uppercase; }
+.ftv-ap { margin-left: 1vw; font-size: 4.6vh; }
+@keyframes ftv-flip { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+.ftv-st { height: 5.5vh; text-align: center; font-size: 4vh; font-weight: 800; letter-spacing: 1.2vw; color: #ff5a5a; }
+.ftv-x, .ftv-win { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: none; align-items: center; justify-content: center; background: rgba(5, 10, 30, 0.6); font-weight: 800; text-align: center; }
+.ftv-x { font-size: 44vh; letter-spacing: 2vw; color: #ff3b3b; }
+.ftv-win { padding: 0 6vw; font-size: 11vh; line-height: 1.15; color: #e9b949; }
+.ftv-x.go, .ftv-win.go { display: flex; animation: ftv-pop 0.25s ease-out; }
+@keyframes ftv-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ftv-foot { position: relative; z-index: 2; display: flex; align-items: center; font-size: 2vh; color: #8f9bc7; }
+.ftv-code { flex: 1; }
+.ftv-btn { margin-left: 1vw; padding: 0.6vh 1.2vw; border: 1px solid #8f9bc7; border-radius: 1vh; background: none; color: #b9c4ea; font: inherit; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .ftv-slot.on, .ftv-x.go, .ftv-win.go { animation: none; } }
 .ds-icons { display: flex; gap: 3px; flex: none; }
 .ds-ic { width: 26px; height: 26px; border-radius: 7px; background: #121213; display: grid; place-items: center; }
 .ds-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
@@ -2144,6 +2248,7 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
         <span>Tap here, then Share → Add to Home Screen. Same scores, same crew.</span>
       </a>
       <div class="cards">
+        <button class="den-strip feud-survey" id="feud-survey" hidden></button>
         <button class="gcard c-five" data-go="five">
           <span class="gicon"><span class="ic-five"><i style="background:var(--hit)"></i><i style="background:var(--near)"></i><i style="background:var(--miss)"></i></span></span>
           <span class="gtext"><b>Five</b><span class="gsub" id="sub-five">Guess the word in 6 tries</span></span>
@@ -6123,7 +6228,7 @@ const ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku"
 // Sections inside the Arcade (4) and Sports (3) hubs. Order inside a section follows ARC_ORDER.
 // NEW / UPDATED tags. When a game ships or gets a real upgrade, add a line: key: ["new" or "upd", "YYYY-MM-DD"].
 // The tag shows on its card (and a NEW/UPDATED flag on the home hub button) for 7 days, then drops off on its own.
-const FRESH = { boom: ["new", "2026-11-26"], cab: ["new", "2026-11-26"], mad: ["new", "2026-11-14"], seven: ["upd", "2026-11-08"], scapes: ["new", "2026-11-08"], skipbo: ["new", "2026-11-07"], rummy: ["upd", "2026-11-07"], unfair: ["new", "2026-11-07"], pede: ["new", "2026-11-07"], cube: ["new", "2026-11-07"], fall: ["new", "2026-11-06"], cliff: ["new", "2026-11-06"], hook: ["new", "2026-11-05"], waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["upd", "2026-11-07"], dawgball: ["upd", "2026-11-02"] };
+const FRESH = { boom: ["new", "2026-11-26"], cab: ["new", "2026-11-26"], dash: ["upd", "2026-11-26"], blumji: ["upd", "2026-11-26"], pupshot: ["upd", "2026-11-26"], feud: ["new", "2026-11-26"], mad: ["new", "2026-11-14"], seven: ["upd", "2026-11-08"], scapes: ["new", "2026-11-08"], skipbo: ["new", "2026-11-07"], rummy: ["upd", "2026-11-07"], unfair: ["new", "2026-11-07"], pede: ["new", "2026-11-07"], cube: ["new", "2026-11-07"], fall: ["new", "2026-11-06"], cliff: ["new", "2026-11-06"], hook: ["upd", "2026-11-26"], waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["upd", "2026-11-07"], dawgball: ["upd", "2026-11-02"] };
 function freshTag(k) { const f = FRESH[k]; if (!f) return null; const age = (Date.now() - new Date(f[1] + "T00:00:00").getTime()) / 864e5; return age >= 0 && age < 7 ? f[0] : null; }
 function freshEl(k, cls) { const t = freshTag(k); return t ? el("span", "fresh " + t + (cls ? " " + cls : ""), t === "new" ? "NEW" : "UPDATED") : null; }
 function markFreshHubs() {
@@ -6164,8 +6269,10 @@ function renderArcSub() {
 // The Den's dailies, in two sections, in a fixed order (re-ranked by hand every month or so from play counts, so the
 // order doesn't shift under people's thumbs day to day). NEW games are pinned first for their first week.
 // Finished puzzles sink to the bottom of their section as a slim row.
+// Feud: a temp Den game for Thanksgiving weekend 2026 (games/g_feud.js). After FEUD_END it isn't registered at all.
+const FEUD_END = "2026-11-29", FEUD_ON = KEY <= FEUD_END;
 const DEN_SECTIONS = [
-  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"] },
+  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: (FEUD_ON ? ["feud"] : []).concat(["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"]) },
   { icon: "🧩", name: "Logic", sub: "Numbers, grids and paths.", compact: true, keys: ["leash", "topdogs", "mahjong", "sudoku", "boneball", "pips"] }
 ];
 const DEN_PUZ = DEN_SECTIONS.flatMap(g => g.keys);
@@ -6184,6 +6291,7 @@ function denStatus(k) {
 }
 // Little drawn icons for the Den dailies, in the same spirit as the core four's (no emoji in a big box).
 const DEN_ICONS = {
+  feud: [5, 14.5, 24].map((y, i) => `<rect x="4" y="${y}" width="28" height="7.5" rx="2.5" fill="${i === 1 ? "#e9b949" : "#1f3a8a"}"/>`).join(""),
   midi: '<rect x="3" y="3" width="30" height="30" rx="2" fill="var(--ink)"/>' + [[0,0],[1,0],[2,0],[4,0],[0,1],[2,1],[3,1],[4,1],[0,2],[1,2],[3,2],[4,2],[0,3],[1,3],[2,3],[4,3],[1,4],[2,4],[3,4],[4,4]].map(([x, y]) => `<rect x="${4.5 + x * 5.6}" y="${4.5 + y * 5.6}" width="4.6" height="4.6" fill="var(--bg)"/>`).join(""),
   waffle: [0,1,2,3,4].flatMap(y => [0,1,2,3,4].filter(x => !(x % 2 && y % 2)).map(x => `<rect x="${3 + x * 6.2}" y="${3 + y * 6.2}" width="5.2" height="5.2" rx="1" fill="${(x + y * 3) % 4 ? "var(--hit)" : "var(--near)"}"/>`)).join(""),
   links: '<path d="M18 9v18" stroke="var(--ink)" stroke-width="2.5"/>' + [3, 14, 25].map((y, i) => `<rect x="6" y="${y}" width="24" height="8" rx="4" fill="${i === 1 ? "var(--near)" : "var(--hit)"}"/>`).join(""),
@@ -6307,7 +6415,44 @@ function denPeople() {
   const ids = {}; DEN_PUZ.forEach(k => ((arcade && arcade.games && arcade.games[k] && arcade.games[k].today) || []).forEach(x => { if (!me || x.id !== me.id) ids[x.id] = x.name; }));
   return Object.values(ids);
 }
+// ---- Feud crew survey (Thanksgiving 2026): 5 questions, answered once, open through Saturday. The answers stay
+// secret on the server until Sunday, when g_feud.js turns them into the Crew Edition board. ----
+const FEUD_SURVEY_END = "2026-11-28";
+const FEUD_QS = [
+  "Besides the turkey, name something that gets stuffed on Thanksgiving.",
+  "Name the person most likely to fall asleep on the couch before the pie comes out.",
+  "Name an excuse people use to get out of doing the dishes.",
+  "Name a dish that shows up every year even though nobody asked for it.",
+  "Name something the dog is hoping falls off the table."
+];
+const feudSvKey = () => "bdd:feudsv:" + (me ? me.id : "");
+function renderFeudSurvey() {
+  const b = $("feud-survey"); if (!b) return;
+  b.hidden = !(me && KEY <= FEUD_SURVEY_END && !store.get(feudSvKey())); if (b.hidden) return;
+  b.innerHTML = ""; const tx = el("span", "ds-tx");
+  tx.append(el("b", null, "🦃 Crew Survey"), el("span", "ds-sub", "5 quick questions. Your answers build Sunday's Feud."));
+  b.append(tx, el("span", "ds-chev", "›"));
+}
+function openFeudSurvey() {
+  const ins = FEUD_QS.map((q, i) => { const lab = el("label", "fs-q"), inp = el("input", "fs-in"); inp.type = "text"; inp.maxLength = 40; inp.autocomplete = "off"; inp.enterKeyHint = i < 4 ? "next" : "send"; lab.append(el("span", null, `${i + 1}. ${q}`), inp); return { lab, inp }; });
+  const go = el("button", "pill solid", "Lock in my answers"), msg = el("p", "note center");
+  const send = () => {
+    const a = ins.map(x => x.inp.value.trim()), miss = a.findIndex(x => !x);
+    if (miss >= 0) { msg.textContent = "Answer all 5 first."; ins[miss].inp.focus(); return; }
+    go.disabled = true; msg.textContent = "Sending…";
+    const done = () => { store.set(feudSvKey(), 1); closeModal(); renderFeudSurvey(); toast("Locked in! See your answers on Sunday's Feud 🦃", 2400); };
+    API("sendFeudSurvey", me.id, a).then(done).catch(e => {
+      if (/already answered/.test(errMsg(e))) return done();
+      go.disabled = false; msg.textContent = /Unknown call/.test(errMsg(e)) ? "The survey is still warming up. Try again in a few minutes." : errMsg(e);
+    });
+  };
+  ins.forEach((x, i) => x.inp.addEventListener("keydown", e => { if (e.key !== "Enter") return; if (i < 4) ins[i + 1].inp.focus(); else send(); }));
+  go.addEventListener("click", send);
+  openModal([el("h2", null, "Crew Survey"), el("p", "sub", "One short answer each, first thing that comes to mind. Nobody sees who said what. Open through Saturday.")].concat(ins.map(x => x.lab), [go, msg]));
+}
+if ($("feud-survey")) $("feud-survey").addEventListener("click", openFeudSurvey);
 function renderDenStrip() {
+  renderFeudSurvey();
   const b = $("den-strip"); if (!b) return; b.innerHTML = "";
   if (!arcade && me && !arcBusy) setTimeout(() => { if (!arcade) refreshArcade(true); }, 1200);
   const ks = DEN_PUZ.filter(k => ARC[k]), done = ks.filter(k => denStatus(k)[1]).length;
@@ -6937,7 +7082,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-play
   window.addEventListener("resize", () => { if (active === "game" && G.state !== "play") gIdle(); });
 })();
 
-defGameMeta([{"file": "g_boom.js", "key": "boom", "name": "Boomerang Dawgs", "icon": "🪃", "blurb": "Throw, slash, dash. One hit and you're out. First to 10.", "how": "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.", "max": 9999}, {"file": "g_cab.js", "key": "cab", "name": "Cab Dawg", "icon": "🚕", "blurb": "Pick up riders, beat their clock, upgrade the cab.", "how": "You drive a cab around the city for 5 days. Hold the left or right side of the screen to steer. The gas is automatic, and holding both sides brakes and backs up (on a keyboard: up arrow or W for gas, left and right to steer, down to brake). Pull up next to a waving rider and the cab stops to let them in. The matching arrow points to their pin: get there before their timer runs out or they walk. Faster rides tip better, and bumps cost you the tip. Hitting traffic costs 2 seconds. Gold riders are VIPs: double fare, tighter clock. Parks are a slow shortcut. When the day's clock runs out, spend what you made on more seats, a faster engine, grippier tires, a longer shift or a better meter. Your score is every dollar you earn Monday to Friday.", "max": 99999}, {"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "icon": "😈", "blurb": "A cute little platformer. Totally fair. 9 lives.", "how": "Run right and touch the flag. Hold the left quarter of the screen to walk left, the next quarter to walk right, and tap the right half to jump (hold it to jump higher). Arrow keys and space work too. Bonk ? blocks for bones (+25) and stomp cats (+50). Each level is +1000, or +1500 with no deaths. Fair warning: the level is out to get you. Blocks hide where you jump, the ground falls away, spikes pop up and not every flag is real. You get 9 lives, like a cat.", "max": 99999}, {"file": "g_pede.js", "key": "pede", "name": "Dawgipede", "icon": "🐛", "blurb": "Blast the Catterpillar before it reaches you.", "how": "A Catterpillar winds down through the toadstools. Drag anywhere to move the Big Dawg (or use the arrow keys). Bones fire on their own, one at a time, so aim with your feet. Every segment you hit becomes a toadstool and splits the cat in two: heads are 100, body parts are 10. Squirrels zigzag through your area and eat toadstools: 300, 600 or 900 the closer they are. Birds dive-bomb and drop toadstools, 2 hits for 200. Touch anything and you lose a life. Clear the Catterpillar for a faster wave. Extra life every 12,000.", "max": 999999}, {"file": "g_cube.js", "key": "cube", "name": "Cube Dawg", "icon": "🧊", "blurb": "Hop the pyramid. Change every cube. Dodge the cat.", "how": "Tap the corner of the screen you want to hop toward: up-left, up-right, down-left or down-right of the Big Dawg (or use the arrow keys: up = up-right, right = down-right, down = down-left, left = up-left). Landing on a cube changes its color (+25). Turn every cube to the target color shown at the top to clear the round. Red yarn balls roll down the pyramid. The purple ball hatches into an alley cat at the bottom that chases you. Hop off the edge onto a spinning frisbee to fly back to the top, and if the cat is right behind you it jumps off after you (+500). Catch a tennis ball to freeze everything (+100) and catch squirrels before they undo your cubes (+300). Hop off the pyramid anywhere else and you fall. 4 lives.", "max": 999999}, {"file": "g_fall.js", "key": "fall", "name": "Fall Dawg", "icon": "⬇️", "blurb": "Roll through the gaps. Don't hit the spikes.", "how": "The bars keep rising. Hold the left or right side of the screen (or use the arrow keys) to roll the Big Dawg into a gap and drop through. Every row you drop is +10, and bones in the gaps are +25. If the bars push you up into the spikes at the top, it's over. It gets faster the longer you last.", "max": 99999}, {"file": "g_cliff.js", "key": "cliff", "name": "Cliff Dawg", "icon": "🏞️", "blurb": "Leap, steer, nail the tiny pool. 3 lives.", "how": "Hold anywhere to charge your jump (the meter swings up and down), then let go to leap off the cliff. Too weak and you hit the cliff, too strong and you hit the far wall. While you fall, hold the left or right side (or the arrow keys) to steer. The canyon gets narrower toward the bottom, and rocks stick out of the walls on deeper dives. Land in the pool to score, more for hitting the middle and +100 for a PERFECT. Every dive is deeper and tighter. You get 3 lives: hit a wall and you climb back up to try that same dive again. Lose all 3 and the run is over.", "max": 99999}, {"file": "g_hook.js", "key": "hook", "name": "Hook Dawg", "icon": "🪝", "blurb": "Hold to hook, let go to fling. Swing forever.", "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.", "max": 99999},
+defGameMeta([{"file": "g_boom.js", "key": "boom", "name": "Boomerang Dawgs", "icon": "🪃", "blurb": "Throw, slash, dash. One hit and you're out. First to 10.", "how": "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.", "max": 9999}, {"file": "g_cab.js", "key": "cab", "name": "Cab Dawg", "icon": "🚕", "blurb": "Pick up riders, beat their clock, upgrade the cab.", "how": "You drive a cab around the city for 5 days. Hold the left or right side of the screen to steer. The gas is automatic, and holding both sides brakes and backs up (on a keyboard: up arrow or W for gas, left and right to steer, down to brake). Pull up next to a waving rider and the cab stops to let them in. The matching arrow points to their pin: get there before their timer runs out or they walk. Faster rides tip better, and bumps cost you the tip. Hitting traffic costs 2 seconds. Gold riders are VIPs: double fare, tighter clock. Parks are a slow shortcut. When the day's clock runs out, spend what you made on more seats, a faster engine, grippier tires, a longer shift or a better meter. Your score is every dollar you earn Monday to Friday.", "max": 99999}, {"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "icon": "😈", "blurb": "A cute little platformer. Totally fair. 9 lives.", "how": "Run right and touch the flag. Hold the left quarter of the screen to walk left, the next quarter to walk right, and tap the right half to jump (hold it to jump higher). Arrow keys and space work too. Bonk ? blocks for bones (+25) and stomp cats (+50). Each level is +1000, or +1500 with no deaths. Fair warning: the level is out to get you. Blocks hide where you jump, the ground falls away, spikes pop up and not every flag is real. You get 9 lives, like a cat.", "max": 99999}, {"file": "g_pede.js", "key": "pede", "name": "Dawgipede", "icon": "🐛", "blurb": "Blast the Catterpillar before it reaches you.", "how": "A Catterpillar winds down through the toadstools. Drag anywhere to move the Big Dawg (or use the arrow keys). Bones fire on their own, one at a time, so aim with your feet. Every segment you hit becomes a toadstool and splits the cat in two: heads are 100, body parts are 10. Squirrels zigzag through your area and eat toadstools: 300, 600 or 900 the closer they are. Birds dive-bomb and drop toadstools, 2 hits for 200. Touch anything and you lose a life. Clear the Catterpillar for a faster wave. Extra life every 12,000.", "max": 999999}, {"file": "g_cube.js", "key": "cube", "name": "Cube Dawg", "icon": "🧊", "blurb": "Hop the pyramid. Change every cube. Dodge the cat.", "how": "Tap the corner of the screen you want to hop toward: up-left, up-right, down-left or down-right of the Big Dawg (or use the arrow keys: up = up-right, right = down-right, down = down-left, left = up-left). Landing on a cube changes its color (+25). Turn every cube to the target color shown at the top to clear the round. Red yarn balls roll down the pyramid. The purple ball hatches into an alley cat at the bottom that chases you. Hop off the edge onto a spinning frisbee to fly back to the top, and if the cat is right behind you it jumps off after you (+500). Catch a tennis ball to freeze everything (+100) and catch squirrels before they undo your cubes (+300). Hop off the pyramid anywhere else and you fall. 4 lives.", "max": 999999}, {"file": "g_fall.js", "key": "fall", "name": "Fall Dawg", "icon": "⬇️", "blurb": "Roll through the gaps. Don't hit the spikes.", "how": "The bars keep rising. Hold the left or right side of the screen (or use the arrow keys) to roll the Big Dawg into a gap and drop through. Every row you drop is +10, and bones in the gaps are +25. If the bars push you up into the spikes at the top, it's over. It gets faster the longer you last.", "max": 99999}, {"file": "g_cliff.js", "key": "cliff", "name": "Cliff Dawg", "icon": "🏞️", "blurb": "Leap, steer, nail the tiny pool. 3 lives.", "how": "Hold anywhere to charge your jump (the meter swings up and down), then let go to leap off the cliff. Too weak and you hit the cliff, too strong and you hit the far wall. While you fall, hold the left or right side (or the arrow keys) to steer. The canyon gets narrower toward the bottom, and rocks stick out of the walls on deeper dives. Land in the pool to score, more for hitting the middle and +100 for a PERFECT. Every dive is deeper and tighter. You get 3 lives: hit a wall and you climb back up to try that same dive again. Lose all 3 and the run is over.", "max": 99999}, {"file": "g_hook.js", "key": "hook", "name": "Hook Dawg", "icon": "🪝", "blurb": "Hold to hook, let go to fling. 24 levels.", "how": "Hold anywhere to grab the nearest hook and swing. You can only grab a hook when you're inside its dashed ring. Let go to fling yourself forward, and let go on the upswing to fly far. Round bumpers bounce you, striped blocks are solid. Fall off the bottom and the level just starts over. Swing past the checkered line to clear it. Each level is worth 1000, plus up to 500 for speed, and your score is the total of your best on every level. Tap ↻ to restart, and the arrows to replay a level you've cleared.", "max": 99999},
 {"file": "g_airhockey.js", "key": "airhockey", "name": "Paw Hockey", "icon": "🏒", "blurb": "Air hockey vs the cat. First to 7.", "how": "Drag anywhere in the bottom half and your bulldog mallet follows just above your thumb. Swing through the puck fast to hit it hard, and bank it off the walls into the cat's goal at the top. First to 7 wins. Each goal is 100, a win is +500, and every shot on goal adds a little bonus. The cat starts sleepy but wakes up as the game goes on.", "cat": "sports", "max": 9999},
 {"file": "g_archery.js", "key": "archery", "name": "Bow Wow", "icon": "🏹", "blurb": "Archery. 10 arrows, mind the wind.", "how": "Put your thumb down and drag to move the crosshair onto the target, then let go to shoot. The wind pushes your arrow (watch the flag), and if you hold too long your aim starts to wobble. 10 arrows, bullseye is 10. Perfect is 100.", "cat": "sports", "max": 100},
 {"file": "g_blocks.js", "key": "blocks", "name": "Block Dawg", "icon": "🧱", "blurb": "Stack the blocks. Clear the lines.", "how": "Shapes fall into the well. Fill a whole row to clear it. Buttons: move ◀ ▶, rotate ⟳, drop ⤓. Or swipe left/right to move, swipe down to drop, tap the well to rotate. Tap the HOLD box to stash a piece for later (once per piece). The outline shows where it will land. 4 lines at once = big points. Don't let the stack reach the top!", "max": 9999999},
@@ -6947,7 +7092,7 @@ defGameMeta([{"file": "g_boom.js", "key": "boom", "name": "Boomerang Dawgs", "ic
 {"file": "g_crib.js", "key": "crib", "name": "Cribbage", "icon": "📌", "blurb": "Cribbage vs Old Tom the cat. First to 121.", "how": "Two-player cribbage against Old Tom. Tap 2 cards to send to the crib, then TO CRIB. Then peg: take turns playing cards without going over 31 (15 and 31 = 2, pairs, runs, last card = 1). If you can't play, it's a Go. Then hands and the crib are counted for you, step by step. First to 121 wins; win before Tom reaches 91 for a skunk. Score: win = 100 + what you win by (+100 for a skunk).", "cat": "den", "max": 500},
 {"file": "g_cross.js", "key": "cross", "name": "Dawgger", "icon": "🐸", "blurb": "Cross the street. Don't get flattened.", "how": "Swipe (or tap above/below/left/right of the pup) to hop one square. Dodge the traffic, ride the logs and floats across the creek (no swimming!), and hop into an empty dog house. Fill all 5 houses to level up. 30 seconds per crossing, 3 lives.", "max": 99999},
 {"file": "g_darts.js", "key": "darts", "name": "Dawg Darts", "icon": "🎯", "blurb": "10 rounds, 3 darts. Steady paws.", "how": "Touch and hold to aim (the crosshair floats just above your thumb). It wobbles like a shaky paw, worse the longer you hold. Let go to throw. 10 rounds of 3 darts. Triple ring x3, double ring x2, bull 50. Same number 3 times in a round = +50 hat trick.", "cat": "sports", "max": 9999},
-{"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.", "max": 999999},
+{"file": "g_dash.js", "key": "dash", "name": "Dawg Dash", "icon": "🛹", "blurb": "Endless runner. Swipe to dodge trains.", "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. Red trains are moving and come at you fast. Swipe sideways into the side of a train and you only stumble, but the dogcatcher closes in, and a second stumble before he drops back gets you caught. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash, 🚀 flies you over everything for a few seconds, 👟 lets you jump right onto train roofs. It gets faster the longer you go.", "max": 999999},
 {"file": "g_dawgball.js", "key": "dawgball", "name": "Dawg Ball", "icon": "🧢", "blurb": "Doodle-style batting vs the Cats.", "how": "You bat, the Alley Cats pitch. Tap anywhere to swing. Any fair ball is a hit - the farther it goes, the more bases. The only way out is swinging and missing: 3 whiffs and the game is over (taking a pitch or fouling one off is free). Early pulls it to left, late goes to right, right on time crushes it. Every 3 runs a nastier pitcher comes in and the timing gets tighter. Score: runs x10.", "cat": "sports", "max": 999},
 {"file": "g_derby.js", "key": "derby", "name": "Dawg Derby", "icon": "⚾", "blurb": "Home run derby. Time your swing.", "how": "The cat pitches, you tap anywhere to swing when the ball reaches the plate. Perfect timing = a moonshot. Any swing that isn't a homer is an out, and so is taking a strike. Balls wide of the plate are free: let them go. 10 outs. Score = total home-run feet.", "cat": "sports", "max": 99999},
 {"file": "g_dig.js", "key": "dig", "name": "Dig Dawg", "icon": "⛏️", "blurb": "Dig tunnels, bark critters until they pop.", "how": "Press and drag in a direction to dig that way; let go to stop. Tap anywhere to BARK in the direction you're facing. Each bark puffs a mole or badger up a little; four barks and it pops. Stop barking and it shrinks back. Critters chase you through your tunnels and can sneak through dirt as ghostly eyes. Dig out the dirt under a 🪨 rock and it falls, squashing anything below (big points, and watch your own head). Deeper critters are worth more. Clear them all to go to the next yard. 3 lives.", "max": 999999},
@@ -6982,8 +7127,8 @@ defGameMeta([{"file": "g_boom.js", "key": "boom", "name": "Boomerang Dawgs", "ic
 {"file": "g_pupman.js", "key": "pupman", "name": "Pup-Man", "icon": ":dawgW:", "blurb": "Gobble kibble. Dodge the mailmen.", "how": "Swipe (or tap a side of the dog) to steer through the maze and gobble every kibble. Turns are saved until the next opening. Big bones in the corners scare the chasers, so chomp them for 200, 400, 800, 1600. 3 lives.", "max": 999999},
 {"file": "g_putt.js", "key": "putt", "name": "Putt Pup", "icon": "⛳", "blurb": "9 holes of backyard mini golf.", "how": "9 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole.", "max": 450},
 {"file": "g_putt.js", "key": "putt18", "name": "Putt Pup 18", "icon": "⛳", "blurb": "The full 18. Back nine included.", "how": "18 holes. Drag back from the tennis ball like a slingshot, then let go to putt. The further you pull, the harder the shot. Ace = 50, 2 strokes = 40, 3 = 30, 4 = 20, 5 = 10, 6 = 5. Water costs a stroke. Max 6 strokes per hole. The back nine adds a loop-de-loop, deck tunnels, a sprinkler, a seesaw, lawnmowers, an island green and the doghouse.", "max": 900},
-{"file": "g_pupshot.js", "key": "pupshot", "name": "Pup Shot", "icon": "🌀", "blurb": "Fling it, warp to it, dunk it. 12 courts.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.", "max": 99999},
-{"file": "g_blumji.js", "key": "blumji", "name": "Blumji Bounce", "icon": "🚩", "blurb": "Bounce platform to platform. Reach the flag. 12 stages.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.", "max":  99999},
+{"file": "g_pupshot.js", "key": "pupshot", "name": "Pup Shot", "icon": "🌀", "blurb": "Fling it, warp to it, dunk it. 20 courts.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.", "max": 99999},
+{"file": "g_blumji.js", "key": "blumji", "name": "Blumji Bounce", "icon": "🚩", "blurb": "Bounce platform to platform. Reach the flag. 20 stages.", "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.", "max":  99999},
 {"file": "g_rummy.js", "key": "rummy", "name": "Rummy Dawgs", "icon": "🧮", "blurb": "Number-tile rummy vs Rex and Duke. 3 rounds, classic scoring.", "how": "Get rid of all your tiles. Sets are RUNS (3+ in a row, same color, like 4-5-6 red) or GROUPS (3 or 4 of the same number, all different colors). The 🐶 joker can stand in for any tile. Your first play each round has to add up to 30+ using only your own tiles. After that, rework the table however you like: take tiles off sets, split them, combine them, as long as every set on the table is valid when you tap Done. Tap tiles to select them, then tap New set or the + at the end of a set to move them there. Undo puts the table back. Nothing to play? Tap Draw. Classic scoring, 3 rounds: when someone goes out, everyone else loses the face value of the tiles left in their rack (jokers 30) and the winner gains it all. If the pool runs out first, the lowest rack wins and the others lose the difference. Highest total after 3 rounds wins the match. Score: 300 + your match total, +100 for winning the match.", "cat": "den", "max": 800},
 {"file": "g_skipbo.js", "key": "skipbo", "name": "Skip-Bo Dawgs", "icon": "🔢", "blurb": "The stockpile card game vs Rex and Duke.", "how": "Be the first to empty your stockpile (left, top card face up). The 4 building piles in the middle go up from 1 to 12, any color; at 12 a pile clears. Orange 🐶 cards are wild and count as whatever the pile needs. On your turn you fill up to 5 cards, then play as many cards as you like from your hand, the top of your stockpile, or the tops of your 4 discard piles: tap a card, then tap a building pile. Use your whole hand and you draw 5 more. To end your turn, tap a hand card and then one of your discard piles. Only the top card of each discard pile can be played, so stack them high-to-low. Quick game: 20-card stockpiles; Classic: 30. Win = 25 + 5 for each card left in the pups' stockpiles. Score: win = 100 + that; lose = 5 for every stockpile card you got rid of.", "cat": "den", "max": 500},
 {"file": "g_waffle.js", "key": "waffle", "name": "Waffle", "icon": "🧇", "blurb": "Daily: swap letters, fix six words.", "how": "The waffle holds six five-letter words: three across and three down. Every letter is already on the board, just in the wrong spots. Tap a tile, then tap another to swap them. Green means right letter, right spot (it locks). Yellow means that letter belongs somewhere else in its row or column (tiles where words cross count for both). Gray means it's not in that row or column. Every board can be solved in 10 swaps and you get 15; each swap you have left when you finish is a star, up to 5. One board a day. Score: 500 for solving plus 100 per star. Run out of swaps and you get 10 per green tile.", "cat": "den", "max": 1000, "puzzle": true}, {"file": "g_scapes.js", "key": "scapes", "name": "Scapes", "icon": "🍂", "blurb": "Daily: swipe to fill the crossword.", "how": "Drag your finger from letter to letter on the wheel to spell a word, then let go. Words that fit the crossword drop into place. Every word uses only the wheel's letters, each letter once. Slide back over a letter to undo it. Real words that aren't in the crossword count as bonus words (🔍). 🔀 shuffles the wheel for a fresh look. 💡 shows one letter (it costs 50 pts). One board a day. Score: 700 for filling the board, minus 50 per hint (never below 300), plus 50 per bonus word, up to 6.", "cat": "den", "max": 1000, "puzzle": true},
@@ -7002,6 +7147,8 @@ defGameMeta([{"file": "g_boom.js", "key": "boom", "name": "Boomerang Dawgs", "ic
 {"file": "g_trail.js", "key": "trail", "name": "Dawg Trail", "icon": "🐂", "blurb": "Wagon-trail adventure. Get the pack west.", "how": "Lead 4 pups 1,200 miles to the Great Dog Park. Tap TRAVEL to roll on a day. Fast pace covers more ground but eats more kibble and gets pups sick. HUNT to catch squirrels for kibble (tap them before they run off). REST heals sick pups. Cross rivers, shop at forts. Score: pups who make it, kibble and treats left, plus a speed bonus.", "max": 9999},
 {"file": "g_trap.js", "key": "trap", "name": "Pup Trap", "icon": "🧀", "blurb": "Push crates. Trap the cats. Eat the cheese.", "how": "You're the pup. Tap or hold on the side you want to move. Walk into crates to push the whole row (if there's room at the end). Box in the cats: when EVERY cat on the board is stuck, they all turn into 🧀 cheese. Eat cheese for points. Clear 3 waves to finish a level. Gray rocks don't move. Get caught 3 times and it's over.", "max": 999999},
 {"file": "g_volley.js", "key": "volley", "name": "Beach Dawgs", "icon": "🏐", "blurb": "2-on-2 beach volleyball. Bump, set, SPIKE.", "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.", "cat": "sports", "max": 9999}]);
+
+if (FEUD_ON) defGameMeta([{ file: "g_feud.js", key: "feud", name: "Feud", icon: "🦃", blurb: "Survey says! Through Sunday.", how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. To put the board on a TV, open Feud on a computer, tap TV and type the code from the host's phone. Here through Sunday only.", cat: "den", puzzle: true, max: 1000 }]);
 
 // Register the newer games with the shared arcade lists.
 Object.values(GAMEDEFS).forEach(d => { ARC[d.key] = { name: d.name, icon: d.icon, how: d.how, cat: d.cat || "arcade", puzzle: !!d.puzzle, blurb: d.blurb || "" }; ARC_BLURB[d.key] = d.blurb; if (aBest[d.key] == null) aBest[d.key] = 0; });
@@ -7764,12 +7911,13 @@ defGame({
 // faces the next platform. How long you hold = how far you go. Land on a platform to stand there, then bounce again.
 // Reach the 🚩 platform to clear the stage. Miss and fall = back to the last platform you stood on (still counts).
 // Pink pads bounce you back up, blue platforms slide side to side (you ride them).
-// 12 stages. Each is worth up to 500 (par or better), 100 less per extra bounce, never below 100.
+// 20 stages. Each is worth up to 500 (par or better), 100 less per extra bounce, never below 100.
 (function () {
   const GR = 140, FEET = 2.4;
   // ---- stages (a 100 x 150 screen, y grows downward) ----
-  // p: platforms [x, top y, width, type, move range, move speed]; type "" normal, "b" pink bouncy pad, "m" moving.
-  // The first platform is the start, the last one has the flag.
+  // p: platforms [x, top y, width, type, move range, move speed]; type "" normal, "b" pink bouncy pad, "m" moving,
+  // "s" spikes (land on them and it's back to your last platform). The first platform is the start, the last has the flag.
+  // w: solid walls [x, y, w, h] you bounce off (like the screen edges). New stages: check them with `node tools/blumji.mjs`.
   const LV = [
     { p: [[6, 130, 20], [70, 130, 22]], par: 1, tip: "HOLD TO CHARGE, LET GO" },
     { p: [[6, 136, 18], [42, 112, 16], [76, 86, 18]], par: 2, tip: "HOP UP TO THE FLAG" },
@@ -7782,7 +7930,15 @@ defGame({
     { p: [[6, 136, 16], [34, 108, 12, "m", 24, 1.1], [62, 78, 10, "m", 14, 1.6], [36, 48, 22]], par: 3 },
     { p: [[44, 140, 14], [6, 112, 12], [82, 104, 12], [52, 92, 16, "b"], [10, 56, 24]], par: 3 },
     { p: [[4, 136, 14], [34, 140, 10, "b"], [62, 112, 8, "m", 20, 1.3], [24, 72, 10, "m", 16, 1.0], [70, 40, 22]], par: 3 },
-    { p: [[84, 140, 14], [56, 118, 8], [30, 96, 8, "m", 14, 1.4], [6, 70, 10], [40, 140, 10, "b"], [36, 30, 10, "m", 22, 0.8], [76, 20, 20]], par: 4 }
+    { p: [[84, 140, 14], [56, 118, 8], [30, 96, 8, "m", 14, 1.4], [6, 70, 10], [40, 140, 10, "b"], [36, 30, 10, "m", 22, 0.8], [76, 20, 20]], par: 4 },
+    { p: [[6, 136, 16], [34, 139, 26, "s"], [72, 136, 20]], par: 1, tip: "DON'T LAND ON THE SPIKES" },
+    { p: [[10, 136, 16], [30, 110, 18]], w: [[50, 20, 5, 130]], par: 1, tip: "BOUNCE OFF THE WALL" },
+    { p: [[4, 136, 14], [22, 140, 56, "s"], [38, 112, 12, "m", 14, 1.0], [82, 110, 14]], par: 2 },
+    { p: [[4, 136, 14], [24, 139, 12, "s"], [40, 136, 10], [56, 139, 12, "s"], [74, 136, 10], [86, 100, 12]], w: [[20, 0, 62, 92]], par: 3, tip: "SHORT HOPS UNDER THE ROOF" },
+    { p: [[6, 80, 14], [28, 142, 12, "b"], [44, 142, 18, "s"], [66, 142, 12, "b"], [82, 60, 14]], par: 3 },
+    { p: [[40, 138, 16], [10, 110, 12], [26, 84, 12], [10, 56, 12], [24, 26, 16]], w: [[44, 0, 5, 124]], par: 5, tip: "WALL TO WALL" },
+    { p: [[4, 136, 14], [26, 139, 14, "s"], [44, 116, 10, "m", 10, 1.2], [70, 139, 26, "s"], [72, 96, 8], [40, 66, 10, "m", 16, 0.9], [8, 44, 16]], par: 4 },
+    { p: [[82, 138, 14], [54, 141, 24, "s"], [34, 120, 10], [6, 141, 24, "s"], [8, 90, 12], [40, 141, 12, "b"], [34, 58, 10, "m", 10, 1.1], [72, 34, 20]], w: [[60, 50, 5, 50]], par: 5 }
   ];
   // ---- physics (pure, so the stages can be checked off-screen) ----
   function plats(L, t) { return L.p.map((a, i) => { const off = a[3] === "m" ? a[4] * Math.sin(t * a[5]) : 0; return { i, x: a[0] + off, y: a[1], w: a[2], k: a[3] || "", flag: i === L.p.length - 1 }; }); }
@@ -7790,9 +7946,16 @@ defGame({
   function step(L, b, t, dt) {
     const py = b.y; b.vy += GR * dt; b.x += b.vx * dt; b.y += b.vy * dt;
     if (b.x < FEET) { b.x = FEET; b.vx = -b.vx * 0.6; } if (b.x > 100 - FEET) { b.x = 100 - FEET; b.vx = -b.vx * 0.6; }
+    for (const w of L.w || []) { // walls: off the sides like the screen edges, a soft bonk off the top or bottom
+      if (b.x <= w[0] - FEET || b.x >= w[0] + w[2] + FEET || b.y <= w[1] || b.y >= w[1] + w[3] + 5) continue;
+      const px = b.x - b.vx * dt;
+      if (px <= w[0] - FEET || px >= w[0] + w[2] + FEET) { b.x = px <= w[0] - FEET ? w[0] - FEET : w[0] + w[2] + FEET; b.vx = -b.vx * 0.6; }
+      else { b.y = py; b.vy = -b.vy * 0.3; }
+    }
     if (b.vy > 0) for (const p of plats(L, t)) {
       if (py <= p.y && b.y >= p.y && b.x >= p.x - 1.5 && b.x <= p.x + p.w + 1.5) {
         b.y = p.y;
+        if (p.k === "s") return "out";
         if (p.k === "b") { b.vy = -Math.min(150, Math.max(105, b.vy * 1.08)); return { bounce: p }; }
         return { land: p };
       }
@@ -7806,14 +7969,14 @@ defGame({
   function aimDir(L, on, x, t) { const P = plats(L, t), n = P[Math.min(on + 1, P.length - 1)]; return n.x + n.w / 2 >= x ? 1 : -1; }
   const levelPts = (n, par) => Math.max(100, 500 - 100 * Math.max(0, n - par));
   const stars = (n, par) => n <= par ? 3 : n === par + 1 ? 2 : 1;
-  const ENG = { LV, plats, step, SPEED, GR, ANG, aimDir };
+  const ENG = { LV, plats, step, SPEED, GR, ANG, aimDir, levelPts };
 
   function view(G) { const S = Math.min(G.W / 100, (G.H - 40) / 150); return { S, ox: (G.W - 100 * S) / 2, oy: G.H - 150 * S - 2 }; }
 
   const game = {
     key: "blumji", name: "Blumji Bounce", icon: "🚩", max: 99999,
-    blurb: "Bounce platform to platform. Reach the flag. 12 stages.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.",
+    blurb: "Bounce platform to platform. Reach the flag. 20 stages.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.",
     reset(G) { G.s = { lv: 0, score: 0 }; this.newLevel(G); },
     newLevel(G) { const s = G.s; s.L = LV[s.lv]; s.n = 0; s.fx = []; s.clear = 0; s.tt = 0; s.tipT = 4; s.on = 0; this.home(G); },
     home(G) { const s = G.s, p = plats(s.L, s.tt)[s.on]; s.off = p.w / 2; s.pup = { x: p.x + s.off, y: p.y, vx: 0, vy: 0 }; s.phase = "aim"; s.flyT = 0; s.acc = 0; s.charge = null; s.dir = aimDir(s.L, s.on, s.pup.x, s.tt); },
@@ -7847,8 +8010,10 @@ defGame({
       const sky = c.createLinearGradient(0, 0, 0, G.H); if (dk) { sky.addColorStop(0, "#151a3a"); sky.addColorStop(1, "#33265a"); } else { sky.addColorStop(0, "#9edcff"); sky.addColorStop(1, "#e7f7d9"); }
       c.fillStyle = sky; c.fillRect(0, 0, G.W, G.H);
       c.fillStyle = dk ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.55)"; [[18, 30], [64, 18], [40, 64]].forEach(([x, y]) => { c.beginPath(); c.arc(X(x), Y(y), 7 * S, 0, 7); c.arc(X(x + 7), Y(y - 2), 8 * S, 0, 7); c.arc(X(x + 14), Y(y), 6 * S, 0, 7); c.fill(); });
+      (s.L.w || []).forEach(w => { c.fillStyle = dk ? "#4b5675" : "#6b7a99"; c.fillRect(X(w[0]), Y(w[1]), w[2] * S, w[3] * S); c.fillStyle = dk ? "#5d6a8e" : "#8292b3"; c.fillRect(X(w[0]), Y(w[1]), Math.min(w[2] * S, 3), w[3] * S); });
       plats(s.L, s.tt).forEach(p => {
         const th = 4;
+        if (p.k === "s") { c.fillStyle = dk ? "#d7dcea" : "#4a5266"; c.beginPath(); for (let x = 0; x < p.w; x += 3) { c.moveTo(X(p.x + x), Y(p.y + th)); c.lineTo(X(p.x + x + 1.5), Y(p.y - 1)); c.lineTo(X(p.x + Math.min(p.w, x + 3)), Y(p.y + th)); } c.fill(); return; }
         if (p.k === "b") { c.fillStyle = "#ff6fae"; c.fillRect(X(p.x), Y(p.y), p.w * S, th * S); c.strokeStyle = "#fff"; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= p.w; x += 3) c.lineTo(X(p.x + x), Y(p.y + (x / 3 % 2 ? 0.8 : th - 0.8))); c.stroke(); }
         else { c.fillStyle = p.k === "m" ? (dk ? "#3f7fbf" : "#4f9be8") : (dk ? "#5b4a3a" : "#9b6b43"); c.fillRect(X(p.x), Y(p.y), p.w * S, th * S);
           c.fillStyle = p.k === "m" ? "#bfe3ff" : (dk ? "#4c8a4c" : "#6cc24a"); c.fillRect(X(p.x), Y(p.y), p.w * S, 1.4 * S); }
@@ -10532,10 +10697,13 @@ defGame({
 <script>
 // ---------- Dawg Dash (3-lane endless runner) ----------
 // Run the rail yard away from the dogcatcher. Swipe left/right to switch lanes, up to jump, down to slide.
+// Subway Surfers rules: parked trains (some with ramps) and red trains that drive at you, a sideswipe into a train
+// only makes you stumble (the dogcatcher closes in; a second stumble before he drops back and you're caught),
+// and power-ups: magnet, 2x, board, rocket (fly over everything) and spring shoes (jump onto train roofs).
 defGame({
   key: "dash", name: "Dawg Dash", icon: "🛹", max: 999999,
   blurb: "Endless runner. Swipe to dodge trains.",
-  how: "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.",
+  how: "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. Red trains are moving and come at you fast. Swipe sideways into the side of a train and you only stumble, but the dogcatcher closes in, and a second stumble before he drops back gets you caught. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash, 🚀 flies you over everything for a few seconds, 👟 lets you jump right onto train roofs. It gets faster the longer you go.",
   // Missions: 3 at a time, each "in one run". Finish all 3 and your score multiplier goes up for good (x1 -> x2 ...).
   MISS: { bones: ["GRAB {n} BONES", 30, 25], jumps: ["JUMP {n} TIMES", 10, 6], slides: ["SLIDE {n} TIMES", 8, 5], roofs: ["LAND ON {n} TRAIN ROOFS", 3, 2], dist: ["RUN {n}M", 400, 300], pups: ["GRAB {n} POWER-UPS", 1, 1] },
   mkey() { return "bdd:dash:" + (typeof me !== "undefined" && me ? me.id : ""); },
@@ -10553,14 +10721,14 @@ defGame({
     try { store.set(this.mkey(), m); } catch (e) {}
   },
   reset(G) {
-    G.s = { st: {}, miss: this.mload(), lane: 0, lx: 0, y: 0, vy: 0, roll: 0, dist: 0, sp: 16, bones: 0, score: 0, objs: [], nextZ: 26, mag: 0, dbl: 0, shield: 0, flash: 0, dead: 0, pops: [] };
+    G.s = { st: {}, miss: this.mload(), lane: 0, lx: 0, y: 0, vy: 0, roll: 0, dist: 0, sp: 16, bones: 0, score: 0, objs: [], nextZ: 26, rows: [], mag: 0, dbl: 0, shield: 0, flash: 0, jet: 0, shoes: 0, stum: 0, safe: 0, dead: 0, pops: [] };
     this.spawnRow(G.s, 26, true); this.spawnRow(G.s, 42);
   },
   ZMAX: 70, TOP: 2.6, RL: 4,
   spawnRow(s, z, easy) {
-    const free = Math.floor(Math.random() * 3) - 1, lvl = Math.min(1, s.dist / 3000);
+    const free = Math.floor(Math.random() * 3) - 1, lvl = Math.min(1, s.dist / 3000); let end = z; const mvL = (s.objs.find(o => o.mv && o.z > z - 12) || {}).lane; // keep a moving train's lane clear ahead of it
     for (let ln = -1; ln <= 1; ln++) {
-      if (ln === free) continue;
+      if (ln === free || ln === mvL) continue;
       const r = Math.random(); if (easy && r < 0.6) continue;
       const k = r < 0.25 - lvl * 0.1 ? null : r < 0.5 ? "low" : r < 0.72 ? "high" : "train";
       if (!k) continue;
@@ -10568,16 +10736,38 @@ defGame({
       // trains: often with a ramp up front, sometimes coupled to a second car you can hop onto
       let zz = z; const cars = Math.random() < 0.45 ? 2 : 1, ramp = Math.random() < 0.6;
       for (let i = 0; i < cars; i++) { const len = 7 + Math.random() * 4; s.objs.push({ k: "train", lane: ln, z: zz, len, ramp: ramp && i === 0 }); if (ramp) for (let b = 1; b < 5; b++) s.objs.push({ k: "bone", lane: ln, z: zz + b * len / 5, len: 0.4, h: this.TOP }); zz += len + 1.4; }
-      s.far = Math.max(s.far || 0, zz - z);
+      s.far = Math.max(s.far || 0, zz - z); end = Math.max(end, zz);
     }
     // bones: a line in the free lane, sometimes a power-up
     for (let i = 0; i < 5; i++) s.objs.push({ k: "bone", lane: free, z: z - 9 + i * 1.6, len: 0.4, h: 0 });
-    if (Math.random() < 0.12) s.objs.push({ k: ["mag", "dbl", "shield"][Math.floor(Math.random() * 3)], lane: free, z: z - 11, len: 0.4, h: 0.4 });
+    if (Math.random() < 0.14) s.objs.push({ k: ["mag", "dbl", "shield", "jet", "shoes"][Math.floor(Math.random() * 5)], lane: free, z: z - 11, len: 0.4, h: 0.4 });
+    s.rows.push({ z, free, end });
+    if (!easy && s.dist > 250 && Math.random() < 0.3 + lvl * 0.25) this.spawnMover(s);
+  },
+  MV: 1.7, // a moving train closes on you this many times faster than the ground does
+  // A red train driving toward you from the horizon. It reaches you together with whatever is now about ZMAX / MV away,
+  // so it takes a lane that isn't the open lane of those rows and has no parked train, and the barriers it would drive through are removed.
+  spawnMover(s) {
+    const len = 8, a = this.ZMAX / this.MV - 7, b = a + 14 + len / this.MV, open = s.rows.filter(r => r.end > a - 2 && r.z - 11 < b).map(r => r.free);
+    const lanes = [-1, 0, 1].filter(l => !open.includes(l) && !s.objs.some(o => o.k === "train" && o.lane === l && !o.gone)); // never through a parked train if (!lanes.length || s.objs.some(o => o.mv)) return;
+    const lane = lanes[Math.floor(Math.random() * lanes.length)];
+    s.objs.forEach(o => { if (o.lane === lane && o.z > a - 8 && o.z < b) o.gone = 1; });
+    s.objs.push({ k: "train", lane, z: this.ZMAX, len, mv: 1 });
   },
   swipe(G, dx, dy) {
     const s = G.s; if (s.dead) return;
-    if (dx) s.lane = Math.max(-1, Math.min(1, s.lane + dx));
-    else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) { s.vy = 9.2; s.roll = 0; this.bump(G, "jumps"); }
+    if (dx) {
+      const to = Math.max(-1, Math.min(1, s.lane + dx));
+      // sideswiping a train: bounce back and stumble; a second stumble while the dogcatcher is close and he has you
+      if (to !== s.lane && s.safe <= 0 && s.objs.some(o => o.k === "train" && !o.gone && o.lane === to && o.z < 0.35 && o.z + o.len > -0.35 && s.y < this.TOP - 0.6)) {
+        G.buzz(); G.sfx("lose");
+        if (s.stum > 0) { s.dead = 1.1; return; }
+        s.stum = 6; s.flash = 0.6; s.pops.push({ t: 1, txt: "OOF! HE'S CLOSE!" }); return;
+      }
+      s.lane = to;
+    }
+    else if (s.jet > 0) return;
+    else if (dy < 0 && s.y <= (s.gnd || 0) + 0.05) { s.vy = s.shoes > 0 ? 12.2 : 9.2; s.roll = 0; this.bump(G, "jumps"); }
     else if (dy > 0) { if (s.y > (s.gnd || 0) + 0.05) s.vy = -16; s.roll = 0.62; this.bump(G, "slides"); }
   },
   // Height of the surface under you in a lane: a train roof, a ramp, or the ground.
@@ -10597,25 +10787,26 @@ defGame({
     s.sp = Math.min(40, 16 + s.dist / 140); const mv = s.sp * dt; s.dist += mv;
     s.lx += (s.lane - s.lx) * Math.min(1, dt * 14);
     const me0 = Math.round(s.lx), gnd = this.ground(s, me0);
-    s.vy -= 26 * dt; s.y += s.vy * dt;
+    if (s.jet > 0) { s.vy = 0; s.y += (5.2 - s.y) * Math.min(1, dt * 6); if (s.jet <= dt) s.safe = 1.3; } // rocket: over everything, soft landing after
+    else { s.vy -= 26 * dt; s.y += s.vy * dt; }
     if (s.y <= gnd + 0.02 && s.vy <= 0) { s.y = gnd; s.vy = 0; } // walk up ramps, ride roofs, fall off the end
     if (gnd >= this.TOP && (s.gnd || 0) < this.TOP && s.y >= this.TOP - 0.01) this.bump(G, "roofs");
     s.gnd = gnd;
     const m10 = Math.floor(s.dist / 10); if (m10 > (s.lastM || 0)) { s.lastM = m10; s.st.dist = Math.floor(s.dist); this.bump(G, "dist", 0); }
     if (s.roll > 0) s.roll -= dt;
-    ["mag", "dbl", "shield", "flash"].forEach(k => { if (s[k] > 0) s[k] -= dt; });
+    ["mag", "dbl", "shield", "flash", "jet", "shoes", "stum", "safe"].forEach(k => { if (s[k] > 0) s[k] -= dt; });
     s.acc = (s.acc || 0) + mv * (s.dbl > 0 ? 2 : 1) * s.miss.mult; const add = Math.floor(s.acc); s.acc -= add; s.score += add;
-    s.objs.forEach(o => o.z -= mv);
+    s.objs.forEach(o => o.z -= o.mv ? mv * this.MV : mv); s.rows.forEach(r => { r.z -= mv; r.end -= mv; }); if (s.rows.length && s.rows[0].end < 0) s.rows.shift();
     s.nextZ -= mv; if (s.nextZ < this.ZMAX - 16) { const gap = Math.max(13, (s.far || 0) + 6) + Math.random() * 6; s.far = 0; s.nextZ += gap; this.spawnRow(s, s.nextZ); }
     const me = Math.round(s.lx);
     for (const o of s.objs) {
       if (o.gone) continue;
-      if (o.k === "bone" || o.k === "mag" || o.k === "dbl" || o.k === "shield") {
+      if (o.k !== "train" && o.k !== "low" && o.k !== "high") {
         const pull = o.k === "bone" && s.mag > 0 && o.z < 6;
-        if (o.z < 0.5 && o.z > -0.6 && (o.lane === me || pull) && Math.abs(s.y - (o.h || 0)) < 1.6) {
+        if (o.z < 0.5 && o.z > -0.6 && (pull || (o.lane === me && (s.jet > 0 || Math.abs(s.y - (o.h || 0)) < 1.6)))) {
           o.gone = 1;
           if (o.k === "bone") { const v = (s.dbl > 0 ? 20 : 10) * s.miss.mult; s.bones++; s.score += v; G.sfx("pop"); this.bump(G, "bones"); }
-          else { this.bump(G, "pups"); s[o.k] = o.k === "shield" ? 12 : 9; s.pops.push({ t: 1, txt: { mag: "MAGNET!", dbl: "2X POINTS!", shield: "BOARD UP!" }[o.k] }); G.sfx("win"); }
+          else { this.bump(G, "pups"); s[o.k] = { shield: 12, jet: 7, shoes: 10 }[o.k] || 9; s.pops.push({ t: 1, txt: { mag: "MAGNET!", dbl: "2X POINTS!", shield: "BOARD UP!", jet: "ROCKET!", shoes: "SPRING SHOES!" }[o.k] }); G.sfx("win"); }
         }
         continue;
       }
@@ -10623,7 +10814,7 @@ defGame({
       const inside = o.z < 0.35 && o.z + o.len > -0.35;
       if (!inside) continue;
       const crash = o.k === "train" ? s.y < this.TOP - 0.6 : o.k === "low" ? s.y < 0.65 : s.roll <= 0 && s.y < 1.3;
-      if (!crash) continue;
+      if (!crash || s.safe > 0) continue;
       o.hit = 1;
       if (s.shield > 0) { s.shield = 0; s.flash = 0.8; G.buzz(); G.sfx("lose"); s.pops.push({ t: 1, txt: "SAVED BY THE BOARD!" }); if (o.k === "train") o.gone = 1; continue; }
       s.dead = 1.1; G.buzz(); G.sfx("lose"); return;
@@ -10652,20 +10843,22 @@ defGame({
       drewMe = true;
       const x = X(s.lx, 0), y = by - s.y * U, sz = s.roll > 0 ? 50 : 66;
       c.fillStyle = "rgba(0,0,0,0.25)"; c.beginPath(); c.ellipse(x, by + 6 - (s.gnd || 0) * U, 26, 8, 0, 0, 7); c.fill();
+      if (s.stum > 0 || (G.t < 2.5 && !s.dead)) G.emoji(c, "👮", x + 6, by + (s.stum > 0 ? 30 : 30 + G.t * 40), 50); // the dogcatcher, right behind you
       if (s.shield > 0) G.emoji(c, "🛹", x, by + 2, 46);
+      if (s.jet > 0) G.emoji(c, "🚀", x, y + 10, 34);
       if (!(s.flash > 0 && Math.floor(G.t * 16) % 2)) G.img(c, s.dead ? ":dawgpain:" : s.roll > 0 ? ":dawgsweat:" : ":dawgW:", x, y - sz / 2 + (s.roll > 0 ? 12 : 0), sz);
     };
     for (const o of objs) {
       if (!drewMe && key(o) < meZ) drawMe();
       const p = P(o.z), x = X(o.lane, o.z), y = Y(o.z), w = LW * 0.82 * p;
       if (o.k === "bone") { G.emoji(c, "🦴", x, y - (22 + (o.h || 0) * U) * p, 30 * p); continue; }
-      if (o.k === "mag" || o.k === "dbl" || o.k === "shield") { G.emoji(c, { mag: "🧲", dbl: "⭐", shield: "🛹" }[o.k], x, y - 40 * p + Math.sin(G.t * 5) * 4 * p, 36 * p); continue; }
+      if (o.k !== "low" && o.k !== "high" && o.k !== "train") { G.emoji(c, { mag: "🧲", dbl: "⭐", shield: "🛹", jet: "🚀", shoes: "👟" }[o.k], x, y - 40 * p + Math.sin(G.t * 5) * 4 * p, 36 * p); continue; }
       if (o.k === "low") { const h = 0.6 * U * p; c.fillStyle = "#fafafa"; c.fillRect(x - w / 2, y - h, w, h * 0.55); c.fillStyle = "#e53935"; for (let i = 0; i < 4; i++) c.fillRect(x - w / 2 + i * w / 4, y - h, w / 8, h * 0.55); c.fillStyle = "#555"; c.fillRect(x - w / 2 + 2, y - h * 0.45, 4 * p, h * 0.45); c.fillRect(x + w / 2 - 6 * p, y - h * 0.45, 4 * p, h * 0.45); }
       else if (o.k === "high") { const top = 1.55 * U * p, bh = 0.5 * U * p; c.fillStyle = "#444"; c.fillRect(x - w / 2, y - top, 5 * p, top); c.fillRect(x + w / 2 - 5 * p, y - top, 5 * p, top); c.fillStyle = "#ffb300"; c.fillRect(x - w / 2, y - top, w, bh); c.fillStyle = "#222"; for (let i = 0; i < 5; i++) c.fillRect(x - w / 2 + i * w / 5, y - top, w / 10, bh); }
       else if (o.k === "train") {
         const z2 = Math.min(this.ZMAX, o.z + o.len), p2 = P(z2), x2 = X(o.lane, z2), y2 = Y(z2), w2 = LW * 0.82 * p2, h = 2.6 * U * p, h2 = 2.6 * U * p2;
         c.fillStyle = dark ? "#5f6d8a" : "#90a4c8"; c.beginPath(); c.moveTo(x - w / 2, y - h); c.lineTo(x + w / 2, y - h); c.lineTo(x2 + w2 / 2, y2 - h2); c.lineTo(x2 - w2 / 2, y2 - h2); c.fill();
-        c.fillStyle = dark ? "#3d4b6b" : "#4f6fa8"; c.fillRect(x - w / 2, y - h, w, h);
+        c.fillStyle = o.mv ? "#c62828" : dark ? "#3d4b6b" : "#4f6fa8"; c.fillRect(x - w / 2, y - h, w, h);
         c.fillStyle = "#cfe8ff"; c.fillRect(x - w * 0.36, y - h * 0.86, w * 0.72, h * 0.3);
         c.fillStyle = "#ffd23f"; c.fillRect(x - w / 2, y - h * 0.4, w, h * 0.06);
         c.fillStyle = "#fff9c4"; [-0.3, 0.3].forEach(o2 => { c.beginPath(); c.arc(x + o2 * w, y - h * 0.18, 5 * p, 0, 7); c.fill(); });
@@ -10685,7 +10878,7 @@ defGame({
       s.miss.set.forEach((q, i) => G.text(c, (q.done ? "✓ " : "· ") + this.mlabel(q) + (q.done ? "" : ` (${Math.min(q.n, s.st[q.k] || 0)}/${q.n})`), W / 2, 84 + i * 20, 10, q.done ? "#7cff6b" : "#fff"));
       c.globalAlpha = 1;
     }
-    G.hud(c, `🦴${s.bones} x${s.miss.mult}`, `${s.score}`, [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : ""].join(""));
+    G.hud(c, `🦴${s.bones} x${s.miss.mult}`, `${s.score}`, [s.mag > 0 ? "🧲" : "", s.dbl > 0 ? "⭐" : "", s.shield > 0 ? "🛹" : "", s.jet > 0 ? "🚀" : "", s.shoes > 0 ? "👟" : ""].join(""));
     s.pops.forEach((p, i) => G.text(c, p.txt, W / 2, H * 0.32 + i * 18 - (1 - p.t) * 12, p.txt.length > 4 ? 12 : 11, "#ffd23f"));
     if (s.dead) G.banner(c, "BUSTED!", "#ff5252");
     G.hint(c, "SWIPE ← → ↑ ↓", 4);
@@ -13296,6 +13489,501 @@ defGame({
 
 </script>
 <script>
+// ---------- Feud (The Den, Thanksgiving weekend 2026 only: Nov 26-29) ----------
+// Family Feud-style: 5 survey questions a day, type what the survey said, 3 strikes per question.
+// Thu-Sat boards are real published polls (source shown under each question; points = the poll's percent).
+// Sunday is the Crew Edition: the board is built from the crew's own answers to the 5-question survey
+// (FEUD_QS in js/arcade.js, stored by sendFeudSurvey in Code.gs). Fewer than 3 crew answers = the SPARE poll board.
+(function () {
+  const STOP = /^(the|a|an|my|some|your|our|their|his|her|and|n|or|of|to|with|in|on|at)$/;
+  const stem = w => w.length < 4 ? w : w.length > 5 && /ing$/.test(w) ? w.slice(0, -3) : /ies$/.test(w) ? w.slice(0, -3) + "y" : /(oes|ches|shes|sses|xes)$/.test(w) ? w.slice(0, -2) : /[^su]s$/.test(w) ? w.slice(0, -1) : w;
+  const norm = t => String(t).toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").split(" ").filter(w => w && !STOP.test(w)).map(stem).join(" ");
+  function lev(a, b) {
+    let prev = []; for (let j = 0; j <= b.length; j++) prev[j] = j;
+    for (let i = 1; i <= a.length; i++) { const cur = [i]; for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+    return prev[b.length];
+  }
+  // Loose match: a typo or two, or one is a whole-word piece of the other ("cranberry" ~ "cranberry sauce").
+  const alike = (a, b) => { const L = Math.max(a.length, b.length); return a === b || (L >= 5 && lev(a, b) <= (L >= 9 ? 2 : 1)) || (Math.min(a.length, b.length) >= 3 && ((" " + a + " ").includes(" " + b + " ") || (" " + b + " ").includes(" " + a + " "))); };
+  // Answers a guess could mean: exact alias hits win; otherwise every loose hit (2+ = "be more specific").
+  function match(q, n) {
+    const ex = q.a.map((a, j) => a.k.includes(n) ? j : -1).filter(j => j >= 0); if (ex.length) return ex;
+    return q.a.map((a, j) => a.k.some(k => alike(k, n)) ? j : -1).filter(j => j >= 0);
+  }
+  const P = (q, src, a) => ({ q, src, a: a.map(([label, pts, al]) => ({ label, pts, k: [label].concat(al ? al.split("|") : []).map(norm) })) });
+  const DAYS = {
+    "2026-11-26": [
+      P("Name a Thanksgiving food people admit they don't actually like.", "Poll: The Vacationer, 2023", [["Cranberry sauce", 31, "cranberry|canned cranberry"], ["Sweet potatoes", 29, "yam|sweet potato casserole|candied yam"], ["Green bean casserole", 28, "green bean"], ["Turkey", 28], ["Stuffing", 27, "dressing"], ["Ham", 26], ["Coleslaw", 26, "cole slaw|slaw"], ["Pumpkin pie", 24]]),
+      P("Name America's favorite Thanksgiving pie.", "Poll: Kelton Global", [["Pumpkin", 37], ["Apple", 16], ["Pecan", 14], ["Sweet potato", 10], ["Chocolate", 6], ["Cherry", 5], ["Lemon meringue", 4, "lemon"], ["Blueberry", 4]]),
+      P("Name something people say they'll do on Thanksgiving.", "Poll: RMG Research, Nov 2025", [["Eat turkey", 74, "turkey"], ["Eat too much", 55, "eat|overeat|eat lot|stuff face|stuff myself|pig out|eat too much food"], ["Watch the parade", 49, "parade|macys parade"], ["Watch football", 35, "football|nfl|watch nfl|watch game|watch lions"], ["Play football", 19, "turkey bowl|backyard football|throw football"], ["Christmas shopping", 8, "shop|shopping|black friday shopping"]]),
+      P("Name something that goes on a Thanksgiving leftover sandwich.", "Harris Poll for Alpha Baking, 2023", [["Turkey", 81], ["Gravy", 42], ["Ham", 41], ["Stuffing", 39, "dressing"], ["Mac and cheese", 21, "macaroni|mac"], ["Green bean casserole", 14, "green bean"], ["Pumpkin pie", 11, "pie"]]),
+      P("Name a topic people want to avoid at Thanksgiving dinner.", "Talker Research, 2025 · ranked list, points by rank", [["Politics", 28, "election|trump|president|government|political"], ["Money", 20, "income|salary|finances|debt|how much i make"], ["Weight or looks", 15, "weight|appearance|diet|body|looks"], ["Religion", 11, "church|god|faith"], ["An ex", 9, "ex|ex wife|ex husband|ex girlfriend|ex boyfriend"], ["Mental health", 7, "therapy|depression|anxiety"], ["Work problems", 6, "work|job|career"], ["Relationship status", 4, "relationship|marriage|dating|love life|single|getting married|when getting married"]])
+    ],
+    "2026-11-27": [
+      P("Name America's favorite food at Thanksgiving dinner.", "Gallup poll, open-ended", [["Turkey", 49], ["Stuffing", 14, "dressing"], ["Ham", 5], ["Mashed potatoes", 5, "potato"], ["Pumpkin pie", 5, "pie"]]),
+      P("Name a top-rated Thanksgiving side dish.", "YouGov, 2020 · % of head-to-head matchups won", [["Mashed potatoes", 78], ["Stuffing", 77, "dressing"], ["Bread or rolls", 74, "roll|bread|dinner roll|biscuit|crescent roll"], ["Scalloped potatoes", 66, "au gratin potato|cheesy potato"], ["Sweet potatoes", 65, "yam"], ["Green beans", 64, "green bean casserole"], ["Mac and cheese", 62, "macaroni|mac"]]),
+      P("Name a food that makes the best Thanksgiving leftovers.", "OnePoll for Stasher · 2,000 people", [["Turkey", 62], ["Mashed potatoes", 46, "potato"], ["Stuffing", 46, "dressing"], ["Pumpkin pie", 45, "pie"]]),
+      P("Name a gift people want to get this holiday season.", "NRF holiday survey, 2025", [["Gift cards", 50, "giftcard|gift certificate"], ["Clothing", 46, "clothes|accessories|shoes|apparel"], ["Books and media", 27, "book|movie|music|video game|game"], ["Beauty or personal care", 23, "beauty|makeup|perfume|cologne|skincare|personal care"], ["Electronics", 22, "phone|tv|laptop|tablet|headphone|computer|tech|gadget|iphone|ipad"]]),
+      P("Name something Americans say they're thankful for.", "Lifeway Research, 2020", [["Family", 84], ["Health", 69], ["Friends", 63], ["Memories", 63], ["Personal freedom", 53, "freedom|liberty"], ["Achievements", 33, "accomplishment|success"], ["Wealth", 21, "money|finances"]])
+    ],
+    "2026-11-28": [
+      P("Name America's favorite Christmas movie.", "Axios / SurveyMonkey, 2018", [["It's a Wonderful Life", 14, "wonderful life"], ["A Christmas Story", 12, "ralphie"], ["Home Alone", 11], ["Christmas Vacation", 11, "national lampoon|national lampoons christmas vacation|griswold"], ["The Grinch", 10, "how grinch stole christmas"], ["Elf", 9], ["Miracle on 34th Street", 7, "miracle"]]),
+      P("Name America's favorite Christmas song.", "AP-NORC poll, 2018, open-ended", [["Silent Night", 12], ["Jingle Bells", 8], ["White Christmas", 5], ["Baby, It's Cold Outside", 5, "cold outside"], ["O Holy Night", 4, "oh holy night|holy night"], ["The Christmas Song", 2, "chestnuts roasting on an open fire|chestnut"], ["Let It Snow", 2], ["Joy to the World", 2]]),
+      P("Name America's favorite sport to watch.", "Gallup, Dec 2023", [["Football", 41, "nfl|college football"], ["Baseball", 10, "mlb"], ["Basketball", 9, "nba|hoop"], ["Soccer", 5], ["Hockey", 4, "ice hockey|nhl"], ["Auto racing", 3, "nascar|racing|f1|formula 1|indycar|car racing"], ["Figure skating", 2, "ice skating|skating"], ["Tennis", 2]]),
+      P("Name America's favorite pizza topping.", "YouGov, 2023", [["Pepperoni", 24], ["Sausage", 13], ["Extra cheese", 11, "cheese|plain"], ["Mushrooms", 9], ["Chicken", 6]]),
+      P("Name a pizza topping people can't stand.", "YouGov, 2019 · in their bottom three", [["Anchovies", 49], ["Eggplant", 30], ["Pineapple", 24], ["Artichokes", 24]])
+    ],
+    "2026-11-29": "crew"
+  };
+  const SPARE = [
+    P("Besides turkey, name a Thanksgiving main dish.", "YouGov, 2020 · % of head-to-head matchups won", [["Ham", 67], ["Beef", 54, "roast beef|prime rib|steak|brisket|roast"], ["Chicken", 53]]),
+    P("Name something people expect to talk about at Thanksgiving dinner.", "Pew Research Center, 2024", [["Work or school", 35, "work|school|job|class"], ["The election", 26, "politics|election|trump|president"], ["Pop culture", 24, "movie|tv|show|music|celebrity|sport"]]),
+    P("Name a kind of gift card people give.", "NRF holiday survey", [["Restaurant", 30, "food|dinner"], ["Visa or bank card", 26, "visa|bank|mastercard|amex|prepaid"], ["Department store", 26, "store|macys|kohls|target|walmart"], ["Coffee shop", 21, "coffee|starbucks|dunkin"]]),
+    P("Name where people do their holiday shopping.", "NRF holiday survey, 2026", [["Online", 53, "amazon|internet|web"], ["Grocery stores", 43, "grocery|supermarket|kroger|meijer"], ["Discount stores", 43, "discount|walmart|target|dollar store"], ["Department stores", 42, "department|macys|kohls|mall"]]),
+    P("Name a common Thanksgiving hosting fail.", "OnePoll for Omaha Steaks, 2019", [["Food isn't done on time", 31, "late|food late|not ready|running late|dinner late|behind"], ["Dishes done at different times", 29, "timing|cold food|food cold|cold"], ["Ran out of wine", 28, "wine|out of wine|alcohol|booze|beer|drink"], ["Spilled a dish", 28, "spill|spilled|drop|dropped|dropped food|dropped turkey"], ["Forgot an ingredient", 28, "forgot|forgot something|missing ingredient|forgot ingredient"]])
+  ];
+  const CK = "bdd:feud:crew"; // Sunday's crew answers, cached once the survey has closed
+  const tidy = t => { t = String(t).trim().slice(0, 24); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const crewBoard = lists => FEUD_QS.map((q, i) => {
+    const gs = [];
+    (lists[i] || []).forEach(raw => { const n = norm(raw); if (!n) return; const g = gs.find(g => g.k.some(k => alike(k, n))); if (g) { g.c++; if (!g.k.includes(n)) g.k.push(n); } else gs.push({ label: tidy(raw), k: [n], c: 1 }); });
+    const tot = gs.reduce((a, g) => a + g.c, 0) || 1;
+    return { q, src: `The crew's own answers · ${tot} in`, a: gs.sort((a, b) => b.c - a.c).slice(0, 8).map(g => ({ label: g.label, pts: Math.round(100 * g.c / tot), k: g.k })) };
+  });
+  const rk = () => "bdd:den:feud:" + KEY + ":" + (me ? me.id : "");
+  const rr = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
+  const wrap = (c, text, maxW) => { const out = []; let line = ""; text.split(" ").forEach(w => { const t = line ? line + " " + w : w; if (line && c.measureText(t).width > maxW) { out.push(line); line = w; } else line = t; }); if (line) out.push(line); return out; };
+  const fit = (c, text, maxW, size, wt, fam) => { let f = size; do { c.font = `${wt} ${f}px ${fam}`; } while (c.measureText(text).width > maxW && --f > 9); };
+  const KB = ["QWERTYUIOP", "ASDFGHJKL", ">ZXCVBNM<", " "];
+  // Each question is worth 200: your share of the points on its board. Max 1000.
+  const tot = q => q.a.reduce((a, x) => a + x.pts, 0);
+  const got = (s, i) => s.found[i].reduce((a, j) => a + s.qs[i].a[j].pts, 0);
+  const qScore = (s, i) => tot(s.qs[i]) ? Math.round(200 * got(s, i) / tot(s.qs[i])) : 0;
+  const scoreOf = s => s.qs.reduce((a, q, i) => a + qScore(s, i), 0);
+  // ---- shared drawing and typing bits (solo and host) ----
+  const TOP = 34; // room for the Solo | Host | TV switch
+  const pal = G => { const dk = G.dark(); return { dk, ink: dk ? "#fff" : "#121213", bg: dk ? "#121213" : "#fff", mute: dk ? "#a3a3a8" : "#66666b", line: dk ? "#3a3a3c" : "#d3d6da" }; };
+  const typeKey = (s, k) => { if (k === "<") s.typed = s.typed.slice(0, -1); else if (k === " ") { if (s.typed && !/ $/.test(s.typed) && s.typed.length < 26) s.typed += " "; } else if (s.typed.length < 26) s.typed += k; };
+  // Question and its source line; returns the y where the board starts.
+  function question(G, c, P, q, y) {
+    const qf = G.H < 560 ? 17 : 19; c.font = `700 ${qf}px ${G.TITLE}`; c.fillStyle = P.ink; c.textAlign = "center";
+    wrap(c, q.q, G.W - 32).slice(0, 3).forEach(l => { c.fillText(l, G.W / 2, y); y += qf + 4; });
+    fit(c, q.src, G.W - 28, 11.5, 500, G.UI); c.fillStyle = P.mute; c.fillText(q.src, G.W / 2, y); return y + 16;
+  }
+  // The answer board: two columns, numbered down the left column first.
+  // st(j): 0 hidden, 1 found, 2 shown but missed, 3 hidden with the host's peek. Returns the slot rectangles.
+  function board(G, c, P, q, y, sh, st) {
+    const s = G.s, rows = Math.ceil(q.a.length / 2), gap = 6, cw = (G.W - 24 - gap) / 2;
+    return q.a.map((a, j) => {
+      const col = j < rows ? 0 : 1, x = 12 + col * (cw + gap), yy = y + (j - col * rows) * (sh + gap), v = st(j), mid = yy + sh / 2 + 1;
+      rr(c, x, yy, cw, sh, 8); c.fillStyle = v === 1 ? (s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949") : v === 2 ? (P.dk ? "#2c2c2e" : "#ecece6") : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
+      if (v) {
+        c.fillStyle = v === 1 ? "#2b1a10" : v === 2 ? P.mute : "rgba(255,255,255,.72)"; c.textAlign = "left"; fit(c, a.label, cw - 46, 14, 700, G.UI); c.fillText(a.label, x + 9, mid);
+        c.textAlign = "right"; c.font = `700 14px ${G.UI}`; c.fillText(a.pts, x + cw - 9, mid);
+      } else { c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 ${Math.min(16, sh * 0.5)}px ${G.UI}`; c.fillText(j + 1, x + cw / 2, mid); }
+      return { x, y: yy, w: cw, h: sh, slot: j };
+    });
+  }
+  function strikes(c, P, n, x, y) {
+    for (let k = 0; k < 3; k++) {
+      const xx = x + k * 32, used = k < n;
+      rr(c, xx, y, 26, 26, 6); if (used) { c.fillStyle = "#d64545"; c.fill(); } else { c.lineWidth = 1.5; c.strokeStyle = P.line; c.stroke(); }
+      c.fillStyle = used ? "#fff" : P.line; c.textAlign = "center"; c.font = "700 15px sans-serif"; c.fillText("✕", xx + 13, y + 14);
+    }
+  }
+  // The answer box. Feedback on the last guess shows in the box itself until the next letter.
+  function inputBox(G, c, P, y, hint) {
+    const s = G.s, bx = 14 + (s.shake > 0 ? Math.sin(s.shake * 60) * 5 : 0), bw = G.W - 28, bh = 42;
+    rr(c, bx, y, bw, bh, 8); c.lineWidth = 2; c.strokeStyle = s.typed ? P.ink : P.line; c.stroke();
+    c.textAlign = "left"; c.font = `700 17px ${G.UI}`;
+    if (s.typed) { c.fillStyle = P.ink; c.fillText(s.typed, bx + 12, y + bh / 2 + 1); } else { const m = s.msgT > 0 && s.msg; c.fillStyle = m ? P.ink : P.mute; c.font = `${m ? 600 : 500} 15px ${G.UI}`; c.fillText(m || hint, bx + 12, y + bh / 2 + 1); }
+    if (s.t % 1 < 0.55 && (s.typed || !(s.msgT > 0))) { const tw = s.typed ? (c.font = `700 17px ${G.UI}`, c.measureText(s.typed).width) : 0; c.fillStyle = P.ink; c.fillRect(bx + 13 + tw, y + 10, 2, bh - 20); }
+  }
+  function keys(G, c, P, kbH) {
+    const W = G.W, ky = G.H - kbH, kh = (kbH - 12) / 4 - 6, kw = (W - 12) / 10 - 5;
+    KB.forEach((row, r) => {
+      const ks = row.split(""), wide = k => k === " " ? kw * 5 + 20 : (k === "<" || k === ">") ? kw * 1.5 + 2.5 : kw;
+      let x = (W - ks.reduce((a, k) => a + wide(k) + 5, -5)) / 2;
+      ks.forEach(k => {
+        const w = wide(k), yy = ky + 6 + r * (kh + 6);
+        rr(c, x, yy, w, kh, 5); c.fillStyle = P.dk ? "#818384" : "#d3d6da"; c.fill();
+        c.fillStyle = P.ink; c.font = `700 ${k === "<" || k === ">" || k === " " ? 13 : 16}px ${G.UI}`; c.textAlign = "center";
+        c.fillText(k === "<" ? "⌫" : k === ">" ? "ENTER" : k === " " ? "space" : k, x + w / 2, yy + kh / 2 + 1);
+        G.s.btns.push({ x, y: yy, w, h: kh, key: k }); x += w + 5;
+      });
+    });
+  }
+  // ---- host mode state: one game at a time, kept on this device so a reload picks it back up ----
+  const HK = "bdd:feud:host", CODE = "bdd:feud:code", TEAMS = ["Team Turkey", "Team Gravy"];
+  let MODE = "solo", HS = null, HD = null;
+  // Crew deck = the crew's survey answers so far. Polls deck = every daily board up to the day
+  // the game started plus the spare board, so hosting never spoils a solo board that hasn't come out yet.
+  // Mix = a 5-round party game: three national boards from Thursday (already out, so nothing upcoming is spoiled) with two
+  // of the crew's questions in between, ending on the triple round with the biggest board.
+  const deckOf = h => {
+    if (h.name === "polls") return [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
+    const cb = crewBoard(h.raw), T = DAYS["2026-11-26"];
+    return h.name === "mix" ? [T[1], cb[4], T[2], cb[0], T[0]] : cb;
+  };
+  const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; if (HS) { askCode(); hPush(); } };
+  const hSave = () => { store.set(HK, HS); hPush(); };
+  const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
+  // ---- TV link: the host's phone pushes what the room may see (feudPush); a second device, say a computer on the TV,
+  // shows it (TV mode, feudWatch). Only flipped answers ever leave the phone. ----
+  const view = () => {
+    const h = HS, i = h.qi, q = HD[i];
+    return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
+      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: TEAMS, won: h.won[i], over: h.over };
+  };
+  // A push that fails is sent again (the newest view, up to 5 tries, 2 s apart) so the TV never sticks on an old screen.
+  let pushing = false, dirty = false, fails = 0, asking = false;
+  function hPush() {
+    if (!HS || !me) return;
+    if (!HS.code) return askCode();
+    if (pushing) { dirty = true; return; }
+    pushing = true; dirty = false;
+    API("feudPush", me.id, HS.code, view()).then(() => { fails = 0; return 0; }, e => {
+      if (/No game/.test(errMsg(e)) && HS) { HS.code = ""; store.set(CODE, null); store.set(HK, HS); return 1; } // code expired: get a new one
+      return ++fails < 5 ? 2000 : 0;
+    }).then(wait => { pushing = false; if (wait > 1) setTimeout(hPush, wait); else if (wait || dirty) hPush(); });
+  }
+  // Ask the server for a TV code for a game that doesn't have one yet (a polls game starts before the code arrives).
+  function askCode() {
+    const h = HS; if (!h || h.code || asking || !me) return; asking = true;
+    API("feudHost", me.id, "").then(r => { asking = false; if (HS === h && r && r.code) { h.code = r.code; store.set(CODE, r.code); hSave(); } }, () => { asking = false; });
+  }
+  let TV = null;
+  function tvClose() {
+    if (!TV) return; TV.alive = false; clearTimeout(TV.xt);
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+    try { if (TV.wake) TV.wake.release(); } catch (e) {}
+    TV.root.remove(); TV = null;
+  }
+  function tvOpen(code, v) {
+    tvClose();
+    const root = el("div", "ftv"), mk = (cls, parent, text) => { const n = el("div", cls, text); (parent || root).append(n); return n; };
+    const top = mk("ftv-top"), t0 = mk("ftv-team", top), mid = mk("ftv-mid", top), t1 = mk("ftv-team", top);
+    const T = TV = { root, alive: true, last: null, key: "", n0: mk("ftv-tn", t0), s0: mk("ftv-ts", t0), rd: mk("ftv-rd", mid), pot: mk("ftv-pot", mid), n1: mk("ftv-tn", t1), s1: mk("ftv-ts", t1),
+      q: mk("ftv-q", null, "Waiting for the host…"), board: mk("ftv-board"), st: mk("ftv-st"), x: mk("ftv-x"), win: mk("ftv-win") };
+    const foot = mk("ftv-foot"); mk("ftv-code", foot, `Big Dawg Feud · TV code ${code}`);
+    const fs = el("button", "ftv-btn", "Full screen"), ex = el("button", "ftv-btn", "Exit"); foot.append(fs, ex);
+    fs.addEventListener("click", () => { try { (root.requestFullscreen || root.webkitRequestFullscreen).call(root); } catch (e) {} });
+    ex.addEventListener("click", tvClose);
+    document.body.append(root);
+    try { navigator.wakeLock.request("screen").then(w => { T.wake = w; }).catch(() => {}); } catch (e) {}
+    tvRender(v);
+    const poll = () => { if (T.alive) API("feudWatch", code).then(tvRender).catch(() => {}).then(() => setTimeout(poll, 700)); };
+    setTimeout(poll, 700);
+  }
+  function tvRender(v) {
+    const T = TV; if (!T || !T.alive || !v) return;
+    const L = T.last;
+    T.n0.textContent = v.tm[0]; T.n1.textContent = v.tm[1]; T.s0.textContent = v.sc[0]; T.s1.textContent = v.sc[1]; T.pot.textContent = v.pot;
+    T.rd.textContent = `ROUND ${v.r} OF ${v.of}` + (v.m > 1 ? (v.m === 2 ? " · DOUBLE" : " · TRIPLE") : "");
+    const key = v.r + "|" + v.q;
+    if (key !== T.key) {
+      T.key = key; T.q.textContent = v.q; T.board.textContent = "";
+      const rows = Math.ceil(v.a.length / 2), cols = [el("div", "ftv-col"), el("div", "ftv-col")]; T.board.append(cols[0], cols[1]);
+      T.slots = v.a.map((a, j) => { const n = el("div", "ftv-slot"); cols[j < rows ? 0 : 1].append(n); return n; }); T.sig = v.a.map(() => null);
+    }
+    v.a.forEach((a, j) => {
+      const sig = a ? a.join("|") : "", n = T.slots[j]; if (T.sig[j] === sig) return; T.sig[j] = sig; n.textContent = "";
+      if (a) { n.className = "ftv-slot on" + (a[2] ? " free" : ""); n.append(el("span", "ftv-al", a[0]), el("span", "ftv-ap", a[1])); }
+      else { n.className = "ftv-slot"; n.append(el("span", "ftv-num", j + 1)); }
+    });
+    T.st.textContent = "✕".repeat(v.st);
+    if (L && v.x > L.x) { T.x.textContent = "✕".repeat(v.xn || 1); T.x.classList.add("go"); buzzer(); clearTimeout(T.xt); T.xt = setTimeout(() => T.x.classList.remove("go"), 1500); }
+    if (L && v.d > L.d) ding();
+    if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
+    T.win.textContent = v.over ? (v.sc[0] === v.sc[1] ? "It's a tie!" : `${v.tm[v.sc[0] > v.sc[1] ? 0 : 1]} wins! 🦃`) : ""; T.win.classList.toggle("go", !!v.over);
+    if (v.over && L && !L.over && typeof celebrate === "function") celebrate();
+    T.last = v;
+  }
+  let ac;
+  function tone(type, f, dur, vol) {
+    if (typeof fxOn === "function" && !fxOn()) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime; o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur);
+    } catch (e) {}
+  }
+  const ding = () => { tone("sine", 1568, 0.9, 0.18); tone("sine", 2093, 0.6, 0.09); };
+  const buzzer = () => { tone("sawtooth", 130, 0.8, 0.2); tone("square", 137, 0.8, 0.1); };
+  defGame({
+    key: "feud", name: "Feud", icon: "🦃", max: 1000, cat: "den", puzzle: true,
+    blurb: "Survey says! Through Sunday.",
+    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. To put the board on a TV, open Feud on a computer, tap TV and type the code from the host's phone. Here through Sunday only.",
+    reset(G) {
+      const s = G.s = { typed: "", msg: "", msgT: 0, btns: [], postT: 0, flash: -1, flashT: 0, shake: 0, t: 0 };
+      let qs = DAYS[KEY] || DAYS["2026-11-26"];
+      if (qs === "crew") {
+        const c = store.get(CK);
+        if (!c) { s.loading = true; return this.fetchCrew(G); }
+        s.crew = c !== "none"; qs = s.crew ? crewBoard(c) : SPARE;
+      }
+      s.qs = qs;
+      const r = store.get(rk());
+      if (r && r.found) Object.assign(s, { qi: r.qi, found: r.found, strikes: r.strikes, over: r.over, el: r.el || 0, done: r.done, posted: r.posted });
+      else Object.assign(s, { qi: 0, found: qs.map(() => []), strikes: qs.map(() => 0), over: qs.map(q => !q.a.length), el: 0, done: false });
+    },
+    fetchCrew(G) {
+      const s = G.s;
+      API("getFeudSurvey", me ? me.id : "").then(r => {
+        if (!r || r.open) throw new Error("early");
+        store.set(CK, r.n >= 3 ? r.answers : "none"); if (G.s === s) this.reset(G);
+      }).catch(() => { if (G.s === s) { s.loading = false; s.err = true; } });
+    },
+    persist(G) { const s = G.s; store.set(rk(), { qi: s.qi, found: s.found, strikes: s.strikes, over: s.over, el: s.el, done: s.done, posted: s.posted, score: s.done ? scoreOf(s) : 0 }); },
+    info(G) {
+      const s = G.s, sc = scoreOf(s), top = s.qs.filter((q, i) => s.found[i].includes(0)).length;
+      const grid = s.qs.map((q, i) => { const f = s.found[i].length, n = q.a.length; return f === n ? "🟩" : f * 2 >= n ? "🟨" : f ? "🟧" : "⬛"; }).join("");
+      const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(KEY + "T12:00:00").getDay()];
+      return { score: sc, grid,
+        title: sc >= 800 ? "Survey says: Big Dawg! 🦃" : sc >= 500 ? "Good answer! Good answer!" : "Survey says…",
+        sub: `${top} of ${s.qs.length} number-one answers. ${sc} pts.`,
+        share: `Feud 🦃 ${s.crew ? "Crew Edition" : day} · ${sc} pts\n${grid}` };
+    },
+    say(G, m, t) { G.s.msg = m; G.s.msgT = t || 1.8; },
+    endQ(G, i) {
+      const s = G.s; s.over[i] = true; s.typed = "";
+      if (s.over.every(Boolean)) { s.done = true; s.postT = 1.2; G.sfx("win"); }
+      this.persist(G);
+    },
+    enter(G) {
+      const s = G.s, i = s.qi, q = s.qs[i]; if (s.done || s.over[i]) return;
+      const n = norm(s.typed); if (n.length < 2) return this.say(G, "Type an answer first");
+      const hits = match(q, n), open = hits.filter(j => !s.found[i].includes(j)); s.typed = "";
+      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 1.8);
+      if (!open.length && hits.length) return this.say(G, "Already on the board");
+      if (open.length) {
+        s.found[i].push(open[0]); s.flash = open[0]; s.flashT = 0.7; G.sfx("pop"); this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!");
+        if (s.found[i].length === q.a.length) return this.endQ(G, i);
+      } else {
+        s.strikes[i]++; s.shake = 0.4; G.buzz(); this.say(G, "Not on the board");
+        if (s.strikes[i] >= 3) return this.endQ(G, i);
+      }
+      this.persist(G);
+    },
+    press(G, k) {
+      const s = G.s; if (s.done || s.over[s.qi]) return;
+      if (k === ">") return this.enter(G);
+      typeKey(s, k);
+    },
+    update(G, dt) {
+      const s = G.s; s.t += dt;
+      if (s.msgT > 0) s.msgT -= dt; if (s.shake > 0) s.shake -= dt; if (s.flashT > 0) s.flashT -= dt; if (s.bigX > 0) s.bigX -= dt; if (s.quitT > 0) s.quitT -= dt;
+      if (MODE !== "solo" || !s.qs) return;
+      if (!s.done) { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
+      if (s.done && !s.posted && s.postT > 0) { s.postT -= dt; if (s.postT <= 0) { s.posted = true; this.persist(G); G.post(scoreOf(s), this.info(G)); } }
+    },
+    draw(G, c) {
+      const s = G.s, P = pal(G), { ink, mute } = P, W = G.W, H = G.H; s.btns = [];
+      c.fillStyle = P.bg; c.fillRect(0, 0, W, H); c.textBaseline = "middle";
+      // Solo | Host | TV switch
+      const gw = 216, sw = gw / 3, gx = W / 2 - gw / 2;
+      rr(c, gx, 4, gw, 28, 14); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
+      ["solo", "host", "tv"].forEach((m, k) => {
+        const on = MODE === m, x = gx + k * sw;
+        if (on) { rr(c, x + 2, 6, sw - 4, 24, 12); c.fillStyle = ink; c.fill(); }
+        c.fillStyle = on ? P.bg : mute; c.textAlign = "center"; c.font = `700 13px ${G.UI}`; c.fillText(["Solo", "Host", "TV"][k], x + sw / 2, 19);
+        s.btns.push({ x, y: 0, w: sw, h: 36, k: "mode", m });
+      });
+      if (MODE === "host") return this.hostDraw(G, c, P);
+      if (MODE === "tv") { // this device becomes the room's screen
+        c.fillStyle = ink; c.textAlign = "center"; c.font = `700 24px ${G.TITLE}`; c.fillText("Put the game on this screen", W / 2, TOP + 44);
+        c.font = `500 14.5px ${G.UI}`; c.fillStyle = mute; let y = TOP + 80;
+        wrap(c, "Start a game in Host mode on your phone, then type its TV code here. This screen shows the board for the room, and the phone runs the game.", W - 48).forEach(l => { c.fillText(l, W / 2, y); y += 21; });
+        inputBox(G, c, P, y + 8, "TV code"); keys(G, c, P, Math.min(214, H * 0.34));
+        return;
+      }
+      if (!s.qs) {
+        c.fillStyle = ink; c.textAlign = "center"; c.font = `600 16px ${G.UI}`;
+        c.fillText(s.err ? "Couldn't load the crew's answers." : "Loading the crew's answers…", W / 2, H * 0.4);
+        if (s.err) s.btns.push(Object.assign(G.pill(c, W / 2 - 80, H * 0.4 + 28, 160, 46, "Try again", true), { k: "retry" }));
+        return;
+      }
+      const i = s.qi, q = s.qs[i], over = s.over[i], typing = !over && !s.done;
+      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`${s.crew ? "Crew Edition" : "Survey says"} · ${i + 1} of ${s.qs.length}`, 14, TOP + 14);
+      c.textAlign = "right"; c.fillText(`${scoreOf(s)} pts`, W - 14, TOP + 14);
+      let y = question(G, c, P, q, TOP + 40);
+      const kbH = typing ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2);
+      const sh = Math.max(26, Math.min(44, (H - y - kbH - 100) / rows - 6));
+      board(G, c, P, q, y, sh, j => s.found[i].includes(j) ? 1 : over ? 2 : 0);
+      y += rows * (sh + 6) + 6;
+      strikes(c, P, s.strikes[i], typing ? 14 : W / 2 - 45, y);
+      if (typing) {
+        s.btns.push(Object.assign(G.pill(c, W - 14 - 84, y - 4, 84, 34, "Pass"), { k: "pass" }));
+        inputBox(G, c, P, y + 36, "Type an answer"); keys(G, c, P, kbH);
+      } else {
+        y += 42;
+        c.fillStyle = ink; c.textAlign = "center"; c.font = `600 15px ${G.UI}`;
+        c.fillText(`${s.found[i].length} of ${q.a.length} answers · ${qScore(s, i)} of 200 pts`, W / 2, y); y += 22;
+        const last = i === s.qs.length - 1, bw = Math.min(240, W - 60);
+        if (!s.done) s.btns.push(Object.assign(G.pill(c, W / 2 - bw / 2, y, bw, 48, "Next question", true), { k: "next" }));
+        else if (s.posted) {
+          const hw = (W - 40) / 2;
+          s.btns.push(Object.assign(G.pill(c, 14, y, hw, 46, "‹ Previous", false, i === 0), { k: "prev" }));
+          s.btns.push(Object.assign(G.pill(c, 26 + hw, y, hw, 46, "Next ›", false, last), { k: "next" }));
+          s.btns.push(Object.assign(G.pill(c, W / 2 - bw / 2, y + 58, bw, 48, "See results", true), { k: "res" }));
+        }
+      }
+    },
+    tap(G, x, y) {
+      const s = G.s, b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return;
+      if (b.k === "mode") { if (MODE !== b.m) { MODE = b.m; s.typed = ""; s.msgT = 0; if (MODE === "host" && !HS) hLoad(); } return; }
+      if (MODE === "host") return this.hostTap(G, b);
+      if (MODE === "tv") { if (b.key) this.tvPress(G, b.key); return; }
+      if (b.k === "retry") { s.err = false; s.loading = true; return this.fetchCrew(G); }
+      if (b.k === "res") return G.results(this.info(G));
+      if (b.k === "prev") { if (s.qi > 0) s.qi--; return; }
+      if (b.k === "next") { if (s.qi < s.qs.length - 1 && s.over[s.qi]) { s.qi++; if (!s.done) this.persist(G); } return; }
+      if (b.k === "pass") return this.endQ(G, s.qi);
+      if (b.key) return this.press(G, b.key);
+    },
+    onKey(G, k, d) {
+      if (!d) return;
+      const host = MODE === "host", tv = MODE === "tv", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      if (tv) { if (key) this.tvPress(G, key); return; }
+      if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
+      if (host) { G.s.hkb = true; this.hPress(G, key); } else this.press(G, key);
+    },
+
+    // ---- Host mode: one screen for the room, run like the show. Two teams; the host flips answers (tap with Peek on,
+    // or type what a player said), hits Strike on a miss, then gives the pot to the team that won the round.
+    // Last round is triple points, the one before it double. Nothing here touches the daily solo score. ----
+    tvPress(G, k) {
+      const s = G.s; if (k !== ">") return typeKey(s, k);
+      const code = s.typed.replace(/[^A-Z]/g, ""); s.typed = ""; if (code.length !== 4) return this.say(G, "The code is 4 letters", 2.5);
+      tone("sine", 30, 0.02, 0.0001); if (ac && ac.resume) ac.resume(); // this key press is what lets the TV play sound later
+      this.say(G, "Connecting…", 20);
+      API("feudWatch", code).then(v => { s.msgT = 0; tvOpen(code, v); }).catch(e => this.say(G, /No game/.test(errMsg(e)) ? "No game with that code" : /Unknown call/.test(errMsg(e)) ? "Server is updating. Try again in a few minutes." : "Couldn't connect. Try again.", 4));
+    },
+    hostNew(G, name, raw, code) {
+      code = store.get(CODE) || code || ""; if (code) store.set(CODE, code); fails = 0;
+      HS = { name, raw: raw || null, code, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
+      ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
+      G.s.peek = false; G.s.hkb = false; hSave(); askCode();
+    },
+    hReveal(G, j) {
+      const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
+      h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
+      s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); hSave();
+    },
+    hStrike(G) {
+      const s = G.s, h = HS, i = h.qi;
+      if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
+      h.nx = (h.nx || 0) + 1; h.xn = s.bigN;
+      s.bigX = 1.3; buzzer(); G.buzz(); hSave();
+    },
+    hEnter(G) {
+      const s = G.s, h = HS, i = h.qi, n = norm(s.typed); if (n.length < 2) return; s.typed = "";
+      const hits = match(HD[i], n), open = hits.filter(j => !h.shown[i].includes(j));
+      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 2.2);
+      if (!open.length && hits.length) return this.say(G, "Already on the board");
+      if (open.length) { this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!"); return this.hReveal(G, open[0]); }
+      this.say(G, "Not on the board"); this.hStrike(G);
+    },
+    hPress(G, k) { if (k === ">") return this.hEnter(G); typeKey(G.s, k); },
+    hostTap(G, b) {
+      const s = G.s, h = HS;
+      if (b.k === "hpolls") return this.hostNew(G, "polls");
+      if (b.k === "hcrew" || b.k === "hmix") {
+        if (s.hload) return; s.hload = true; s.hmsg = "";
+        // the crew's answers only ever come down as part of a host game, and the server logs who started it
+        API("feudHost", me ? me.id : "", "crew").then(r => {
+          s.hload = false;
+          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first."; else this.hostNew(G, b.k === "hmix" ? "mix" : "crew", r.answers, r.code);
+        }).catch(e => { s.hload = false; s.hmsg = /Unknown call/.test(errMsg(e)) ? "The server is still updating. Try again in a few minutes." : "Couldn't load the crew's answers. Check your connection."; });
+        return;
+      }
+      if (!h) return;
+      const quit = () => { HS = HD = null; store.set(HK, null); s.quitT = 0; s.hmsg = ""; };
+      if (b.k === "hnew") return quit();
+      if (b.k === "hquit") { if (s.quitT > 0) quit(); else s.quitT = 3; return; }
+      const i = h.qi, q = HD[i];
+      if (b.slot != null) return this.hReveal(G, b.slot);
+      if (b.k === "hstrike") return this.hStrike(G);
+      if (b.k === "hpeek") { s.peek = !s.peek; return; }
+      if (b.k === "hkb") { s.hkb = !s.hkb; s.typed = ""; return; }
+      if (b.k === "hwin0" || b.k === "hwin1") {
+        if (h.won[i] >= 0 || !h.pot) return;
+        const t = b.k === "hwin0" ? 0 : 1; h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
+      }
+      if (b.k === "hall") { q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
+      if (b.k === "hnext") {
+        if (h.won[i] < 0 && h.pot) return;
+        s.peek = false; s.typed = ""; if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
+        return hSave();
+      }
+      if (b.key) return this.hPress(G, b.key);
+    },
+    hostDraw(G, c, P) {
+      const s = G.s, W = G.W, H = G.H, h = HS, { ink, mute } = P;
+      const lines = (t, y, font, col) => { c.font = font; c.fillStyle = col; c.textAlign = "center"; wrap(c, t, W - 48).forEach(l => { c.fillText(l, W / 2, y); y += 21; }); return y; };
+      const bw = Math.min(280, W - 60), bx = W / 2 - bw / 2;
+      if (!h) {
+        lines("Host a game", TOP + 44, `700 24px ${G.TITLE}`, ink);
+        let y = lines("Two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round. Party mix is America's polls with the crew's own answers mixed in.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Party mix · 5 rounds", true, s.hload), { k: "hmix" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 60, bw, 46, "Crew answers only", false, s.hload), { k: "hcrew" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 114, bw, 46, "America's polls only", false, s.hload), { k: "hpolls" }));
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, y + 190, `600 14px ${G.UI}`, ink);
+        return;
+      }
+      if (h.over) {
+        const [a, b] = h.score;
+        lines(a === b ? "It's a tie!" : `${TEAMS[a > b ? 0 : 1]} wins! 🦃`, TOP + 60, `700 26px ${G.TITLE}`, ink);
+        lines(`${TEAMS[0]} ${a}  ·  ${TEAMS[1]} ${b}`, TOP + 100, `600 16px ${G.UI}`, mute);
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 50, "New game", true), { k: "hnew" }));
+        return;
+      }
+      const i = h.qi, q = HD[i], m = mult(i), won = h.won[i], kb = s.hkb, T = TOP + 6;
+      // scoreboard: team, pot, team
+      const pw = 88, tw = (W - 24 - pw - 12) / 2;
+      [0, 1].forEach(t => {
+        const x = t ? W - 12 - tw : 12; rr(c, x, T, tw, 50, 10); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
+        c.textAlign = "center"; c.fillStyle = mute; c.font = `600 11.5px ${G.UI}`; c.fillText(TEAMS[t], x + tw / 2, T + 15);
+        c.fillStyle = ink; c.font = `700 22px ${G.UI}`; c.fillText(h.score[t], x + tw / 2, T + 35);
+      });
+      rr(c, W / 2 - pw / 2, T, pw, 50, 10); c.fillStyle = "#1f3a8a"; c.fill();
+      c.fillStyle = "#e9b949"; c.font = `700 11.5px ${G.UI}`; c.fillText("POT", W / 2, T + 15); c.font = `700 22px ${G.UI}`; c.fillText(h.pot, W / 2, T + 35);
+      let y = T + 68;
+      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`Round ${i + 1} of ${HD.length}${m > 1 ? (m === 2 ? " · DOUBLE" : " · TRIPLE") : ""}${h.code ? " · TV code " + h.code : ""}`, 14, y);
+      c.textAlign = "right"; c.fillStyle = s.quitT > 0 ? "#d64545" : mute; c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
+      s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
+      y = question(G, c, P, q, y + 28);
+      const kbH = kb ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2);
+      const sh = Math.max(26, Math.min(44, (H - y - kbH - (kb ? 96 : 160)) / rows - 6));
+      const slots = board(G, c, P, q, y, sh, j => h.shown[i].includes(j) ? (h.free[i].includes(j) ? 2 : 1) : s.peek ? 3 : 0);
+      if (s.peek) slots.forEach(b => s.btns.push(b));
+      if (s.bigX > 0) { // the big red X
+        const n = s.bigN || 1, z = Math.min(84, (W - 60) / 3), bh = rows * (sh + 6), x0 = W / 2 - (n * z + (n - 1) * 10) / 2;
+        c.save(); c.globalAlpha = Math.min(1, s.bigX * 3);
+        for (let k = 0; k < n; k++) { const x = x0 + k * (z + 10), yy = y + bh / 2 - z / 2; rr(c, x, yy, z, z, 12); c.fillStyle = P.bg; c.fill(); c.lineWidth = 6; c.strokeStyle = "#d64545"; c.stroke(); c.fillStyle = "#d64545"; c.textAlign = "center"; c.font = `700 ${z * 0.72}px ${G.UI}`; c.fillText("✕", x + z / 2, yy + z / 2 + 3); }
+        c.restore();
+      }
+      y += rows * (sh + 6) + 6;
+      strikes(c, P, h.strikes[i], 14, y);
+      const aw = W - 28 - 104, w1 = aw * 0.4, w2 = (aw - w1 - 12) / 2; let x = 14 + 104;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w1, 34, "Strike"), { k: "hstrike" })); x += w1 + 6;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Peek", s.peek), { k: "hpeek" })); x += w2 + 6;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Keys", kb), { k: "hkb" }));
+      if (kb) { inputBox(G, c, P, y + 36, "Type what they said"); keys(G, c, P, kbH); return; }
+      y += 42; const hw = (W - 36) / 2, last = i === HD.length - 1;
+      if (won < 0) [0, 1].forEach(t => s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), y, hw, 46, `Pot → ${TEAMS[t].slice(5)}`, true, !h.pot), { k: "hwin" + t })));
+      else lines(`${TEAMS[won]} banked it`, y + 23, `600 15px ${G.UI}`, ink);
+      y += 56;
+      s.btns.push(Object.assign(G.pill(c, 12, y, hw, 46, "Reveal all", false, h.shown[i].length === q.a.length), { k: "hall" }));
+      s.btns.push(Object.assign(G.pill(c, 24 + hw, y, hw, 46, last ? "Final score" : "Next round ›", false, won < 0 && h.pot > 0), { k: "hnext" }));
+    },
+    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; }, view, tvOpen, tvRender }
+  });
+})();
+
+</script>
+<script>
 // ---------- Kick Dawg (field goals in the wind) ----------
 // View from behind the kicker. Two taps per kick: (1) an AIM arrow swings left/right - tap to lock it,
 // (2) a POWER meter fills up and down - tap to lock it. Wind bends the ball in flight, so lock the aim off-center.
@@ -14713,255 +15401,213 @@ defGame({
 
 </script>
 <script>
-// ---------- Hook Dawg (swing-and-fling, Stickman Hook style) ----------
-// A stick-figure dawg swings from hooks. Hold to grab the nearest hook ahead, let go to fling.
-// Don't fall in the pit. Score = distance + bones + flips.
-// World x grows right, world y is screen y (down) shifted by camY (camera only rises when you fly high).
-defGame({
-  key: "hook", name: "Hook Dawg", icon: "🪝", max: 99999,
-  blurb: "Hold to hook, let go to fling. Swing forever.",
-  how: "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
-  reset(G) {
-    const W = G.W, H = G.H;
-    const s = G.s = {
-      p: { x: 70, y: H * 0.42, vx: 0, vy: 0, rot: 0, spin: 0 },
-      hooks: [], pads: [], bones: [], pops: [], trail: [],
-      hook: null, held: false, auto: true, len: 0,
-      camX: 0, camY: 0, lastX: 0, maxX: 0, bonus: 0, airRot: 0, flips: 0, n: 0,
-      hills: [], clouds: []
-    };
-    for (let i = 0; i < 7; i++) s.clouds.push({ x: Math.random() * W * 2, y: 20 + Math.random() * H * 0.35, w: 40 + Math.random() * 60 });
-    for (let i = 0; i < 12; i++) s.hills.push({ x: i * 140 + Math.random() * 60, h: 40 + Math.random() * 70, w: 120 + Math.random() * 80 });
-    // first hook right above the start so the dawg is already swinging
-    s.hooks.push({ x: 150, y: H * 0.16, by: H * 0.16, bob: 0, ph: 0 });
-    s.lastX = 150;
-    s.hook = s.hooks[0];
-    s.len = Math.hypot(s.p.x - s.hook.x, s.p.y - s.hook.y);
-    s.p.vx = 260;
-    this.gen(G);
-  },
-  gen(G) {
-    const s = G.s, W = G.W, H = G.H;
-    while (s.lastX < s.camX + W + 400) {
-      s.n++;
-      const lvl = Math.min(1, s.lastX / 30000);
-      const gap = 170 + lvl * 110 + Math.random() * (50 + lvl * 40);
-      const x = s.lastX + gap;
-      const y = H * (0.12 + Math.random() * (0.26 + lvl * 0.08));
-      const bob = s.lastX > 5000 && Math.random() < 0.25 + lvl * 0.45 ? 25 + Math.random() * 35 * (0.5 + lvl) : 0;
-      s.hooks.push({ x, y, by: y, bob, ph: Math.random() * 6 });
-      // bones along the arc between hooks
-      if (Math.random() < 0.55) {
-        const mx = s.lastX + gap / 2, my = H * (0.38 + Math.random() * 0.2);
-        for (let i = -1; i <= 1; i++) s.bones.push({ x: mx + i * 26, y: my - (i === 0 ? 14 : 0), got: 0 });
-      }
-      // bounce pads in the pit (rarer the farther you go)
-      if (Math.random() < 0.45 - lvl * 0.3) s.pads.push({ x: s.lastX + gap * (0.3 + Math.random() * 0.4), w: 70 - lvl * 20, sq: 0 });
-      s.lastX = x;
-    }
-  },
-  // the hook you'd grab right now: nearest one in reach, preferring ones ahead of you
-  target(G) {
-    const s = G.s, p = s.p; let best = null, bd = 1e9;
-    for (const h of s.hooks) {
-      if (h.x < p.x - 60) continue;
-      const d = Math.hypot(h.x - p.x, h.y - p.y);
-      if (d > 360 || d < 30) continue;
-      const score = d - (h.x > p.x ? 60 : 0);
-      if (score < bd) { bd = score; best = h; }
-    }
-    return best;
-  },
-  grab(G) {
-    const s = G.s, p = s.p; s.held = true;
-    if (s.auto && s.hook) return; // already hanging on the first hook
-    const h = this.target(G); if (!h) return;
-    s.hook = h; s.len = Math.max(70, Math.hypot(p.x - h.x, p.y - h.y)); s.auto = false;
-    s.airRot = 0; G.sfx("pop");
-  },
-  release(G) {
-    const s = G.s, p = s.p; s.held = false;
-    if (!s.hook) return;
-    s.hook = null; s.auto = false; s.airRot = 0;
-    p.spin = Math.max(-14, Math.min(14, (p.vx * 0.006) + (p.vy < 0 ? 4 : 1) * Math.sign(p.vx || 1)));
-  },
-  update(G, dt) {
-    const s = G.s, p = s.p, W = G.W, H = G.H;
-    // drifting hooks
-    for (const h of s.hooks) if (h.bob) { h.ph += dt * 1.6; h.y = h.by + Math.sin(h.ph) * h.bob; }
-    const steps = 3, h = dt / steps;
-    for (let i = 0; i < steps; i++) {
-      p.vy += 1500 * h;
-      if (s.hook) {
-        // a little swing assist so momentum doesn't die
-        const dx = p.x - s.hook.x, dy = p.y - s.hook.y, d = Math.hypot(dx, dy) || 1;
-        const tx = -dy / d, ty = dx / d, along = p.vx * tx + p.vy * ty;
-        const push = Math.sign(along) * 260 * h;
-        p.vx += tx * push; p.vy += ty * push;
-      }
-      p.x += p.vx * h; p.y += p.vy * h;
-      if (s.hook) {
-        const dx = p.x - s.hook.x, dy = p.y - s.hook.y, d = Math.hypot(dx, dy) || 1;
-        if (d > s.len) {
-          const nx = dx / d, ny = dy / d;
-          p.x = s.hook.x + nx * s.len; p.y = s.hook.y + ny * s.len;
-          const out = p.vx * nx + p.vy * ny;
-          if (out > 0) { p.vx -= out * nx; p.vy -= out * ny; }
-        }
-      }
-    }
-    const sp = Math.hypot(p.vx, p.vy); if (sp > 1400) { p.vx *= 1400 / sp; p.vy *= 1400 / sp; }
-    // body rotation: hang along the rope, tumble in the air
-    if (s.hook) {
-      const want = Math.atan2(p.x - s.hook.x, -(p.y - s.hook.y)) + Math.PI;
-      let dr = want - p.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
-      p.rot += dr * Math.min(1, dt * 14);
-    } else {
-      const dr = p.spin * dt; p.rot += dr; s.airRot += dr;
-      p.spin *= Math.pow(0.6, dt);
-      if (Math.abs(s.airRot) >= Math.PI * 2) {
-        s.airRot -= Math.sign(s.airRot) * Math.PI * 2; s.flips++;
-        const pts = 50 * s.flips; s.bonus += pts; G.sfx("win");
-        s.pops.push({ x: p.x, y: p.y - 40, t: 1, txt: (s.flips > 1 ? s.flips + "x FLIP +" : "FLIP +") + pts });
-      }
-    }
-    if (s.hook) s.flips = 0;
-    const bx = p.x - Math.sin(p.rot) * 32, by = p.y + Math.cos(p.rot) * 32; // body center
-    // bones
-    for (const b of s.bones) if (!b.got && Math.abs(b.x - bx) < 26 && Math.abs(b.y - by) < 34) {
-      b.got = 1; s.bonus += 25; G.sfx("pop"); s.pops.push({ x: b.x, y: b.y - 16, t: 0.8, txt: "+25" });
-    }
-    // bounce pads at the bottom of the pit
-    const padY = H - 34;
-    for (const pd of s.pads) {
-      pd.sq = Math.max(0, pd.sq - dt * 4);
-      if (!s.hook && p.vy > 0 && by > padY - 26 && by < padY + 14 && Math.abs(bx - pd.x) < pd.w / 2 + 10) {
-        p.y -= by - (padY - 26); p.vy = -Math.max(950, p.vy * 0.95); p.vx = Math.max(p.vx, 280);
-        p.spin = 6 * Math.sign(p.vx); s.airRot = 0; pd.sq = 1; G.sfx("win");
-        s.pops.push({ x: pd.x, y: padY - 40, t: 0.7, txt: "BOING" });
-      }
-    }
-    // trail
-    s.trail.push({ x: p.x, y: p.y, t: 0.35 });
-    for (const t of s.trail) t.t -= dt;
-    if (s.trail.length) s.trail = s.trail.filter(t => t.t > 0);
-    for (const q of s.pops) q.t -= dt;
-    if (s.pops.length) s.pops = s.pops.filter(q => q.t > 0);
-    // camera
-    const wantX = p.x - W * 0.36;
-    s.camX += (wantX - s.camX) * Math.min(1, dt * 5);
-    const wantY = Math.min(0, p.y - H * 0.18);
-    s.camY += (wantY - s.camY) * Math.min(1, dt * 4);
-    s.maxX = Math.max(s.maxX, p.x - 70);
-    this.gen(G);
-    const lo = s.camX - 300;
-    if (s.hooks.length > 3 && s.hooks[0].x < lo && s.hooks[0] !== s.hook) s.hooks.shift();
-    if (s.bones.length && s.bones[0].x < lo) s.bones = s.bones.filter(b => b.x >= lo);
-    if (s.pads.length && s.pads[0].x < lo) s.pads = s.pads.filter(pd => pd.x >= lo);
-    // fell in the pit
-    if (by > H + 10) {
-      G.sfx("lose"); G.buzz();
-      const sc = this.score(s), m = Math.floor(s.maxX / 10);
-      G.over(sc, m > 2000 ? "Swing legend!" : m > 600 ? "Into the pit!" : "Hold on tighter!");
-    }
-  },
-  score(s) { return Math.min(99999, Math.floor(s.maxX / 10) + s.bonus); },
-  down(G) { this.grab(G); },
-  up(G) { this.release(G); },
-  onKey(G, k, isDown) {
-    if (k !== " " && k !== "ArrowUp" && k !== "w") return;
-    if (isDown && !G.s.held) this.grab(G); else if (!isDown && G.s.held) this.release(G);
-  },
-  draw(G, c) {
-    const s = G.s, W = G.W, H = G.H, dark = G.dark();
-    if (!s.p) return;
-    const cx = s.camX || 0, cy = s.camY || 0;
-    const X = x => x - cx, Y = y => y - cy;
-    // sky
-    const gr = c.createLinearGradient(0, 0, 0, H);
-    if (dark) { gr.addColorStop(0, "#141a46"); gr.addColorStop(1, "#3a2d6e"); }
-    else { gr.addColorStop(0, "#5fb6ff"); gr.addColorStop(1, "#ffd9a8"); }
-    c.fillStyle = gr; c.fillRect(0, 0, W, H);
-    // sun / moon
-    c.fillStyle = dark ? "rgba(240,240,255,0.85)" : "rgba(255,240,170,0.9)";
-    c.beginPath(); c.arc(W * 0.8, Y(H * 0.14) * 0.5 + 40, 26, 0, Math.PI * 2); c.fill();
-    // clouds (slow parallax)
-    c.fillStyle = dark ? "rgba(190,200,240,0.16)" : "rgba(255,255,255,0.85)";
-    const span = W + 200;
-    for (const cl of s.clouds) {
-      const xx = ((cl.x - cx * 0.2) % span + span) % span - 100, yy = cl.y - cy * 0.3;
-      c.beginPath(); c.roundRect(xx - cl.w / 2, yy, cl.w, 16, 8); c.fill();
-      c.beginPath(); c.roundRect(xx - cl.w / 4, yy - 10, cl.w * 0.5, 16, 8); c.fill();
-    }
-    // hills (mid parallax)
-    c.fillStyle = dark ? "#2a2556" : "#7fcf8a";
-    const hspan = 12 * 140;
-    for (const hl of s.hills) {
-      const xx = ((hl.x - cx * 0.45) % hspan + hspan) % hspan - 120, base = H - 30 - cy * 0.5;
-      c.beginPath(); c.ellipse(xx, base, hl.w / 2, hl.h, 0, Math.PI, 0); c.fill();
-    }
-    // pit
-    const pitY = Y(H - 24);
-    c.fillStyle = dark ? "#0b0a1c" : "#3b2a4d"; c.fillRect(0, pitY, W, H - pitY + 50);
-    c.fillStyle = dark ? "#e0446a" : "#ff5a7a";
-    for (let x = -((cx * 1) % 20); x < W + 20; x += 20) { c.beginPath(); c.moveTo(x, pitY); c.lineTo(x + 10, pitY - 12); c.lineTo(x + 20, pitY); c.fill(); }
-    // bounce pads
-    for (const pd of s.pads) {
-      const x = X(pd.x); if (x < -60 || x > W + 60) continue;
-      const y = Y(H - 34), q = pd.sq;
-      c.fillStyle = "#222"; c.fillRect(x - pd.w / 2 + 4, y + 4, 4, 20); c.fillRect(x + pd.w / 2 - 8, y + 4, 4, 20);
-      c.fillStyle = "#1f9d55"; c.beginPath(); c.ellipse(x, y + 4 + q * 5, pd.w / 2, 7 - q * 3, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = "#6cf0a0"; c.fillRect(x - pd.w / 2 + 8, y + 1 + q * 5, pd.w - 16, 2);
-    }
-    // bones
-    for (const b of s.bones) { if (b.got) continue; const x = X(b.x); if (x < -30 || x > W + 30) continue; G.emoji(c, "🦴", x, Y(b.y) + Math.sin(G.t * 4 + b.x) * 3, 22); }
-    // hooks
-    const tgt = !s.hook && G.state === "play" ? this.target(G) : null;
-    for (const hk of s.hooks) {
-      const x = X(hk.x), y = Y(hk.y); if (x < -40 || x > W + 40) continue;
-      if (hk === tgt) { c.strokeStyle = "rgba(255,210,63," + (0.5 + 0.3 * Math.sin(G.t * 8)) + ")"; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 18, 0, Math.PI * 2); c.stroke(); }
-      c.fillStyle = hk.bob ? "#7b5cff" : "#ff8a1e"; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.fill();
-      c.fillStyle = "#fff"; c.beginPath(); c.arc(x - 3, y - 3, 3, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = "rgba(0,0,0,0.35)"; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.stroke();
-    }
-    // trail
-    for (const t of s.trail) { c.fillStyle = `rgba(255,255,255,${t.t * 0.8})`; c.fillRect(X(t.x) - 2, Y(t.y) - 2, 4, 4); }
-    // rope
-    const p = s.p, px = X(p.x), py = Y(p.y);
-    if (s.hook) {
-      c.strokeStyle = dark ? "#e8e2ff" : "#3b2a1a"; c.lineWidth = 2.5;
-      c.beginPath(); c.moveTo(px, py); c.lineTo(X(s.hook.x), Y(s.hook.y)); c.stroke();
-    }
-    // the stick dawg hangs from its hands at p; local +y points away from the hook
-    c.save(); c.translate(px, py); c.rotate(p.rot);
-    const ink = dark ? "#f2f2f2" : "#1d1d1d", fl = Math.sin(G.t * 12) * (s.hook ? 0.15 : 0.6);
-    c.strokeStyle = ink; c.lineWidth = 3.5; c.lineCap = "round"; c.lineJoin = "round";
-    c.beginPath();
-    if (s.hook) { c.moveTo(-2, 0); c.lineTo(-13, 11); c.lineTo(0, 24); c.moveTo(2, 0); c.lineTo(13, 11); c.lineTo(0, 24); } // arms up to the rope
-    else { c.moveTo(0, 24); c.lineTo(-14, 20 + fl * 10); c.lineTo(-20, 10 + fl * 14); c.moveTo(0, 24); c.lineTo(14, 20 - fl * 10); c.lineTo(20, 10 - fl * 14); }
-    c.moveTo(0, 22); c.lineTo(0, 42);                        // body
-    c.moveTo(0, 42); c.lineTo(-7 - fl * 6, 50); c.lineTo(-9 - fl * 8, 60); // legs
-    c.moveTo(0, 42); c.lineTo(7 + fl * 6, 50); c.lineTo(9 + fl * 8, 60);
-    c.stroke();
-    c.restore();
-    // head between the arms, kept fairly upright so the face reads
-    const hx = px - Math.sin(p.rot) * 12, hy = py + Math.cos(p.rot) * 12;
-    const face = G.state === "over" ? ":dawgpain:" : s.flips > 0 && !s.hook ? ":dawgpog:" : p.vy > 700 && !s.hook ? ":dawgsweat:" : ":dawgW:";
-    G.img(c, face, hx, hy, 24, p.rot * 0.35);
-    for (const q of s.pops) { c.globalAlpha = Math.min(1, q.t * 2); G.text(c, q.txt, X(q.x), Y(q.y) - (1 - q.t) * 30, 10, "#ffd23f"); c.globalAlpha = 1; }
-    // off the top of the screen: little arrow
-    if (py < 0) G.text(c, "▲", px, 40, 12, "#ffd23f");
-    if (G.state === "play" && G.t < 4) {
-      c.globalAlpha = 0.6 * Math.min(1, 4 - G.t);
-      G.text(c, "HOLD = HOOK", W / 2, H * 0.62, 11, "#fff"); G.text(c, "LET GO = FLING", W / 2, H * 0.62 + 20, 11, "#fff");
-      c.globalAlpha = 1;
-    }
-    // HUD
-    c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 0, W, 30);
-    G.text(c, `SCORE ${this.score(s)}`, 10, 15, 11, "#fff", "left");
-    G.text(c, `${Math.floor(s.maxX / 10)}m`, W - 10, 15, 11, "#ffd23f", "right");
+// ---------- Hook Dawg (swing-and-fling levels, Stickman Hook style) ----------
+// Hold to grab the nearest hook you're in range of (dashed ring), let go to fling. The rope reels in a little, so
+// every swing adds speed. Round bumpers bounce you, striped blocks are solid, falling off the bottom restarts the
+// level. Cross the checkered line to clear it. No lives, no game over: score = career total, best per level
+// (1000 + up to 500 for speed), posted quietly like Mad Dawg.
+// World: px, x right, y DOWN. Physics runs in fixed 1/120 s steps so tools/hook.mjs can replay it.
+// LEVELS are generated and bot-checked by `node tools/hook.mjs` (h hooks [x,y,range], b bumpers [x,y],
+// k blocks [x,y,w,h], fin = finish x, bot = fall line); it prints LEVELS and PAR to paste here.
+(function () {
+  const DT = 1 / 120, GRAV = 1500, PR = 13, BR = 24, VMAX = 1500;
+  const LEVELS = [{h:[[150,0,235],[392,29,235],[601,18,235],[828,-15,235],[1067,-13,235],[1287,-4,235],[1508,7,235]],b:[],k:[[1838,207,260,40]],fin:1888,bot:449},{h:[[150,0,235],[366,-15,234],[585,-13,234],[801,-17,234],[1018,-32,234],[1233,-31,234],[1462,-33,234]],b:[],k:[[1792,167,260,40]],fin:1842,bot:420},{h:[[150,0,235],[374,-5,232],[601,40,232],[1060,54,232],[1300,56,232],[1516,106,232],[1729,153,232],[1964,133,232],[2422,117,232]],b:[[811,300],[2174,393]],k:[[2752,317,260,40]],fin:2802,bot:573},{h:[[150,0,235],[394,11,230],[632,51,230],[853,48,230],[1143,52,230],[1358,80,230],[1590,113,230],[2061,103,230],[2526,102,230]],b:[[1800,373],[2271,363]],k:[[976,203,44,700],[2856,302,260,40]],fin:2906,bot:533},{h:[[150,0,235],[383,8,229],[620,-14,229],[910,-18,229],[1124,5,229],[1340,-5,229],[1812,-9,229],[2065,10,229],[2297,35,229],[2587,43,229]],b:[[1550,255]],k:[[743,153,44,700],[2420,208,44,700],[2917,243,260,40]],fin:2967,bot:463},{h:[[150,0,235],[360,-30,232],[822,-21,232],[1038,-37,232],[1258,-83,232],[1465,-41,232],[1672,-36,232],[1877,12,232]],b:[[570,230]],k:[[2207,212,260,40]],fin:2257,bot:432},{h:[[150,0,235],[399,58,225],[645,31,225],[857,4,225],[1332,0,225],[1561,14,225],[1813,66,225],[2078,78,225],[2340,80,225],[2789,96,225],[3238,88,225],[3446,131,225]],b:[[1067,264],[2550,340],[2999,356]],k:[[3776,331,260,40]],fin:3826,bot:551},{h:[[150,0,235],[440,-15,228],[690,-22,228],[909,2,228],[1199,2,228],[1408,-19,228],[1886,-28,228],[2125,-8,228],[2415,-4,228],[2664,13,228]],b:[[1618,241]],k:[[273,183,44,700],[1032,172,44,700],[2248,135,44,700],[2994,213,260,40]],fin:3044,bot:433},{h:[[150,0,235],[379,26,227],[669,29,227],[877,-34,227],[1167,-23,227],[1636,-17,227],[1858,39,227],[2148,32,227],[2381,37,227],[2830,51,227],[3055,96,227]],b:[[1377,237],[2591,297]],k:[[502,216,44,700],[1000,119,44,700],[1981,209,44,700],[3385,296,260,40]],fin:3435,bot:516},{h:[[150,0,235],[450,10,225],[695,-35,225],[902,-3,225],[1149,-17,225],[1412,2,225],[1712,-6,225],[2012,-23,225],[2302,-15,225],[2567,-12,225],[3022,-23,225]],b:[[2777,248]],k:[[278,-620,44,724],[1540,-618,44,729],[1840,-626,44,723],[2135,138,44,700],[3352,177,260,40]],fin:3402,bot:430},{h:[[150,0,235],[415,20,223],[705,39,223],[917,-32,223],[1207,-53,223],[1507,-35,223],[1961,-46,223],[2251,-44,223],[2725,-35,223],[2994,-30,223],[3203,-2,223],[3663,-19,223]],b:[[1717,225],[2461,216],[3413,258]],k:[[538,175,44,700],[1040,122,44,700],[1335,-673,44,724],[2084,142,44,700],[3993,181,260,40]],fin:4043,bot:459},{h:[[150,0,235],[440,1,224],[685,-56,224],[975,-54,224],[1275,-46,224],[1512,-51,224],[1990,-35,224],[2280,-27,224],[2520,-86,224],[2810,-97,224],[3100,-104,224],[3331,-65,224]],b:[[1722,209]],k:[[273,176,44,700],[808,100,44,700],[1103,-674,44,734],[2113,122,44,700],[2643,96,44,700],[2933,83,44,700],[3661,135,260,40]],fin:3711,bot:421},{h:[[150,0,235],[395,-27,220],[633,51,220],[933,34,220],[1223,38,220],[1513,50,220],[1772,47,220],[2028,97,220],[2486,74,220],[2701,73,220],[2910,116,220],[3378,104,220],[3604,144,220],[3894,120,220]],b:[[2238,357],[3120,376]],k:[[761,-569,44,710],[1056,185,44,700],[1346,217,44,700],[3727,308,44,700],[4224,320,260,40]],fin:4274,bot:564},{h:[[150,0,235],[450,6,221],[740,23,221],[1187,3,221],[1487,20,221],[1966,15,221],[2221,-63,221],[2511,-50,221],[2749,-103,221],[2983,-96,221],[3447,-81,221],[3925,-65,221],[4179,-26,221]],b:[[950,283],[1697,280],[3193,164],[3657,179]],k:[[278,-620,44,716],[573,194,44,700],[1315,-617,44,734],[2344,87,44,700],[4509,174,260,40]],fin:4559,bot:443},{h:[[150,0,235],[440,-19,219],[672,27,219],[962,21,219],[1435,34,219],[1668,25,219],[1968,8,219],[2437,32,219],[2697,61,219],[2921,56,219],[3211,43,219],[3501,66,219],[3725,26,219],[4025,48,219]],b:[[1172,281],[2178,268]],k:[[273,140,44,700],[795,196,44,700],[1796,-595,44,713],[3044,224,44,700],[3334,189,44,700],[3853,-594,44,722],[4355,248,260,40]],fin:4405,bot:486},{h:[[150,0,235],[408,-10,218],[874,-17,218],[1174,-11,218],[1432,36,218],[1698,20,218],[1929,99,218],[2219,80,218],[2464,120,218],[2913,143,218],[3197,134,218],[3662,141,218],[3909,206,218],[4178,181,218],[4642,207,218]],b:[[618,250],[2674,380],[3407,394],[4388,441]],k:[[1002,-637,44,715],[2052,287,44,700],[4972,407,260,40]],fin:5022,bot:627},{h:[[150,0,235],[600,11,233],[1072,25,233],[1536,36,233],[1753,1,233],[2220,13,233],[2465,-36,233],[2700,-13,233]],b:[[360,260],[810,271],[1282,285],[1963,261]],k:[[3030,187,260,40]],fin:3080,bot:456},{h:[[150,0,235],[597,13,231],[848,0,231],[1082,-20,231],[1311,22,231],[1559,69,231],[1780,84,231],[2017,77,231],[2265,47,231]],b:[[360,260]],k:[[2595,247,260,40]],fin:2645,bot:504},{h:[[150,0,235],[603,18,226],[819,-43,226],[1073,-22,226],[1525,-33,226],[1753,-74,226],[1993,-140,226],[2248,-151,226],[2491,-112,226],[2937,-119,226],[3395,-117,226]],b:[[360,260],[1283,238],[2701,148],[3147,141]],k:[[3725,83,260,40]],fin:3775,bot:438},{h:[[150,0,235],[599,20,222],[806,-51,222],[1096,-35,222],[1386,-52,222],[1686,-71,222],[1986,-86,222],[2286,-98,222],[2558,-95,222],[3020,-78,222],[3320,-99,222],[3526,-175,222],[3785,-98,222]],b:[[360,260],[2768,165]],k:[[929,126,44,700],[1219,135,44,700],[1514,-672,44,709],[1814,-691,44,715],[2114,-706,44,721],[3148,-698,44,718],[4115,102,260,40]],fin:4165,bot:440},{h:[[150,0,235],[419,25,216],[890,51,216],[1344,70,216],[1630,79,216],[1930,94,216],[2197,89,216],[2470,94,216],[2758,114,216],[2994,206,216],[3219,269,216],[3438,180,216],[3728,153,216],[3983,217,216],[4273,229,216],[4544,226,216]],b:[[629,285],[1100,311]],k:[[1758,-541,44,725],[3561,367,44,700],[4106,391,44,700],[4874,426,260,40]],fin:4924,bot:689},{h:[[150,0,235],[429,13,218],[905,34,218],[1205,32,218],[1680,8,218],[1919,-14,218],[2134,36,218],[2406,29,218],[2673,29,218],[2939,9,218],[3197,4,218],[3497,4,218],[3797,4,218],[4087,-21,218]],b:[[639,273],[1415,292]],k:[[1033,-586,44,723],[3325,-616,44,713],[3625,-616,44,728],[3920,162,44,700],[4417,179,260,40]],fin:4467,bot:456},{h:[[150,0,235],[440,-19,217],[895,0,217],[1103,49,217],[1565,48,217],[1778,-41,217],[2026,-114,217],[2234,-37,217],[2534,-12,217],[2834,1,217],[3064,-58,217],[3342,-44,217],[3632,-58,217],[3932,-84,217],[4151,-86,217]],b:[[650,241],[1313,309]],k:[[273,159,44,700],[2362,-657,44,711],[2662,-632,44,718],[3465,110,44,700],[3760,-678,44,713],[4481,114,260,40]],fin:4531,bot:469},{h:[[150,0,235],[608,19,215],[829,-56,215],[1084,20,215],[1348,8,215],[1826,35,215],[2043,45,215],[2333,68,215],[2800,85,215],[3047,94,215],[3301,41,215],[3746,22,215],[4046,25,215],[4313,27,215],[4593,41,215],[4893,27,215]],b:[[360,260],[1558,268],[2543,328],[3511,301]],k:[[2166,230,44,700],[3874,-598,44,726],[4721,-579,44,722],[5223,227,260,40]],fin:5273,bot:514}];
+  const PAR = [3.9,4.1,5.5,6.1,5.8,4.4,7.5,6.7,6,6.7,8.6,9.1,8.1,8.9,9,11.7,8.1,7.8,9.5,10.2,10,8.1,9.8,14.7];
+
+  // ---- simulation (no drawing, no globals) ----
+  function mk(L) {
+    const h = L.h[0], st = { L, x: h[0] - 105, y: h[1] + 95, vx: 0, vy: 0, hk: 0, len: 0, t: 0, done: 0, dead: 0, was: false, rot: 0, spin: 0, still: 0, hitB: -1 };
+    st.len = Math.hypot(st.x - h[0], st.y - h[1]);
+    return st;
   }
-});
+  // the hook a press would grab: the nearest one whose ring you're inside
+  function target(st) {
+    let best = -1, bd = 1e9;
+    st.L.h.forEach((h, i) => { const d = Math.hypot(h[0] - st.x, h[1] - st.y); if (d < h[2] && d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  function step(st, held) {
+    const L = st.L;
+    if (held && !st.was && st.hk < 0) { const i = target(st); if (i >= 0) { st.hk = i; st.len = Math.max(50, Math.hypot(st.x - L.h[i][0], st.y - L.h[i][1])); st.min = Math.max(50, st.len * 0.78); st.ev = "grab"; } }
+    if (!held && st.was && st.hk >= 0) { st.hk = -1; st.spin = Math.max(-16, Math.min(16, st.vx * 0.012)); }
+    st.was = held;
+    st.vy += GRAV * DT;
+    st.x += st.vx * DT; st.y += st.vy * DT;
+    if (st.hk >= 0) {
+      const h = L.h[st.hk];
+      if (st.min && st.len > st.min) st.len = Math.max(st.min, st.len - 150 * DT); // elastic rope: reels in, which speeds the swing up
+      const dx = st.x - h[0], dy = st.y - h[1], d = Math.hypot(dx, dy) || 1;
+      if (d > st.len) {
+        const nx = dx / d, ny = dy / d, out = st.vx * nx + st.vy * ny;
+        st.x = h[0] + nx * st.len; st.y = h[1] + ny * st.len;
+        if (out > 0) { st.vx -= out * nx; st.vy -= out * ny; }
+      }
+    }
+    for (const k of L.k) { // solid blocks: circle vs box
+      const cx = Math.max(k[0], Math.min(st.x, k[0] + k[2])), cy = Math.max(k[1], Math.min(st.y, k[1] + k[3]));
+      let nx = st.x - cx, ny = st.y - cy, d = Math.hypot(nx, ny);
+      if (d >= PR) continue;
+      if (d < 1e-6) { nx = 0; ny = -1; d = 0; st.y = k[1] - PR; } else { nx /= d; ny /= d; st.x = cx + nx * PR; st.y = cy + ny * PR; }
+      const vn = st.vx * nx + st.vy * ny;
+      if (vn < 0) { st.vx -= 1.35 * vn * nx; st.vy -= 1.35 * vn * ny; st.vx *= 0.99; st.vy *= 0.99; if (vn < -250) st.ev = "thud"; }
+    }
+    for (let i = 0; i < L.b.length; i++) { // bumpers always throw you off at a good clip
+      const b = L.b[i], dx = st.x - b[0], dy = st.y - b[1], d = Math.hypot(dx, dy) || 1;
+      if (d >= PR + BR) continue;
+      const nx = dx / d, ny = dy / d, vn = st.vx * nx + st.vy * ny;
+      st.x = b[0] + nx * (PR + BR); st.y = b[1] + ny * (PR + BR);
+      const want = Math.max(900, -vn);
+      st.vx += (want - vn) * nx; st.vy += (want - vn) * ny; st.hitB = i; st.ev = "boing";
+    }
+    const sp = Math.hypot(st.vx, st.vy);
+    if (sp > VMAX) { st.vx *= VMAX / sp; st.vy *= VMAX / sp; }
+    if (st.hk >= 0) { const h = L.h[st.hk]; st.rot = Math.atan2(st.x - h[0], -(st.y - h[1])) + Math.PI; }
+    else { st.rot += st.spin * DT; st.still = sp < 25 ? st.still + DT : 0; }
+    st.t += DT;
+    if (st.x >= L.fin) st.done = 1;
+    else if (st.y > L.bot || st.still > 1.2) st.dead = 1; // fell off, or came to rest with nothing to grab
+  }
+
+  // ---- game ----
+  const pkey = () => "bdd:hook:" + (typeof me !== "undefined" && me ? me.id : "");
+  function prog() { let p = null; try { p = store.get(pkey()); } catch (e) {} if (!p || !p.b) p = { u: 0, b: {}, last: 0 }; return p; }
+  const total = p => Object.keys(p.b).reduce((a, k) => a + (p.b[k] || 0), 0);
+  const ptsFor = (li, t) => { const par = PAR[li] || 12; return 1000 + Math.round(500 * Math.max(0, Math.min(1, 1 - (t - par) / (par * 1.5)))); };
+  const stars = pts => pts >= 1400 ? 3 : pts >= 1200 ? 2 : 1;
+
+  defGame({
+    key: "hook", name: "Hook Dawg", icon: "🪝", max: 99999,
+    blurb: "Hold to hook, let go to fling. 24 levels.",
+    how: "Hold anywhere to grab the nearest hook and swing. You can only grab a hook when you're inside its dashed ring. Let go to fling yourself forward, and let go on the upswing to fly far. Round bumpers bounce you, striped blocks are solid. Fall off the bottom and the level just starts over. Swing past the checkered line to clear it. Each level is worth 1000, plus up to 500 for speed, and your score is the total of your best on every level. Tap ↻ to restart, and the arrows to replay a level you've cleared.",
+    _t: { LEVELS, PAR, mk, step, target, DT, PR, BR },
+    reset(G) {
+      const p = prog();
+      G.s = { p, held: false, acc: 0, fx: [], cam: null };
+      this.load(G, Math.min(p.last || 0, p.u, LEVELS.length - 1));
+    },
+    load(G, li) {
+      const s = G.s; s.li = li; s.st = mk(LEVELS[li]); s.phase = "go"; s.pt = 0; s.fx = []; s.held = false; s.trail = []; s.sq = {};
+      s.cam = null; s.p.last = li; try { store.set(pkey(), s.p); } catch (e) {}
+    },
+    win(G) {
+      const s = G.s; s.phase = "win"; s.pt = 0; G.sfx("win");
+      const pts = ptsFor(s.li, s.st.t), old = s.p.b[s.li] || 0;
+      s.winPts = pts; s.winBest = pts > old;
+      if (pts > old) s.p.b[s.li] = pts;
+      s.p.u = Math.max(s.p.u, Math.min(LEVELS.length - 1, s.li + 1));
+      try { store.set(pkey(), s.p); } catch (e) {}
+      if (pts > old) G.postQuiet(total(s.p));
+      for (let i = 0; i < 50; i++) s.fx.push({ x: s.st.x, y: s.st.y, vx: (Math.random() - 0.3) * 500, vy: -Math.random() * 600, t: 1.5 + Math.random(), col: ["#e63946", "#ffd23f", "#2a9df4", "#5cd65c"][i % 4] });
+    },
+    update(G, dt) {
+      const s = G.s, st = s.st;
+      s.pt += dt;
+      for (const f of s.fx) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 900 * dt; f.t -= dt; }
+      if (s.fx.length) s.fx = s.fx.filter(f => f.t > 0);
+      for (const k in s.sq) s.sq[k] = Math.max(0, s.sq[k] - dt * 5);
+      if (s.phase === "dead") { if (s.pt > 0.45) this.load(G, s.li); return; }
+      // after the line the dawg keeps sailing, hands off
+      for (s.acc += dt; s.acc >= DT; s.acc -= DT) {
+        if (s.phase === "win") { st.vy += GRAV * DT; st.x += st.vx * DT; st.y += st.vy * DT; st.rot += st.spin * DT; continue; }
+        st.ev = null; step(st, s.held);
+        if (st.ev === "boing") { s.sq[st.hitB] = 1; G.sfx("pop"); } else if (st.ev === "grab") G.sfx("pop");
+        if (st.done) { st.hk = -1; this.win(G); } else if (st.dead) { s.phase = "dead"; s.pt = 0; G.sfx("lose"); G.buzz(); break; }
+      }
+      s.trail.push([st.x, st.y]); if (s.trail.length > 14) s.trail.shift();
+    },
+    btns(G) { const y = 52, r = 17, s = G.s; return { redo: { x: G.W - 26, y, r, ch: "↻" }, next: { x: G.W - 66, y, r, ch: "▶", off: s.li >= s.p.u || s.li >= LEVELS.length - 1 }, prev: { x: G.W - 106, y, r, ch: "◀", off: s.li <= 0 } }; },
+    down(G, x, y) {
+      const s = G.s, b = this.btns(G);
+      for (const k in b) if (Math.hypot(x - b[k].x, y - b[k].y) < 22) {
+        if (b[k].off) return;
+        G.sfx("pop"); return this.load(G, s.li + (k === "next" ? 1 : k === "prev" ? -1 : 0));
+      }
+      if (s.phase === "win") { if (s.pt > 0.5) this.load(G, (s.li + 1) % LEVELS.length); return; }
+      s.held = true;
+    },
+    up(G) { G.s.held = false; },
+    onKey(G, k, isDown) {
+      const s = G.s;
+      if ((k === "r" || k === "R") && isDown) return this.load(G, s.li);
+      if (k !== " " && k !== "ArrowUp" && k !== "w") return;
+      if (isDown && s.phase === "win") { if (s.pt > 0.5) this.load(G, (s.li + 1) % LEVELS.length); return; }
+      s.held = isDown;
+    },
+    draw(G, c) {
+      const s = G.s, W = G.W, H = G.H, dark = G.dark(), st = s.st;
+      if (!st) return;
+      const L = st.L, z = Math.max(0.8, Math.min(1.5, W / 400));
+      // camera: dawg a third of the way across, never looking far below the fall line
+      const wx = st.x - W * 0.36 / z, wy = Math.min(st.y - H * 0.45 / z, L.bot + 30 - H / z);
+      if (!s.cam) s.cam = { x: wx, y: wy };
+      s.cam.x += (wx - s.cam.x) * 0.18; s.cam.y += (wy - s.cam.y) * 0.12;
+      const gr = c.createLinearGradient(0, 0, 0, H);
+      if (dark) { gr.addColorStop(0, "#131a35"); gr.addColorStop(1, "#27325c"); } else { gr.addColorStop(0, "#bfe6ff"); gr.addColorStop(1, "#f4fbff"); }
+      c.fillStyle = gr; c.fillRect(0, 0, W, H);
+      const ink = dark ? "#eef1ff" : "#22252e";
+      c.save(); c.scale(z, z); c.translate(-s.cam.x, -s.cam.y);
+      const x0 = s.cam.x - 60, x1 = s.cam.x + W / z + 60;
+      // finish line
+      const sq = 14, top = s.cam.y - 20, rows = Math.ceil((H / z + 40) / sq);
+      for (let r = 0; r < rows; r++) for (let q = 0; q < 2; q++) { c.fillStyle = (r + q) % 2 ? (dark ? "#eef1ff" : "#22252e") : (dark ? "#3a456f" : "#fff"); c.fillRect(L.fin + q * sq, Math.floor(top / sq) * sq + r * sq, sq, sq); }
+      // blocks
+      for (const k of L.k) {
+        if (k[0] + k[2] < x0 || k[0] > x1) continue;
+        c.fillStyle = dark ? "#55608f" : "#3d4558"; c.fillRect(k[0], k[1], k[2], k[3]);
+        c.save(); c.beginPath(); c.rect(k[0], k[1], k[2], k[3]); c.clip();
+        c.strokeStyle = "rgba(255,255,255,0.13)"; c.lineWidth = 7; c.beginPath();
+        for (let x = k[0] - k[3]; x < k[0] + k[2]; x += 22) { c.moveTo(x, k[1] + k[3]); c.lineTo(x + k[3], k[1]); }
+        c.stroke(); c.restore();
+      }
+      // bumpers
+      L.b.forEach((b, i) => {
+        if (b[0] < x0 || b[0] > x1) return;
+        const q = 1 + (s.sq[i] || 0) * 0.25;
+        c.fillStyle = "#ff4d6d"; c.beginPath(); c.arc(b[0], b[1], BR * q, 0, 7); c.fill();
+        c.strokeStyle = "#fff"; c.lineWidth = 4; c.beginPath(); c.arc(b[0], b[1], BR * q * 0.58, 0, 7); c.stroke();
+      });
+      // hooks and their rings
+      const tg = s.phase === "go" && st.hk < 0 ? target(st) : -1;
+      L.h.forEach((h, i) => {
+        if (h[0] + h[2] < x0 || h[0] - h[2] > x1) return;
+        const on = i === tg || i === st.hk;
+        c.setLineDash([7, 9]); c.lineWidth = on ? 2.5 : 1.5;
+        c.strokeStyle = on ? "#ff8a1e" : dark ? "rgba(238,241,255,0.22)" : "rgba(34,37,46,0.2)";
+        c.beginPath(); c.arc(h[0], h[1], h[2], 0, 7); c.stroke(); c.setLineDash([]);
+        c.fillStyle = on ? "#ff8a1e" : ink; c.beginPath(); c.arc(h[0], h[1], 8, 0, 7); c.fill();
+        c.fillStyle = dark ? "#131a35" : "#fff"; c.beginPath(); c.arc(h[0], h[1], 3, 0, 7); c.fill();
+      });
+      // speed trail, rope
+      s.trail.forEach((t, i) => { c.fillStyle = dark ? `rgba(238,241,255,${i / 40})` : `rgba(34,37,46,${i / 50})`; c.beginPath(); c.arc(t[0], t[1], 2 + i / 4, 0, 7); c.fill(); });
+      c.strokeStyle = ink; c.lineCap = "round"; c.lineJoin = "round";
+      if (st.hk >= 0) { c.lineWidth = 2.5; c.beginPath(); c.moveTo(st.x, st.y); c.lineTo(L.h[st.hk][0], L.h[st.hk][1]); c.stroke(); }
+      // the stick dawg: hangs long from the rope, tucks into a spinning ball in the air
+      c.save(); c.translate(st.x, st.y); c.rotate(st.rot); c.lineWidth = 3.5; c.beginPath();
+      if (st.hk >= 0) { c.moveTo(-5, 6); c.lineTo(0, -16); c.lineTo(5, 6); c.moveTo(0, 8); c.lineTo(0, 30); c.moveTo(0, 30); c.lineTo(-6, 46); c.moveTo(0, 30); c.lineTo(7, 45); }
+      else { c.arc(0, 6, 12, 0.3, Math.PI - 0.3); c.moveTo(-10, 12); c.lineTo(-4, 22); c.moveTo(10, 12); c.lineTo(4, 22); }
+      c.stroke(); c.restore();
+      G.img(c, s.phase === "dead" ? ":dawgpain:" : s.phase === "win" ? ":dawgpog:" : st.hk < 0 && st.vy > 700 ? ":dawgsweat:" : ":dawgW:", st.x, st.y, 26, st.hk >= 0 ? st.rot * 0.35 : st.rot);
+      for (const f of s.fx) { c.fillStyle = f.col; c.fillRect(f.x - 3, f.y - 3, 6, 6); }
+      c.restore();
+      if (s.phase === "dead") { c.fillStyle = `rgba(0,0,0,${Math.min(0.5, s.pt)})`; c.fillRect(0, 0, W, H); }
+      // HUD
+      c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(0, 0, W, 30);
+      G.text(c, `LEVEL ${s.li + 1}/${LEVELS.length}`, 10, 15, 11, "#fff", "left");
+      G.text(c, `${total(s.p)}`, W - 10, 15, 11, "#ffd23f", "right");
+      G.text(c, st.t.toFixed(1) + "s", 12, 52, 10, ink, "left");
+      const b = this.btns(G);
+      for (const k in b) { const o = b[k]; c.globalAlpha = o.off ? 0.3 : 1; c.fillStyle = "rgba(0,0,0,0.45)"; c.beginPath(); c.arc(o.x, o.y, o.r, 0, 7); c.fill(); c.fillStyle = "#fff"; c.font = "bold 16px system-ui"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(o.ch, o.x, o.y + 1); c.globalAlpha = 1; }
+      if (G.state === "play" && s.phase === "go" && s.li === 0 && st.t < 5) G.hint(c, "HOLD = HOOK · LET GO = FLING", 99, H * 0.8);
+      if (s.phase === "win") {
+        c.fillStyle = "rgba(0,0,0,0.45)"; c.fillRect(0, H * 0.3, W, 150);
+        G.text(c, s.li === LEVELS.length - 1 ? "ALL CLEAR!" : "LEVEL CLEAR", W / 2, H * 0.3 + 32, 16, "#ffd23f");
+        G.text(c, "★".repeat(stars(s.winPts)) + "☆".repeat(3 - stars(s.winPts)), W / 2, H * 0.3 + 64, 18, "#ffd23f");
+        G.text(c, `${st.t.toFixed(1)}s  +${s.winPts}${s.winBest ? "  BEST" : ""}`, W / 2, H * 0.3 + 96, 10, "#fff");
+        if (s.pt > 0.5) G.text(c, "TAP FOR NEXT", W / 2, H * 0.3 + 126, 10, "#fff");
+      }
+    }
+  });
+})();
 
 </script>
 <script>
@@ -20097,7 +20743,7 @@ defGame({
 // Hold (thumb on the screen, or the space bar) to charge, let go to shoot. The angle is fixed and the pup
 //   always shoots toward the hoop, so it's all about how long you hold. While it flies, TAP to warp the pup to the ball, then shoot
 //   again from right there (even in mid-air). Get it through the hoop in as few shots as you can.
-// 12 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
+// 20 courts. Each court is worth up to 500 (par or better), 100 less per extra shot, never below 100.
 (function () {
   const GR = 140, BR = 2.6, RIM = 13, FLOOR = [-30, 146, 160, 30];
   // ---- levels (a 100 x 150 court, y grows downward) ----
@@ -20114,7 +20760,15 @@ defGame({
     { d: [12, 138], h: [74, 118, "r"], w: [[40, 34, 10, 112]], par: 3 },
     { d: [12, 138], h: [14, 72, "l"], w: [[0, 96, 66, 5]], par: 3 },
     { d: [88, 138], h: [10, 120, "l"], w: [[30, 46, 8, 100], [30, 0, 8, 22]], par: 3 },
-    { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 3 }
+    { d: [50, 138], h: [80, 30, "r"], w: [[20, 100, 20, 4], [62, 70, 26, 4], [70, 46, 26, 4]], par: 3 },
+    { d: [12, 138], h: [74, 50, "r"], w: [[38, 140, 24, 6, 1]], par: 2, tip: "PINK PADS BOUNCE IT HIGHER" },
+    { d: [12, 138], h: [78, 40, "r"], w: [], bombs: [[52, 96]], par: 2, tip: "BOMBS BLAST THE BALL AWAY" },
+    { d: [14, 138], h: [70, 60, "r"], w: [[50, 0, 8, 40]], mags: [[60, 96]], par: 2, tip: "MAGNETS BEND THE SHOT" },
+    { d: [12, 138], h: [78, 124, "r"], w: [[26, 0, 74, 96], [50, 140, 16, 6, 1]], par: 1 },
+    { d: [14, 138], h: [40, 60, "l"], w: [[90, 30, 6, 90, 1]], par: 2 },
+    { d: [10, 138], h: [76, 100, "r"], w: [[46, 70, 8, 76], [22, 140, 20, 6, 1]], par: 2 },
+    { d: [86, 138], h: [10, 70, "l"], w: [[36, 90, 8, 56]], mags: [[30, 50]], bombs: [[60, 100]], par: 2 },
+    { d: [10, 138], h: [80, 26, "r"], w: [[34, 60, 8, 86], [60, 100, 30, 4]], mags: [[46, 40]], bombs: [[20, 90]], par: 2 }
   ];
   // ---- physics (pure, so it can be tested off-screen) ----
   function world(L) {
@@ -20186,7 +20840,7 @@ defGame({
     c.strokeStyle = "#7a3a00"; c.lineWidth = Math.max(1, r * 0.14); c.stroke(); c.beginPath(); c.moveTo(-r, 0); c.lineTo(r, 0); c.moveTo(0, -r); c.lineTo(0, r); c.stroke();
     c.beginPath(); c.arc(-r * 1.25, 0, r * 0.9, -0.9, 0.9); c.stroke(); c.beginPath(); c.arc(r * 1.25, 0, r * 0.9, Math.PI - 0.9, Math.PI + 0.9); c.stroke(); c.restore();
   }
-  function hud(G, c, s, name) { G.hud(c, `COURT ${s.lv + 1}/12`, `${s.score}`, `SHOTS ${s.shots}`); }
+  function hud(G, c, s, name) { G.hud(c, `COURT ${s.lv + 1}/${SHOT.length}`, `${s.score}`, `SHOTS ${s.shots}`); }
   function banner(G, c, s) {
     if (s.clear > 0) { const st = stars(s.shots, s.L.par); c.fillStyle = "rgba(0,0,0,0.45)"; c.fillRect(0, G.H * 0.3 - 40, G.W, 110);
       G.banner(c, s.shots <= s.L.par ? "SWISH!" : "BUCKET!", "#ffd23f", G.H * 0.3); G.text(c, "★".repeat(st) + "☆".repeat(3 - st), G.W / 2, G.H * 0.3 + 34, 18, "#ffd23f"); G.text(c, `+${levelPts(s.shots, s.L.par)}`, G.W / 2, G.H * 0.3 + 58, 11, "#fff"); }
@@ -20196,7 +20850,7 @@ defGame({
       newLevel(G) { const s = G.s, L = SHOT[s.lv]; s.L = L; s.W = world(L); s.shots = 0; s.fx = []; s.clear = 0; this.home(G); s.tipT = 4; },
       home(G) { const s = G.s; s.dog = { x: s.L.d[0], y: s.L.d[1] - 4 }; s.ball = { x: s.dog.x + 3, y: s.dog.y - 2, vx: 0, vy: 0 }; s.phase = "aim"; s.rot = 0; s.rest = 0; s.flyT = 0; s.charge = null; s.W.bombs.forEach(q => q.on = true); },
       cleared(G) { const s = G.s; s.score += levelPts(s.shots, s.L.par); s.clear = 1.6; s.phase = "clear"; G.sfx("win"); s.fx.push({ k: "swish", x: s.W.hx + RIM / 2, y: s.W.hy + 4, t: 0 }); },
-      advance(G) { const s = G.s; s.lv++; if (s.lv >= 12) { s.done = true; return G.over(s.score, "All 12 courts cleared! 🏀"); } this.newLevel(G); },
+      advance(G) { const s = G.s; s.lv++; if (s.lv >= SHOT.length) { s.done = true; return G.over(s.score, "All 20 courts cleared! 🏀"); } this.newLevel(G); },
       save(G) { const s = G.s; if (s.done || s.phase === "clear") return null; return { label: `Court ${s.lv + 1} · ${s.score} pts`, v: { lv: s.lv, score: s.score } }; },
       load(G, sv) { G.s.lv = sv.v.lv; G.s.score = sv.v.score; this.newLevel(G); },
       fly(G, dt) {
@@ -20217,8 +20871,8 @@ defGame({
   // ======== Pup Shot ========
   const pup = Object.assign(common("pupshot"), {
     key: "pupshot", name: "Pup Shot", icon: "🌀", max: 99999,
-    blurb: "Fling it, warp to it, dunk it. 12 courts.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+    blurb: "Fling it, warp to it, dunk it. 20 courts.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.",
     reset(G) { G.s = { lv: 0, score: 0 }; this.newLevel(G); },
     update(G, dt) {
       const s = G.s; this.tickFx(G, dt);

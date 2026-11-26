@@ -937,6 +937,10 @@ var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", 
 var FRESH = {
   boom: ["new", "2026-11-26"],
   cab: ["new", "2026-11-26"],
+  dash: ["upd", "2026-11-26"],
+  blumji: ["upd", "2026-11-26"],
+  pupshot: ["upd", "2026-11-26"],
+  feud: ["new", "2026-11-26"],
   mad: ["new", "2026-11-14"],
   seven: ["upd", "2026-11-08"],
   scapes: ["new", "2026-11-08"],
@@ -947,7 +951,7 @@ var FRESH = {
   cube: ["new", "2026-11-07"],
   fall: ["new", "2026-11-06"],
   cliff: ["new", "2026-11-06"],
-  hook: ["new", "2026-11-05"],
+  hook: ["upd", "2026-11-26"],
   waffle: ["new", "2026-11-04"],
   guess: ["new", "2026-11-04"],
   midi: ["new", "2026-11-04"],
@@ -1048,11 +1052,13 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = txt;
   });
 }
+var FEUD_END = "2026-11-29",
+  FEUD_ON = KEY <= FEUD_END;
 var DEN_SECTIONS = [{
   icon: "✏️",
   name: "Words",
   sub: "Crosswords, chains and word hunts.",
-  keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"]
+  keys: (FEUD_ON ? ["feud"] : []).concat(["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"])
 }, {
   icon: "🧩",
   name: "Logic",
@@ -1106,6 +1112,9 @@ function denStatus(k) {
   return n === 3 ? ["Done", true, "All 3 solved"] : n ? ["Continue", false, "".concat(n, " of 3 solved")] : ["Play", false, null];
 }
 var DEN_ICONS = {
+  feud: [5, 14.5, 24].map(function (y, i) {
+    return "<rect x=\"4\" y=\"".concat(y, "\" width=\"28\" height=\"7.5\" rx=\"2.5\" fill=\"").concat(i === 1 ? "#e9b949" : "#1f3a8a", "\"/>");
+  }).join(""),
   midi: '<rect x="3" y="3" width="30" height="30" rx="2" fill="var(--ink)"/>' + [[0, 0], [1, 0], [2, 0], [4, 0], [0, 1], [2, 1], [3, 1], [4, 1], [0, 2], [1, 2], [3, 2], [4, 2], [0, 3], [1, 3], [2, 3], [4, 3], [1, 4], [2, 4], [3, 4], [4, 4]].map(function (_ref3) {
     var _ref4 = _slicedToArray(_ref3, 2),
       x = _ref4[0],
@@ -1440,7 +1449,77 @@ function denPeople() {
   });
   return Object.values(ids);
 }
+var FEUD_SURVEY_END = "2026-11-28";
+var FEUD_QS = ["Besides the turkey, name something that gets stuffed on Thanksgiving.", "Name the person most likely to fall asleep on the couch before the pie comes out.", "Name an excuse people use to get out of doing the dishes.", "Name a dish that shows up every year even though nobody asked for it.", "Name something the dog is hoping falls off the table."];
+var feudSvKey = function feudSvKey() {
+  return "bdd:feudsv:" + (me ? me.id : "");
+};
+function renderFeudSurvey() {
+  var b = $("feud-survey");
+  if (!b) return;
+  b.hidden = !(me && KEY <= FEUD_SURVEY_END && !store.get(feudSvKey()));
+  if (b.hidden) return;
+  b.innerHTML = "";
+  var tx = el("span", "ds-tx");
+  tx.append(el("b", null, "🦃 Crew Survey"), el("span", "ds-sub", "5 quick questions. Your answers build Sunday's Feud."));
+  b.append(tx, el("span", "ds-chev", "›"));
+}
+function openFeudSurvey() {
+  var ins = FEUD_QS.map(function (q, i) {
+    var lab = el("label", "fs-q"),
+      inp = el("input", "fs-in");
+    inp.type = "text";
+    inp.maxLength = 40;
+    inp.autocomplete = "off";
+    inp.enterKeyHint = i < 4 ? "next" : "send";
+    lab.append(el("span", null, "".concat(i + 1, ". ").concat(q)), inp);
+    return {
+      lab: lab,
+      inp: inp
+    };
+  });
+  var go = el("button", "pill solid", "Lock in my answers"),
+    msg = el("p", "note center");
+  var send = function send() {
+    var a = ins.map(function (x) {
+        return x.inp.value.trim();
+      }),
+      miss = a.findIndex(function (x) {
+        return !x;
+      });
+    if (miss >= 0) {
+      msg.textContent = "Answer all 5 first.";
+      ins[miss].inp.focus();
+      return;
+    }
+    go.disabled = true;
+    msg.textContent = "Sending…";
+    var done = function done() {
+      store.set(feudSvKey(), 1);
+      closeModal();
+      renderFeudSurvey();
+      toast("Locked in! See your answers on Sunday's Feud 🦃", 2400);
+    };
+    API("sendFeudSurvey", me.id, a).then(done)["catch"](function (e) {
+      if (/already answered/.test(errMsg(e))) return done();
+      go.disabled = false;
+      msg.textContent = /Unknown call/.test(errMsg(e)) ? "The survey is still warming up. Try again in a few minutes." : errMsg(e);
+    });
+  };
+  ins.forEach(function (x, i) {
+    return x.inp.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      if (i < 4) ins[i + 1].inp.focus();else send();
+    });
+  });
+  go.addEventListener("click", send);
+  openModal([el("h2", null, "Crew Survey"), el("p", "sub", "One short answer each, first thing that comes to mind. Nobody sees who said what. Open through Saturday.")].concat(ins.map(function (x) {
+    return x.lab;
+  }), [go, msg]));
+}
+if ($("feud-survey")) $("feud-survey").addEventListener("click", openFeudSurvey);
 function renderDenStrip() {
+  renderFeudSurvey();
   var b = $("den-strip");
   if (!b) return;
   b.innerHTML = "";
@@ -3249,8 +3328,8 @@ defGameMeta([{
   "key": "hook",
   "name": "Hook Dawg",
   "icon": "🪝",
-  "blurb": "Hold to hook, let go to fling. Swing forever.",
-  "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
+  "blurb": "Hold to hook, let go to fling. 24 levels.",
+  "how": "Hold anywhere to grab the nearest hook and swing. You can only grab a hook when you're inside its dashed ring. Let go to fling yourself forward, and let go on the upswing to fly far. Round bumpers bounce you, striped blocks are solid. Fall off the bottom and the level just starts over. Swing past the checkered line to clear it. Each level is worth 1000, plus up to 500 for speed, and your score is the total of your best on every level. Tap ↻ to restart, and the arrows to replay a level you've cleared.",
   "max": 99999
 }, {
   "file": "g_airhockey.js",
@@ -3338,7 +3417,7 @@ defGameMeta([{
   "name": "Dawg Dash",
   "icon": "🛹",
   "blurb": "Endless runner. Swipe to dodge trains.",
-  "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash. It gets faster the longer you go.",
+  "how": "Swipe LEFT or RIGHT to switch tracks, UP to jump the low barriers, DOWN to slide under the high bars. Trains block a whole track: dodge them, or run up a ramp onto the roof and hop from car to car (and across to trains on other tracks). Grab bones for points. Red trains are moving and come at you fast. Swipe sideways into the side of a train and you only stumble, but the dogcatcher closes in, and a second stumble before he drops back gets you caught. 🧲 pulls bones in, ⭐ doubles points, 🛹 lets you survive one crash, 🚀 flies you over everything for a few seconds, 👟 lets you jump right onto train roofs. It gets faster the longer you go.",
   "max": 999999
 }, {
   "file": "g_dawgball.js",
@@ -3651,16 +3730,16 @@ defGameMeta([{
   "key": "pupshot",
   "name": "Pup Shot",
   "icon": "🌀",
-  "blurb": "Fling it, warp to it, dunk it. 12 courts.",
-  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 12 courts.",
+  "blurb": "Fling it, warp to it, dunk it. 20 courts.",
+  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to shoot. The angle is always the same and your pup always shoots toward the hoop, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. While the ball is flying, TAP anywhere (or press space) to warp your pup to the ball, then shoot again from right there, even in mid-air. Keep holding after the warp tap to start charging right away. Get it through the hoop. Each court is worth 500 if you make it in par shots (the stars), 100 less for each extra shot. Later courts add pink pads that bounce the ball higher, bombs that blast it away and magnets that bend its path. If the ball flies off the court it comes back to the start. Stuck? Tap ↺ to restart the court. 20 courts.",
   "max": 99999
 }, {
   "file": "g_blumji.js",
   "key": "blumji",
   "name": "Blumji Bounce",
   "icon": "🚩",
-  "blurb": "Bounce platform to platform. Reach the flag. 12 stages.",
-  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.",
+  "blurb": "Bounce platform to platform. Reach the flag. 20 stages.",
+  "how": "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.",
   "max": 99999
 }, {
   "file": "g_rummy.js",
@@ -3832,6 +3911,17 @@ defGameMeta([{
   "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.",
   "cat": "sports",
   "max": 9999
+}]);
+if (FEUD_ON) defGameMeta([{
+  file: "g_feud.js",
+  key: "feud",
+  name: "Feud",
+  icon: "🦃",
+  blurb: "Survey says! Through Sunday.",
+  how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. To put the board on a TV, open Feud on a computer, tap TV and type the code from the host's phone. Here through Sunday only.",
+  cat: "den",
+  puzzle: true,
+  max: 1000
 }]);
 Object.values(GAMEDEFS).forEach(function (d) {
   ARC[d.key] = {

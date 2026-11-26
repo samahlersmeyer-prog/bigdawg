@@ -1644,6 +1644,42 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
   margin-left: 10px;
 }
 .den-strip:active { transform: scale(0.985); }
+.feud-survey { border: 2px solid #e9b949; }
+.fs-q { display: -webkit-flex; display: flex; flex-direction: column; font-size: 14.5px; font-weight: 600; line-height: 1.3; text-align: left; }
+.fs-q > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 6px;
+}
+.fs-in { width: 100%; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px; font-weight: 500; border: 1.5px solid var(--line); border-radius: 10px; background: var(--raise); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.fs-in:focus { outline: none; border-color: var(--ink); }
+/* Feud TV screen (games/g_feud.js): the board on a computer or TV while the host runs the game from a phone. Sized in vh/vw so it fills any screen. */
+.ftv { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: -webkit-flex; display: flex; flex-direction: column; padding: 3vh 4vw 1.5vh; background: #0b1a4a; color: #fff; overflow: hidden; }
+.ftv-top { display: -webkit-flex; display: flex; align-items: center; justify-content: space-between; }
+.ftv-team { width: 24vw; padding: 1.2vh 1vw; border-radius: 1.6vh; background: #14286b; text-align: center; }
+.ftv-tn { font-size: 2.6vh; font-weight: 700; color: #b9c4ea; }
+.ftv-ts { font-size: 7vh; font-weight: 800; line-height: 1.1; }
+.ftv-mid { flex: 1; text-align: center; }
+.ftv-rd { font-size: 2.3vh; font-weight: 700; color: #b9c4ea; letter-spacing: 0.06em; }
+.ftv-pot { display: inline-block; min-width: 16vw; margin-top: 0.8vh; padding: 0.2vh 2vw; border: 0.5vh solid #e9b949; border-radius: 2vh; font-size: 7.5vh; font-weight: 800; line-height: 1.15; color: #e9b949; }
+.ftv-q { display: -webkit-flex; display: flex; align-items: center; justify-content: center; min-height: 14vh; padding: 1vh 2vw; text-align: center; font-family: var(--title, inherit); font-size: 4.8vh; font-weight: 800; line-height: 1.2; }
+.ftv-board { flex: 1; display: -webkit-flex; display: flex; justify-content: center; min-height: 0; }
+.ftv-col { width: 44vw; margin: 0 0.8vw; display: -webkit-flex; display: flex; flex-direction: column; }
+.ftv-slot { height: 9.6vh; margin-bottom: 1.3vh; display: -webkit-flex; display: flex; align-items: center; justify-content: center; border: 0.45vh solid #e9b949; border-radius: 1.4vh; background: #1f3a8a; font-weight: 800; }
+.ftv-num { width: 6.6vh; height: 6.6vh; line-height: 6.6vh; border-radius: 50%; background: #0b1a4a; text-align: center; font-size: 3.8vh; color: #e9b949; }
+.ftv-slot.on { justify-content: space-between; padding: 0 1.6vw; background: #e9b949; color: #2b1a10; animation: ftv-flip 0.45s ease-out; }
+.ftv-slot.free { background: #31417a; color: #c9d1ee; }
+.ftv-al { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 4.2vh; text-transform: uppercase; }
+.ftv-ap { margin-left: 1vw; font-size: 4.6vh; }
+@keyframes ftv-flip { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+.ftv-st { height: 5.5vh; text-align: center; font-size: 4vh; font-weight: 800; letter-spacing: 1.2vw; color: #ff5a5a; }
+.ftv-x, .ftv-win { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: none; align-items: center; justify-content: center; background: rgba(5, 10, 30, 0.6); font-weight: 800; text-align: center; }
+.ftv-x { font-size: 44vh; letter-spacing: 2vw; color: #ff3b3b; }
+.ftv-win { padding: 0 6vw; font-size: 11vh; line-height: 1.15; color: #e9b949; }
+.ftv-x.go, .ftv-win.go { display: -webkit-flex; display: flex; animation: ftv-pop 0.25s ease-out; }
+@keyframes ftv-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ftv-foot { position: relative; z-index: 2; display: -webkit-flex; display: flex; align-items: center; font-size: 2vh; color: #8f9bc7; }
+.ftv-code { flex: 1; }
+.ftv-btn { margin-left: 1vw; padding: 0.6vh 1.2vw; border: 1px solid #8f9bc7; border-radius: 1vh; background: none; color: #b9c4ea; font: inherit; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .ftv-slot.on, .ftv-x.go, .ftv-win.go { animation: none; } }
 .ds-icons { display: -webkit-flex; display: flex; flex: none; }
 .ds-icons > :not([hidden]) ~ :not([hidden]) {
   margin-left: 3px;

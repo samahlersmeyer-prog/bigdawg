@@ -1090,10 +1090,10 @@ const ARCADE_GAMES = { zoomies: 300, snake: 999, fetch: 99999, pupman: 999999, p
   td: 99999, pop: 99999, trail: 9999, archery: 100, golf18: 144, party: 1500, dash: 999999, harvest: 99999, dvz: 99999, trap: 999999, euchre: 300, crib: 500,
   sgroups: 1000, hive: 999, sudoku: 3000, pips: 3000, crazy: 2000, rummy: 800, skipbo: 500, topdogs: 1000, leash: 1000, mahjong: 1500, mjrush: 999999, mjzen: 999999,
   squad: 999999, dig: 999999, solitaire: 1000, boneball: 1000,
-  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000, scapes: 1000, hook: 99999, fall: 99999, cliff: 99999, unfair: 99999, pede: 999999, cube: 999999, boom: 9999, cab: 99999 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
+  seven: 999, pupshot: 99999, blumji: 99999, dlords: 99999, links: 1000, midi: 1000, guess: 1000, waffle: 1000, scapes: 1000, hook: 99999, fall: 99999, cliff: 99999, unfair: 99999, pede: 999999, cube: 999999, feud: 1000, boom: 9999, cab: 99999 }; // dlords: Dawg Lords' fresh board (old 'lords' rows were from earlier versions)
 const DEN_SINCE = '2026-10-28'; // daily Den boards start fresh with the chill scoring
-const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true, boneball: true, links: true, midi: true, guess: true, waffle: true, scapes: true }; // daily Den puzzles get a today-only board too
-const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'skipbo', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen', 'solitaire', 'boneball', 'links', 'midi', 'guess', 'waffle', 'scapes'].indexOf(g) < 0); // long or retired games sit out
+const DEN_DAILY = { sgroups: true, hive: true, sudoku: true, pips: true, topdogs: true, leash: true, mahjong: true, boneball: true, links: true, midi: true, guess: true, waffle: true, scapes: true, feud: true }; // daily Den puzzles get a today-only board too
+const GOTD_POOL = Object.keys(ARCADE_GAMES).filter(g => ['mow', 'golf18', 'putt18', 'trail', 'euchre', 'crib', 'crazy', 'rummy', 'skipbo', 'sgroups', 'hive', 'sudoku', 'pips', 'topdogs', 'leash', 'mahjong', 'mjzen', 'solitaire', 'boneball', 'links', 'midi', 'guess', 'waffle', 'scapes', 'feud'].indexOf(g) < 0); // long or retired games sit out
 // Game of the Day: one per hub (Arcade, Sports, Den card games), each with its own board that resets at midnight.
 const SPORTS_GAMES = ['airhockey', 'archery', 'bowl', 'darts', 'dawgball', 'derby', 'duck', 'fg', 'golf', 'hoops', 'kickret', 'pks', 'pool', 'punch', 'shred', 'swim', 'tennis', 'volley', 'seven'];
 const GOTD_FROM = { squad: '2026-10-31', dig: '2026-10-31', seven: '2026-11-01', pupshot: '2026-11-01', blumji: '2026-11-01' }; // new games join the rotation the next day, so today's pick doesn't change
@@ -1239,7 +1239,7 @@ function answerDare(id, dateKey, dareId, score) {
 // When everyone opens the app at once, the same tabs used to be read over and over. Read-only calls now share
 // one copy of the big tabs for up to 30 seconds. Any call that changes data bumps a version number before and
 // after it runs, so nobody sees an old copy after a change, and calls that write always read the sheet fresh.
-const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1 };
+const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1, feudPush: 1, feudWatch: 1 };
 const RC_SECS_ = 30;
 let READONLY_ = false, RC_VER_ = null, TZ_ = null;
 function rcVer_() { if (RC_VER_ == null) { try { RC_VER_ = CacheService.getScriptCache().get('rc:ver') || '0'; } catch (e) { RC_VER_ = 'x' + Date.now(); } } return RC_VER_; }
@@ -1273,6 +1273,76 @@ function tabValues_(tag, getSheet, cols) {
 }
 
 // ---------------- Fast JSON API ----------------
+// ---------------- Feud crew survey (Thanksgiving weekend 2026) ----------------
+// For the Den's temp Feud game: one row per player, 5 short answers. Answers stay on the server until the survey
+// closes (the start of FEUD_CLOSE); after that getFeudSurvey hands them out with no names attached and each phone
+// builds Sunday's Crew Edition board from them.
+const FEUD_CLOSE = '2026-11-29';
+const FEUD_HEADERS = ['date', 'playerId', 'a1', 'a2', 'a3', 'a4', 'a5'];
+function feudSheet_() { return tabSheet_('FeudSurvey', FEUD_HEADERS, 'B:G'); }
+function feudOpen_() { return asDateKey_(new Date(), tz_()) < FEUD_CLOSE; }
+function getFeudSurvey(id) {
+  id = cleanId_(id);
+  const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
+  const out = { n: rows.length, mine: rows.some(r => String(r[1]) === id), open: feudOpen_() };
+  if (!out.open) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+  return out;
+}
+function sendFeudSurvey(id, answers) {
+  id = cleanId_(id);
+  if (!feudOpen_()) throw new Error('The survey is closed.');
+  if (!Array.isArray(answers) || answers.length !== 5) throw new Error('Answer all 5 first.');
+  // no leading = + - @, so a Sheet never reads an answer as a formula
+  const a = answers.map(x => String(x || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().replace(/^[=+\-@\s]+/, '').slice(0, 40));
+  if (a.some(x => !x)) throw new Error('Answer all 5 first.');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+    if (tabValues_('feud', feudSheet_, FEUD_HEADERS.length).some(r => String(r[1]) === id)) throw new Error('You already answered.');
+    feudSheet_().appendRow([new Date(), id].concat(a));
+  } finally { lock.releaseLock(); }
+  return true;
+}
+
+// Feud host games. A host (phone) starts a game and gets a 4-letter TV code; while it plays it pushes what the room may
+// see, and a second screen (a computer on the TV) reads that with the code. Game state lives in the script cache only,
+// so play never touches the Sheet. The crew's survey answers are locked until Sunday except here: starting a host
+// game on the crew deck hands them to that host's phone, and every such start is logged in the FeudHosts tab.
+function feudCode_(code) { code = String(code || '').toUpperCase().replace(/[^A-Z]/g, ''); if (code.length !== 4) throw new Error('No game with that code.'); return code; }
+function feudHost(id, deck) {
+  id = cleanId_(id);
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  const cache = CacheService.getScriptCache(), abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let tries = 0; tries < 20; tries++) {
+    code = ''; for (let k = 0; k < 4; k++) code += abc.charAt(Math.floor(Math.random() * abc.length));
+    if (!cache.get('feudg:' + code)) break;
+  }
+  cache.put('feudg:' + code, id, 21600);
+  const out = { code: code };
+  if (deck === 'crew') {
+    const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
+    out.n = rows.length; out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+    tabSheet_('FeudHosts', ['date', 'playerId', 'code'], 'B:C').appendRow([new Date(), id, code]);
+  }
+  return out;
+}
+function feudPush(id, code, state) {
+  id = cleanId_(id); code = feudCode_(code);
+  const cache = CacheService.getScriptCache();
+  if (cache.get('feudg:' + code) !== id) throw new Error('No game with that code.');
+  const s = JSON.stringify(state || null);
+  if (s.length > 6000) throw new Error('Too big.');
+  cache.put('feudv:' + code, s, 21600); cache.put('feudg:' + code, id, 21600);
+  return true;
+}
+function feudWatch(code) {
+  code = feudCode_(code);
+  const cache = CacheService.getScriptCache(), s = cache.get('feudv:' + code);
+  if (!s && !cache.get('feudg:' + code)) throw new Error('No game with that code.');
+  return s ? JSON.parse(s) : null;
+}
+
 // The game page can live on a fast static host (GitHub Pages) and talk to this script over HTTPS.
 // The page sends {fn, args} as plain text (no CORS preflight); only the functions listed here can be called.
 const API_FNS = {
@@ -1280,7 +1350,8 @@ const API_FNS = {
   getShadeState: getShadeState, saveSettings: saveSettings, sendShade: sendShade, respondShade: respondShade, addJoke: addJoke,
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
-  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview
+  bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview,
+  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey, feudHost: feudHost, feudPush: feudPush, feudWatch: feudWatch
 };
 function doPost(e) {
   let req = {};

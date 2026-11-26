@@ -51,6 +51,38 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }, {
     p: [[84, 140, 14], [56, 118, 8], [30, 96, 8, "m", 14, 1.4], [6, 70, 10], [40, 140, 10, "b"], [36, 30, 10, "m", 22, 0.8], [76, 20, 20]],
     par: 4
+  }, {
+    p: [[6, 136, 16], [34, 139, 26, "s"], [72, 136, 20]],
+    par: 1,
+    tip: "DON'T LAND ON THE SPIKES"
+  }, {
+    p: [[10, 136, 16], [30, 110, 18]],
+    w: [[50, 20, 5, 130]],
+    par: 1,
+    tip: "BOUNCE OFF THE WALL"
+  }, {
+    p: [[4, 136, 14], [22, 140, 56, "s"], [38, 112, 12, "m", 14, 1.0], [82, 110, 14]],
+    par: 2
+  }, {
+    p: [[4, 136, 14], [24, 139, 12, "s"], [40, 136, 10], [56, 139, 12, "s"], [74, 136, 10], [86, 100, 12]],
+    w: [[20, 0, 62, 92]],
+    par: 3,
+    tip: "SHORT HOPS UNDER THE ROOF"
+  }, {
+    p: [[6, 80, 14], [28, 142, 12, "b"], [44, 142, 18, "s"], [66, 142, 12, "b"], [82, 60, 14]],
+    par: 3
+  }, {
+    p: [[40, 138, 16], [10, 110, 12], [26, 84, 12], [10, 56, 12], [24, 26, 16]],
+    w: [[44, 0, 5, 124]],
+    par: 5,
+    tip: "WALL TO WALL"
+  }, {
+    p: [[4, 136, 14], [26, 139, 14, "s"], [44, 116, 10, "m", 10, 1.2], [70, 139, 26, "s"], [72, 96, 8], [40, 66, 10, "m", 16, 0.9], [8, 44, 16]],
+    par: 4
+  }, {
+    p: [[82, 138, 14], [54, 141, 24, "s"], [34, 120, 10], [6, 141, 24, "s"], [8, 90, 12], [40, 141, 12, "b"], [34, 58, 10, "m", 10, 1.1], [72, 34, 20]],
+    w: [[60, 50, 5, 50]],
+    par: 5
   }];
   function plats(L, t) {
     return L.p.map(function (a, i) {
@@ -78,14 +110,35 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       b.x = 100 - FEET;
       b.vx = -b.vx * 0.6;
     }
+    var _iterator = _createForOfIteratorHelper(L.w || []),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var w = _step.value;
+        if (b.x <= w[0] - FEET || b.x >= w[0] + w[2] + FEET || b.y <= w[1] || b.y >= w[1] + w[3] + 5) continue;
+        var px = b.x - b.vx * dt;
+        if (px <= w[0] - FEET || px >= w[0] + w[2] + FEET) {
+          b.x = px <= w[0] - FEET ? w[0] - FEET : w[0] + w[2] + FEET;
+          b.vx = -b.vx * 0.6;
+        } else {
+          b.y = py;
+          b.vy = -b.vy * 0.3;
+        }
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
     if (b.vy > 0) {
-      var _iterator = _createForOfIteratorHelper(plats(L, t)),
-        _step;
+      var _iterator2 = _createForOfIteratorHelper(plats(L, t)),
+        _step2;
       try {
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-          var p = _step.value;
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var p = _step2.value;
           if (py <= p.y && b.y >= p.y && b.x >= p.x - 1.5 && b.x <= p.x + p.w + 1.5) {
             b.y = p.y;
+            if (p.k === "s") return "out";
             if (p.k === "b") {
               b.vy = -Math.min(150, Math.max(105, b.vy * 1.08));
               return {
@@ -98,9 +151,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           }
         }
       } catch (err) {
-        _iterator.e(err);
+        _iterator2.e(err);
       } finally {
-        _iterator.f();
+        _iterator2.f();
       }
     }
     return b.y > 165 ? "out" : "";
@@ -131,7 +184,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     SPEED: SPEED,
     GR: GR,
     ANG: ANG,
-    aimDir: aimDir
+    aimDir: aimDir,
+    levelPts: levelPts
   };
   function view(G) {
     var S = Math.min(G.W / 100, (G.H - 40) / 150);
@@ -146,8 +200,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     name: "Blumji Bounce",
     icon: "🚩",
     max: 99999,
-    blurb: "Bounce platform to platform. Reach the flag. 12 stages.",
-    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 12 stages.",
+    blurb: "Bounce platform to platform. Reach the flag. 20 stages.",
+    how: "Hold your thumb on the screen (or hold the space bar) to charge, then let go to bounce. The angle is always the same and your pup faces the next platform, so it's all about how long you hold: the power meter fills up, then drops back down if you hold too long. Land on a platform to stand there, then bounce again. Reach the 🚩 flag platform to clear the stage. Miss and you drop back to the last platform you stood on (that bounce still counts). Pink pads bounce you back up, blue platforms slide side to side and carry you with them. Spikes send you back to your last platform, and grey walls bounce you back the way you came. Each stage is worth 500 if you make it in par bounces (the stars), 100 less for each extra bounce. Stuck? Tap ↺ to restart the stage. 20 stages.",
     reset: function reset(G) {
       G.s = {
         lv: 0,
@@ -339,15 +393,32 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         c.arc(X(x + 14), Y(y), 6 * S, 0, 7);
         c.fill();
       });
+      (s.L.w || []).forEach(function (w) {
+        c.fillStyle = dk ? "#4b5675" : "#6b7a99";
+        c.fillRect(X(w[0]), Y(w[1]), w[2] * S, w[3] * S);
+        c.fillStyle = dk ? "#5d6a8e" : "#8292b3";
+        c.fillRect(X(w[0]), Y(w[1]), Math.min(w[2] * S, 3), w[3] * S);
+      });
       plats(s.L, s.tt).forEach(function (p) {
         var th = 4;
+        if (p.k === "s") {
+          c.fillStyle = dk ? "#d7dcea" : "#4a5266";
+          c.beginPath();
+          for (var x = 0; x < p.w; x += 3) {
+            c.moveTo(X(p.x + x), Y(p.y + th));
+            c.lineTo(X(p.x + x + 1.5), Y(p.y - 1));
+            c.lineTo(X(p.x + Math.min(p.w, x + 3)), Y(p.y + th));
+          }
+          c.fill();
+          return;
+        }
         if (p.k === "b") {
           c.fillStyle = "#ff6fae";
           c.fillRect(X(p.x), Y(p.y), p.w * S, th * S);
           c.strokeStyle = "#fff";
           c.lineWidth = 2;
           c.beginPath();
-          for (var x = 0; x <= p.w; x += 3) c.lineTo(X(p.x + x), Y(p.y + (x / 3 % 2 ? 0.8 : th - 0.8)));
+          for (var _x = 0; _x <= p.w; _x += 3) c.lineTo(X(p.x + _x), Y(p.y + (_x / 3 % 2 ? 0.8 : th - 0.8)));
           c.stroke();
         } else {
           c.fillStyle = p.k === "m" ? dk ? "#3f7fbf" : "#4f9be8" : dk ? "#5b4a3a" : "#9b6b43";
