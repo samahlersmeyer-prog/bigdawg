@@ -27,7 +27,10 @@
   ];
   const PW = { multi: ["🖐️", "MULTI x5"], extra: ["➕", "EXTRA RANG"], boom: ["💣", "EXPLOSIVE"], fire: ["🔥", "FIRE"], ice: ["❄️", "ICE"], shield: ["🛡️", "SHIELD"], speed: ["☕", "CAFFEINATED"], tele: ["🌀", "WARP"],
     wall: ["👻", "GHOST DASH"], tk: ["🧠", "TELEKINESIS"], decoy: ["🎭", "DECOY"], disguise: ["🥸", "DISGUISE"], royale: ["🌩️", "BATTLE ROYALE"], bam: ["😵", "BAMBOOZLED"] };
-  const MODES = [{ m: "ffa", t: "FREE FOR ALL", d: "Everyone for themselves" }, { m: "teams", t: "TEAMS", d: "You + Bao vs Mittens + Rusty" }, { m: "gold", t: "GOLDEN BOOMERANG", d: "Hold the gold the longest" }, { m: "seek", t: "HIDE & SEEK", d: "Hiders turn into bushes. Swap every round" }];
+  // Difficulty (picked on the menu, remembered per phone): where CPU skill starts and tops out, how long they wait
+  // between throws, how fast they walk, and what the final score is multiplied by.
+  const DIFF = [{ t: "PUP", base: 0, max: 0.4, cool: 1.8, spd: 0.82, mult: 0.75 }, { t: "DAWG", base: 0.12, max: 0.65, cool: 1.3, spd: 0.92, mult: 1 }, { t: "BIG DAWG", base: 0.25, max: 0.95, cool: 1, spd: 1, mult: 1.5 }];
+  const MODES = [{ m: "ffa", t: "FREE FOR ALL", d: "+1 per knockout, +1 last one standing" }, { m: "teams", t: "TEAMS", d: "You + Bao vs Mittens + Rusty" }, { m: "gold", t: "GOLDEN BOOMERANG", d: "Hold the gold to fill your score" }, { m: "seek", t: "HIDE & SEEK", d: "Hiders become bushes. Swap each round" }];
   const PWK = Object.keys(PW);
 
   const tileAt = (s, x, y) => { const cx = Math.floor(x / s.T), cy = Math.floor(y / s.T); return cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS ? "#" : s.map[cy][cx]; };
@@ -163,7 +166,7 @@
       else s.f.forEach(o => { if (o !== f && o.alive && !o.burn && hyp(o.x - f.x, o.y - f.y) < T * 0.75) o.burn = { t: 3, by: f.burn.by }; });
     }
     if (!f.alive) return;
-    const sp = 4.3 * T * (hasP(f, "speed") ? 1.35 : 1) * (f.charge >= 0 ? 0.6 : 1) * (ice ? 0.55 : 1);
+    const sp = 4.3 * T * (f.cpu ? s.diff.spd : 1) * (hasP(f, "speed") ? 1.35 : 1) * (f.charge >= 0 ? 0.6 : 1) * (ice ? 0.55 : 1);
     let vx = mx * sp, vy = my * sp;
     if (f.dashT > 0) { f.dashT -= dt; vx = f.fx * 13 * T; vy = f.fy * 13 * T; }
     f.mvx = vx; f.mvy = vy;
@@ -284,7 +287,7 @@
     if (e) {
       if (ed < 1.25 * T) { const d = to(e.x, e.y); f.fx = d[0]; f.fy = d[1]; if (f.slashCd <= 0 && Math.random() < dt * (3 + 8 * sk)) act(s, f, "slash", true); }
       else if (A.cool <= 0 && ed < 8.5 * T && los(s, f.x, f.y, e.x, e.y)) {
-        A.tg = e; A.err = (Math.random() - 0.5) * (0.7 * (1 - sk) + (f.conf > 0 ? 3 : 0)); A.aim = 0.12 + clamp((ed / T - 4.5) / 7, 0, 1) * 0.8; A.cool = 1.2 + (1 - sk) * 1.8 + Math.random() * 0.8;
+        A.tg = e; A.err = (Math.random() - 0.5) * (0.7 * (1 - sk) + (f.conf > 0 ? 3 : 0)); A.aim = 0.12 + clamp((ed / T - 4.5) / 7, 0, 1) * 0.8; A.cool = (1.2 + (1 - sk) * 1.8 + Math.random() * 0.8) * s.diff.cool;
         act(s, f, "throw", true); return [0, 0];
       }
     }
@@ -306,13 +309,13 @@
     for (let y = 0; y < ROWS; y++) { const x = s.map[y].indexOf(String(i + 1)); if (x >= 0) { f.x = (x + 0.5) * T; f.y = (y + 0.5) * T; } }
     const d = hyp(COLS * T / 2 - f.x, ROWS * T / 2 - f.y); f.fx = (COLS * T / 2 - f.x) / d; f.fy = (ROWS * T / 2 - f.y) / d;
     Object.assign(f, { alive: true, has: f.max, charge: -1, recall: false, slashT: 0, slashCd: 0, dashT: 0, dashCd: 0, inv: 0, frozen: 0, chill: 0, burn: null, kx: 0, ky: 0, mvx: 0, mvy: 0, hid: false, fake: false, conf: 0, still: 0, rs: 0 });
-    f.ai = { cool: 1 + Math.random() * 1.5, aware: 0, aim: 0, noR: 0, err: 0, tg: null, wt: 0, wx: f.x, wy: f.y, flee: 0 };
+    f.ai = { cool: (1 + Math.random() * 1.5) * s.diff.cool, aware: 0, aim: 0, noR: 0, err: 0, tg: null, wt: 0, wx: f.x, wy: f.y, flee: 0 };
     f.hider = s.mode === "seek" && f.team === s.hide; if (f.hider) f.has = 0;
   }
   function startRound(G) {
     const s = G.s, T = s.T; s.round++; s.map = MAPS[(s.round - 1) % MAPS.length];
     s.rangs = []; s.items = []; s.patches = []; s.booms = []; s.fx = []; s.pops = []; s.decoys = []; s.storm = null; s.rt = 0; s.phase = "intro"; s.pt = 1.4;
-    s.skill = clamp(0.2 + s.round * 0.04 + lead(s) * 0.05, 0.15, 0.95);
+    s.skill = clamp(s.diff.base + s.round * 0.03 + lead(s) * 0.04, 0.05, s.diff.max);
     if (s.mode === "seek") { // you seek first, then swap; scatter extra bushes so a hider has company
       s.hide = s.round % 2; const rows = s.map.map(r => r.split(""));
       for (let n = 0, k = 0; n < 10 && k < 200; k++) { const cx = Math.floor(Math.random() * COLS), cy = Math.floor(Math.random() * ROWS); if (rows[cy][cx] === "." && edge(s, (cx + 0.5) * T, (cy + 0.5) * T) > 0) { rows[cy][cx] = "b"; n++; } }
@@ -321,10 +324,11 @@
     s.f.forEach(f => spawn(s, f));
     if (s.mode === "gold") { const c = freeSpot(s, COLS * T / 2, ROWS * T / 2); s.gold = { x: c[0], y: c[1], held: null }; }
   }
+  function setDiff(G, i) { G.s.di = i; G.s.diff = DIFF[i]; try { localStorage.setItem("bdd:boomdiff", String(i)); } catch (e) {} }
   function pick(G, mode) { const s = G.s; s.mode = mode; s.f.forEach((f, i) => f.team = mode === "teams" || mode === "seek" ? (i === 0 || i === 3 ? 0 : 1) : i); G.sfx("pop"); startRound(G); }
   function finish(G) {
     const s = G.s, p = s.f[0], L = leader(s), won = L[2].team === p.team, mine = Math.floor(s.tp[p.team]);
-    G.over(mine * 100 + (won ? 1000 + (mine - L[1]) * 150 : 0), won ? (s.kos >= 8 ? "Boomerang master!" : "Top dawg!") : (s.mode === "teams" || s.mode === "seek" ? "Mittens and Rusty win" : L[2].who.name + " wins") + ". Rematch?");
+    G.over(Math.round((mine * 100 + (won ? 1000 + (mine - L[1]) * 150 : 0)) * s.diff.mult), won ? (s.kos >= 8 ? "Boomerang master!" : "Top dawg!") : (s.mode === "teams" || s.mode === "seek" ? "Mittens and Rusty win" : L[2].who.name + " wins") + ". Rematch?");
   }
   function step(G, dt) {
     const s = G.s, T = s.T, p = s.f[0];
@@ -364,7 +368,7 @@
       s.rangs.forEach(r => { if (r.st === "ground" && edge(s, r.x, r.y) < st.n) { const c = freeSpot(s, r.x, r.y); r.x = c[0]; r.y = c[1]; } });
     }
     if (s.mode === "gold") {
-      const g = s.gold; s.skill = clamp(0.45 + lead(s) * 0.05, 0.3, 0.9);
+      const g = s.gold; s.skill = clamp(s.diff.base + 0.2 + lead(s) * 0.04, 0.05, s.diff.max);
       if (g.held && !g.held.alive) { const c = freeSpot(s, g.held.x, g.held.y); g.x = c[0]; g.y = c[1]; g.held = null; }
       if (!g.held) { const f = s.f.find(f => f.alive && hyp(f.x - g.x, f.y - g.y) < T * 0.6); if (f) { g.held = f; pop(s, f.x, f.y - T * 0.8, "GOT THE GOLD!", "#fde047"); if (f === p) G.sfx("pass"); } }
       if (g.held) { s.tp[g.held.team] += dt / 2.5; if (s.tp[g.held.team] >= GOAL) { s.phase = "end"; s.pt = 1.7; s.last = g.held; if (g.held.team === p.team) G.sfx("win"); return; } }
@@ -395,19 +399,21 @@
 
   defGame({
     key: "boom", name: "Boomerang Dawgs", icon: "🪃", max: 9999,
-    blurb: "Throw, slash, dash. One hit and you're out. 4 modes.",
-    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. Pick a mode at the start. Free For All: everyone for themselves. Teams: you and Bao against Mittens and Rusty, and you can't hurt your partner. Golden Boomerang: pick up the gold one and hang on to it; holding it fills your score, knockouts just make them drop it, and anyone knocked out comes back. Hide & Seek: same teams, 30 second rounds, swapping sides each round. Hiders have no boomerang and turn into a bush whenever they stand still; seekers get 2 for each hider they find and hiders get 2 for each one still hidden at the buzzer. More power-ups: ghost dash (dash through walls), telekinesis (steer your boomerang in the air), decoy (dashing leaves a copy of you), disguise (stand still to look like a bush), battle royale (the walls close in on everyone) and bamboozled (everyone else walks backwards). On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.",
+    blurb: "Throw, slash, dash. One hit and you're out.",
+    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold for a longer throw. It bounces off walls and comes back, and if you're empty-handed, holding THROW calls it home. SLASH cuts whoever is in front of you and bats boomerangs away. DASH is a quick burst that gets you over water (walk in and you're out). Scrolls are power-ups: hold 3, kept all match. Pick how tough the CPUs are and a mode when it starts. Keyboard: arrows or WASD, Space throw, Z slash, X dash.",
     lay(G) {
       const s = G.s; s.T = Math.max(16, Math.floor(Math.min(G.W / COLS, (G.H - HUD - CTRL) / ROWS)));
       s.ox = Math.round((G.W - COLS * s.T) / 2); s.oy = HUD + Math.round((G.H - HUD - CTRL - ROWS * s.T) / 2);
       const y = G.H - CTRL / 2;
-      const mw = Math.min(G.W - 36, 330), mh = Math.min(78, (G.H - 150) / 4 - 10);
-      s.menu = MODES.map((o, i) => ({ m: o.m, t: o.t, d: o.d, x: (G.W - mw) / 2, y: 110 + i * (mh + 10), w: mw, h: mh }));
+      const mw = Math.min(G.W - 36, 330), mh = Math.min(74, (G.H - 250) / 4 - 10), mx = (G.W - mw) / 2;
+      s.dbtn = DIFF.map((o, i) => ({ i, t: o.t, x: mx + i * (mw + 8) / 3, y: 84, w: (mw + 8) / 3 - 8, h: 46 }));
+      s.menu = MODES.map((o, i) => ({ m: o.m, t: o.t, d: o.d, x: mx, y: 196 + i * (mh + 10), w: mw, h: mh }));
       s.btn = [{ k: "throw", x: G.W - 54, y, r: 42, em: "🪃" }, { k: "slash", x: G.W - 138, y: y - 26, r: 27, em: "⚔️" }, { k: "dash", x: G.W - 138, y: y + 30, r: 25, em: "💨" }];
     },
     reset(G) {
       G.s = { phase: "menu", mode: "ffa", round: 0, kos: 0, shake: 0, itemT: 2, tp: [0, 0, 0, 0], keys: {}, fx: [], pops: [], booms: [], stick: { x: 0, y: 0, on: 0, ox: 0, oy: 0, kx: 0, ky: 0 }, f: WHO.map((w, i) => ({ who: w, cpu: i > 0, team: i, pw: [], max: 1, ai: {} })) };
-      this.lay(G); this.hook();
+      let di = 1; try { di = clamp(parseInt(localStorage.getItem("bdd:boomdiff") || "1", 10) || 0, 0, 2); } catch (e) {}
+      setDiff(G, di); this.lay(G); this.hook();
     },
     hook() {
       if (window._boomT) return; window._boomT = 1;
@@ -434,9 +440,9 @@
       };
       ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(n => w.addEventListener(n, f, { passive: true }));
     },
-    tap(G, x, y) { const s = G.s; if (s.phase !== "menu") return; const b = s.menu.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (b) pick(G, b.m); },
+    tap(G, x, y) { const s = G.s; if (s.phase !== "menu") return; const b = s.menu.concat(s.dbtn).find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return; if (b.m) pick(G, b.m); else { setDiff(G, b.i); G.sfx("pop"); } },
     onKey(G, k, isDown) {
-      if (G.s.phase === "menu") { if (isDown && k >= "1" && k <= "4") pick(G, MODES[+k - 1].m); return; }
+      if (G.s.phase === "menu") { if (!isDown) return; if (k >= "1" && k <= "4") pick(G, MODES[+k - 1].m); else if (k === "ArrowLeft" || k === "ArrowRight") setDiff(G, clamp(G.s.di + (k === "ArrowLeft" ? -1 : 1), 0, 2)); return; }
       const s = G.s, m = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "u", w: "u", ArrowDown: "d", s: "d" }[k];
       if (m) { s.keys[m] = isDown; return; }
       const a = { " ": "throw", z: "slash", j: "slash", x: "dash", k: "dash", Shift: "dash" }[k]; if (!a) return;
@@ -451,7 +457,10 @@
       const s = G.s, T = s.T, W = G.W, H = G.H, p = s.f[0];
       c.fillStyle = "#1c2a1e"; c.fillRect(0, 0, W, H);
       if (s.phase === "menu") {
-        G.text(c, "PICK A MODE", W / 2, 64, 14, "#ffd23f");
+        G.text(c, "HOW TOUGH?", W / 2, 58, 12, "#ffd23f");
+        s.dbtn.forEach(b => { const on = b.i === s.di; c.fillStyle = on ? "#ffd23f" : "rgba(255,255,255,0.1)"; c.fillRect(b.x, b.y, b.w, b.h); G.text(c, b.t, b.x + b.w / 2, b.y + b.h / 2, 10, on ? "#111" : "#fff"); });
+        G.text(c, "SCORE x" + s.diff.mult, W / 2, 144, 8, "rgba(255,255,255,0.6)");
+        G.text(c, "PICK A MODE TO START", W / 2, 176, 12, "#ffd23f");
         s.menu.forEach((b, i) => {
           c.fillStyle = "rgba(255,255,255,0.1)"; c.fillRect(b.x, b.y, b.w, b.h); c.fillStyle = WHO[i].col; c.fillRect(b.x, b.y, 5, b.h);
           G.text(c, b.t, b.x + 18, b.y + b.h * 0.36, 11, "#fff", "left");

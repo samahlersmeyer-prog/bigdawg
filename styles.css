@@ -90,6 +90,8 @@ input { -webkit-user-select: text; user-select: text; }
 .zhud { position: absolute; top: 14px; left: 0; right: 0; text-align: center; font-family: var(--title); font-weight: 700; font-size: 44px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.35); pointer-events: none; font-variant-numeric: tabular-nums; }
 .zpanel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 32px)); background: var(--bg); color: var(--ink); border-radius: 16px; padding: 18px 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.25); cursor: default; }
 .zpanel[hidden] { display: none; }
+.zpanel { max-height: calc(100% - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; } /* a long how-to can never push Play off the screen */
+#g-title { white-space: nowrap; font-size: clamp(17px, 5.4vw, 24px); }
 .zpanel h2 { margin: 0; font-family: var(--title); font-size: 28px; }
 .zpanel p { margin: 0; color: var(--muted); font-size: 14px; }
 .zpanel .zbig { font-family: var(--title); font-size: 56px; font-weight: 700; line-height: 1; color: var(--ink); }
