@@ -39,8 +39,31 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     ice: ["❄️", "ICE"],
     shield: ["🛡️", "SHIELD"],
     speed: ["☕", "CAFFEINATED"],
-    tele: ["🌀", "WARP"]
+    tele: ["🌀", "WARP"],
+    wall: ["👻", "GHOST DASH"],
+    tk: ["🧠", "TELEKINESIS"],
+    decoy: ["🎭", "DECOY"],
+    disguise: ["🥸", "DISGUISE"],
+    royale: ["🌩️", "BATTLE ROYALE"],
+    bam: ["😵", "BAMBOOZLED"]
   };
+  var MODES = [{
+    m: "ffa",
+    t: "FREE FOR ALL",
+    d: "Everyone for themselves"
+  }, {
+    m: "teams",
+    t: "TEAMS",
+    d: "You + Bao vs Mittens + Rusty"
+  }, {
+    m: "gold",
+    t: "GOLDEN BOOMERANG",
+    d: "Hold the gold the longest"
+  }, {
+    m: "seek",
+    t: "HIDE & SEEK",
+    d: "Hiders turn into bushes. Swap every round"
+  }];
   var PWK = Object.keys(PW);
   var tileAt = function tileAt(s, x, y) {
     var cx = Math.floor(x / s.T),
@@ -51,8 +74,48 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return f.pw.indexOf(k) >= 0;
   };
   var lethal = function lethal(r, f) {
-    return r.st !== "ground" && f !== r.safe && (f !== r.o || r.defl);
+    return r.st !== "ground" && f.team !== (r.safe || r.o).team;
   };
+  var counting = function counting(s, f) {
+    return s.mode === "seek" && s.rt < 2.5 && !f.hider;
+  };
+  var edge = function edge(s, x, y) {
+    var cx = Math.floor(x / s.T),
+      cy = Math.floor(y / s.T);
+    return Math.min(cx, cy, COLS - 1 - cx, ROWS - 1 - cy);
+  };
+  var stormAt = function stormAt(s, x, y) {
+    return s.storm ? edge(s, x, y) < Math.min(3, s.storm.n + 1) : false;
+  };
+  function freeSpot(s, x, y) {
+    var b = [x, y],
+      bd = 1e9;
+    for (var cy = 0; cy < ROWS; cy++) for (var cx = 0; cx < COLS; cx++) {
+      var ch = s.map[cy][cx],
+        px = (cx + 0.5) * s.T,
+        py = (cy + 0.5) * s.T,
+        d = hyp(px - x, py - y);
+      if (ch !== "#" && ch !== "~" && !stormAt(s, px, py) && d < bd) {
+        bd = d;
+        b = [px, py];
+      }
+    }
+    return b;
+  }
+  function leader(s) {
+    var t = s.tp.map(function (v, i) {
+      return [Math.floor(v), i];
+    }).filter(function (a) {
+      return s.f.some(function (f) {
+        return f.team === a[1];
+      });
+    }).sort(function (a, b) {
+      return b[0] - a[0];
+    });
+    return [t[0][0], t[1][0], s.f.find(function (f) {
+      return f.team === t[0][1];
+    })];
+  }
   var pop = function pop(s, x, y, txt, col) {
     return s.pops.push({
       x: x,
@@ -78,16 +141,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }
   function moveF(s, f, dx, dy) {
     var r = s.T * 0.34,
-      wet = f.cpu;
-    var bad = function bad(x, y) {
-      var t = tileAt(s, x, y);
-      return t === "#" || wet && t === "~";
+      wet = f.cpu,
+      ghost = f.dashT > 0 && hasP(f, "wall");
+    var bad = function bad(x, y, solid) {
+      var cx = Math.floor(x / s.T),
+        cy = Math.floor(y / s.T);
+      if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return true;
+      var t = s.map[cy][cx];
+      return t === "#" && (solid || !ghost) || wet && t === "~";
     };
-    var blocked = function blocked(x, y) {
-      return bad(x - r, y - r) || bad(x + r, y - r) || bad(x - r, y + r) || bad(x + r, y + r);
+    var blocked = function blocked(x, y, solid) {
+      return bad(x - r, y - r, solid) || bad(x + r, y - r, solid) || bad(x - r, y + r, solid) || bad(x + r, y + r, solid);
     };
     if (!blocked(f.x + dx, f.y)) f.x += dx;
     if (!blocked(f.x, f.y + dy)) f.y += dy;
+    if (!ghost && hasP(f, "wall") && blocked(f.x, f.y, true)) {
+      var p = freeSpot(s, f.x, f.y);
+      f.x = p[0];
+      f.y = p[1];
+    }
   }
   function los(s, x0, y0, x1, y1) {
     var n = Math.ceil(hyp(x1 - x0, y1 - y0) / (s.T * 0.4));
@@ -115,7 +187,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
         var ch = s.map[ny][nx],
           id = nx + ny * COLS;
-        if (ch === "#" || ch === "~" || prev[id] !== undefined) continue;
+        if (ch === "#" || ch === "~" || prev[id] !== undefined || id !== start && stormAt(s, (nx + 0.5) * T, (ny + 0.5) * T)) continue;
         prev[id] = cur;
         q.push(id);
       }
@@ -139,12 +211,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     f.charge = -1;
     f.recall = false;
     f.burn = null;
+    f.rs = 2.5;
     puff(s, f.x, f.y, f.who.col, 16);
     s.shake = 0.25;
-    if (by && by !== f) {
-      by.pts++;
+    if (by && by.team !== f.team) {
+      if (s.mode !== "gold") s.tp[by.team] += s.mode === "seek" ? 2 : 1;
       if (by === s.f[0]) s.kos++;
-      pop(s, f.x, f.y - s.T * 0.7, "+1 " + by.who.name, by.who.col);
+      pop(s, f.x, f.y - s.T * 0.7, (s.mode === "gold" ? "KO! " : s.mode === "seek" ? "FOUND! +2 " : "+1 ") + by.who.name, by.who.col);
     }
     if (f === s.f[0]) {
       G.sfx("lose");
@@ -154,6 +227,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function give(s, f, k) {
     pop(s, f.x, f.y - s.T * 0.8, PW[k][1] + "!", "#fde047");
     if (f === s.f[0]) G.sfx("pass");
+    if (k === "royale") {
+      if (!s.storm) s.storm = {
+        n: 0,
+        t: 2.5
+      };
+      return;
+    }
+    if (k === "bam") {
+      s.f.forEach(function (o) {
+        if (o.team !== f.team) o.conf = 4;
+      });
+      return;
+    }
     if (hasP(f, k)) return;
     if (k === "fire" || k === "ice") f.pw = f.pw.filter(function (p) {
       return p !== "fire" && p !== "ice";
@@ -175,7 +261,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (!f.cpu) {
       var best = 0.3;
       s.f.forEach(function (e) {
-        if (e === f || !e.alive || e.hid) return;
+        if (e.team === f.team || !e.alive || e.hid) return;
         var d = Math.atan2(e.y - f.y, e.x - f.x) - ang;
         d = Math.atan2(Math.sin(d), Math.cos(d));
         if (Math.abs(d) < Math.abs(best)) best = d;
@@ -224,7 +310,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     s.shake = 0.3;
     G.sfx("lose");
     s.f.forEach(function (f) {
-      if (f.alive && f !== r.o && hyp(f.x - r.x, f.y - r.y) < T * 1.5) hit(s, f, r.safe || r.o);
+      if (f.alive && f.team !== (r.safe || r.o).team && hyp(f.x - r.x, f.y - r.y) < T * 1.5) hit(s, f, r.safe || r.o);
+    });
+    s.decoys.forEach(function (d) {
+      if (hyp(d.x - r.x, d.y - r.y) < T * 1.5) d.t = 0;
     });
     r.st = "return";
     r.ph = true;
@@ -243,6 +332,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (kind === "dash" && down) f.frozen -= 0.4;
       return;
     }
+    if (counting(s, f)) return;
     if (kind === "throw") {
       if (down) {
         if (f.has > 0) f.charge = 0;else f.recall = true;
@@ -268,7 +358,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         f.y = r.y;
         puff(s, f.x, f.y, "#c4b5fd", 8);
         caught(s, s.rangs.indexOf(r));
-      } else f.dashT = 0.15;
+      } else {
+        f.dashT = 0.15;
+        if (hasP(f, "decoy") && !s.decoys.some(function (d) {
+          return d.o === f;
+        })) s.decoys.push({
+          o: f,
+          team: f.team,
+          who: f.who,
+          x: f.x,
+          y: f.y,
+          fx: f.fx,
+          fy: f.fy,
+          t: 4,
+          alive: true,
+          hid: false,
+          mvx: 0,
+          mvy: 0
+        });
+      }
     }
   }
   function stepF(s, f, mx, my, dt) {
@@ -278,6 +386,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     f.dashCd -= dt;
     f.inv -= dt;
     if (f.charge >= 0) f.charge += dt;
+    if (f.conf > 0) {
+      f.conf -= dt;
+      mx = -mx;
+      my = -my;
+    }
+    f.still = mx || my || f.charge >= 0 || f.slashT > 0 || f.dashT > 0 ? 0 : f.still + dt;
     if (f.frozen > 0) {
       f.frozen -= dt;
       mx = my = 0;
@@ -294,7 +408,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     try {
       for (_iterator.s(); !(_step = _iterator.n()).done;) {
         var q = _step.value;
-        if (q.o === f || hyp(q.x - f.x, q.y - f.y) > T * 0.45) continue;
+        if (q.o.team === f.team || hyp(q.x - f.x, q.y - f.y) > T * 0.45) continue;
         if (q.k === "fire") {
           if (!f.burn) f.burn = {
             t: 3,
@@ -344,7 +458,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     f.ky *= kd;
     moveF(s, f, vx * dt, vy * dt);
     var t = tileAt(s, f.x, f.y);
-    f.hid = t === "b";
+    f.fake = f.hider ? f.still > 0.4 : hasP(f, "disguise") && f.still > 0.7;
+    f.hid = t === "b" || f.fake;
     if (t === "~" && f.dashT <= 0) {
       pop(s, f.x, f.y - T * 0.6, "SPLASH!", "#7dd3fc");
       puff(s, f.x, f.y, "#7dd3fc", 12);
@@ -355,8 +470,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       hit(s, f, null);
       return;
     }
+    if (f.slashT > 0) s.decoys.forEach(function (d) {
+      if (d.team !== f.team && hyp(d.x - f.x, d.y - f.y) < T * 1.15) d.t = 0;
+    });
     if (f.slashT > 0) s.f.forEach(function (o) {
-      if (o === f || !o.alive) return;
+      if (o.team === f.team || !o.alive) return;
       var dx = o.x - f.x,
         dy = o.y - f.y,
         d = hyp(dx, dy) || 1;
@@ -378,120 +496,145 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       wall = function wall(x, y) {
         return tileAt(s, x, y) === "#";
       };
-    for (var i = s.rangs.length - 1; i >= 0; i--) {
-      var r = s.rangs[i],
-        o = r.o;
-      if (o.recall && o.alive && r.st !== "return") {
-        r.st = "return";
-        r.ph = true;
-        r.defl = false;
-        r.safe = null;
-      }
-      if (r.st === "ground") {
-        if (o.alive && hyp(o.x - r.x, o.y - r.y) < T * 0.7) caught(s, i);
-        continue;
-      }
-      r.rot += dt * 22;
-      var sp = hyp(r.vx, r.vy);
-      if (r.st === "fly") {
-        var nx = r.x + r.vx * dt,
-          ny = r.y + r.vy * dt,
-          bounced = false;
-        if (wall(nx, r.y)) {
-          r.vx = -r.vx;
-          nx = r.x;
-          bounced = true;
-        }
-        if (wall(nx, ny)) {
-          r.vy = -r.vy;
-          ny = r.y;
-          bounced = true;
-        }
-        r.x = nx;
-        r.y = ny;
-        r.range -= sp * dt;
-        if (bounced) {
-          r.b++;
-          if (r.boom) {
-            explode(s, r);
-            continue;
-          }
-          if (r.b > 2) {
-            r.st = "ground";
-            continue;
-          }
-        }
-        if (r.range <= 0) {
-          if (r.boom) {
-            explode(s, r);
-            continue;
-          }
+    var _loop = function _loop() {
+        var r = s.rangs[i],
+          o = r.o;
+        if (o.recall && o.alive && r.st !== "return") {
           r.st = "return";
+          r.ph = true;
           r.defl = false;
           r.safe = null;
         }
-      } else {
-        if (!o.alive) {
-          r.st = "ground";
-          continue;
+        if (r.st === "ground") {
+          if (o.alive && hyp(o.x - r.x, o.y - r.y) < T * 0.7) caught(s, i);
+          return 0;
         }
-        var dx = o.x - r.x,
-          dy = o.y - r.y,
-          d = hyp(dx, dy) || 1,
-          k = Math.min(1, dt * 6);
-        r.vx += (dx / d * 12 * T - r.vx) * k;
-        r.vy += (dy / d * 12 * T - r.vy) * k;
-        var _nx = r.x + r.vx * dt,
-          _ny = r.y + r.vy * dt;
-        if (!r.ph && wall(_nx, _ny)) {
-          r.st = "ground";
-          continue;
-        }
-        r.x = _nx;
-        r.y = _ny;
-        if (d < T * 0.6) {
-          caught(s, i);
-          continue;
-        }
-      }
-      if (r.kind && (r.tr += sp * dt) > T * 0.45) {
-        r.tr = 0;
-        s.patches.push({
-          x: r.x,
-          y: r.y,
-          k: r.kind,
-          o: o,
-          t: r.kind === "fire" ? 2.2 : 3.5
-        });
-      }
-      var _iterator2 = _createForOfIteratorHelper(s.f),
-        _step2;
-      try {
-        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-          var f = _step2.value;
-          if (!f.alive || !lethal(r, f) || hyp(f.x - r.x, f.y - r.y) > T * 0.52) continue;
-          if (f.slashT > 0 && (r.x - f.x) * f.fx + (r.y - f.y) * f.fy > 0) {
-            r.vx = f.fx * 11 * T;
-            r.vy = f.fy * 11 * T;
-            r.st = "fly";
-            r.range = 5 * T;
-            r.b = 0;
-            r.safe = f;
-            r.defl = true;
-            r.ph = false;
-            pop(s, f.x, f.y - T * 0.7, "DEFLECT!", "#e5e7eb");
-            G.sfx("pop");
-          } else {
-            hit(s, f, r.safe || o);
-            if (r.boom) explode(s, r);else r.st = "ground";
+        r.rot += dt * 22;
+        var sp = hyp(r.vx, r.vy);
+        if (r.st === "fly") {
+          if (!r.safe && o.alive && hasP(o, "tk")) {
+            var g = o.ai.tg,
+              want = o.cpu ? g && g.alive ? Math.atan2(g.y - r.y, g.x - r.x) : null : s.inx || s.iny ? Math.atan2(s.iny, s.inx) : null;
+            if (want !== null) {
+              var a = Math.atan2(r.vy, r.vx),
+                d = want - a;
+              d = Math.atan2(Math.sin(d), Math.cos(d));
+              a += clamp(d, -5 * dt, 5 * dt);
+              r.vx = Math.cos(a) * sp;
+              r.vy = Math.sin(a) * sp;
+            }
           }
-          break;
+          var nx = r.x + r.vx * dt,
+            ny = r.y + r.vy * dt,
+            bounced = false;
+          if (wall(nx, r.y)) {
+            r.vx = -r.vx;
+            nx = r.x;
+            bounced = true;
+          }
+          if (wall(nx, ny)) {
+            r.vy = -r.vy;
+            ny = r.y;
+            bounced = true;
+          }
+          r.x = nx;
+          r.y = ny;
+          r.range -= sp * dt;
+          if (bounced) {
+            r.b++;
+            if (r.boom) {
+              explode(s, r);
+              return 0;
+            }
+            if (r.b > 2) {
+              r.st = "ground";
+              return 0;
+            }
+          }
+          if (r.range <= 0) {
+            if (r.boom) {
+              explode(s, r);
+              return 0;
+            }
+            r.st = "return";
+            r.defl = false;
+            r.safe = null;
+          }
+        } else {
+          if (!o.alive) {
+            r.st = "ground";
+            return 0;
+          }
+          var dx = o.x - r.x,
+            dy = o.y - r.y,
+            _d = hyp(dx, dy) || 1,
+            k = Math.min(1, dt * 6);
+          r.vx += (dx / _d * 12 * T - r.vx) * k;
+          r.vy += (dy / _d * 12 * T - r.vy) * k;
+          var _nx = r.x + r.vx * dt,
+            _ny = r.y + r.vy * dt;
+          if (!r.ph && wall(_nx, _ny)) {
+            r.st = "ground";
+            return 0;
+          }
+          r.x = _nx;
+          r.y = _ny;
+          if (_d < T * 0.6) {
+            caught(s, i);
+            return 0;
+          }
         }
-      } catch (err) {
-        _iterator2.e(err);
-      } finally {
-        _iterator2.f();
-      }
+        if (r.kind && (r.tr += sp * dt) > T * 0.45) {
+          r.tr = 0;
+          s.patches.push({
+            x: r.x,
+            y: r.y,
+            k: r.kind,
+            o: o,
+            t: r.kind === "fire" ? 2.2 : 3.5
+          });
+        }
+        var dc = s.decoys.find(function (d) {
+          return d.t > 0 && d.team !== (r.safe || o).team && hyp(d.x - r.x, d.y - r.y) < T * 0.52;
+        });
+        if (dc) {
+          dc.t = 0;
+          if (r.boom) explode(s, r);else r.st = "ground";
+          return 0;
+        }
+        var _iterator2 = _createForOfIteratorHelper(s.f),
+          _step2;
+        try {
+          for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+            var f = _step2.value;
+            if (!f.alive || !lethal(r, f) || hyp(f.x - r.x, f.y - r.y) > T * 0.52) continue;
+            if (f.slashT > 0 && (r.x - f.x) * f.fx + (r.y - f.y) * f.fy > 0) {
+              r.vx = f.fx * 11 * T;
+              r.vy = f.fy * 11 * T;
+              r.st = "fly";
+              r.range = 5 * T;
+              r.b = 0;
+              r.safe = f;
+              r.defl = true;
+              r.ph = false;
+              pop(s, f.x, f.y - T * 0.7, "DEFLECT!", "#e5e7eb");
+              G.sfx("pop");
+            } else {
+              hit(s, f, r.safe || o);
+              if (r.boom) explode(s, r);else r.st = "ground";
+            }
+            break;
+          }
+        } catch (err) {
+          _iterator2.e(err);
+        } finally {
+          _iterator2.f();
+        }
+      },
+      _ret;
+    for (var i = s.rangs.length - 1; i >= 0; i--) {
+      _ret = _loop();
+      if (_ret === 0) continue;
     }
   }
   function think(s, f, dt) {
@@ -509,6 +652,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (Math.random() < dt * 4) act(s, f, "dash", true);
       return [0, 0];
     }
+    if (counting(s, f)) return [0, 0];
+    if (stormAt(s, f.x, f.y)) {
+      var c = freeSpot(s, COLS * T / 2, ROWS * T / 2),
+        _p = path(s, f, c[0], c[1]);
+      if (f.charge >= 0) act(s, f, "throw", false);
+      return to(_p[0], _p[1]);
+    }
     var th = null,
       thd = 3.2 * T;
     var _iterator3 = _createForOfIteratorHelper(s.rangs),
@@ -519,11 +669,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         if (!lethal(r, f)) continue;
         var dx = f.x - r.x,
           dy = f.y - r.y,
-          _d2 = hyp(dx, dy) || 1,
+          _d4 = hyp(dx, dy) || 1,
           _sp = hyp(r.vx, r.vy) || 1;
-        if (_d2 < thd && (dx * r.vx + dy * r.vy) / (_d2 * _sp) > 0.8) {
+        if (_d4 < thd && (dx * r.vx + dy * r.vy) / (_d4 * _sp) > 0.8) {
           th = r;
-          thd = _d2;
+          thd = _d4;
         }
       }
     } catch (err) {
@@ -554,47 +704,83 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     }
     var e = null,
       ed = 1e9;
-    s.f.forEach(function (o) {
-      if (o === f || !o.alive) return;
+    s.f.concat(s.decoys).forEach(function (o) {
+      if (o.team === f.team || !o.alive) return;
       var d = hyp(o.x - f.x, o.y - f.y);
-      if (o.hid && d > 2.5 * T) return;
+      if (o.hid && d > (o.fake ? 1.2 : 2.5) * T) return;
       if (d < ed) {
         ed = d;
         e = o;
       }
     });
+    var gd = s.mode === "gold" ? s.gold : null;
+    if (gd && gd.held && gd.held.team !== f.team && !(gd.held.hid && hyp(gd.held.x - f.x, gd.held.y - f.y) > 2.5 * T)) {
+      e = gd.held;
+      ed = hyp(e.x - f.x, e.y - f.y);
+    }
     if (f.charge >= 0) {
       A.aim -= dt;
       if (A.tg && A.tg.alive) {
         var _g = A.tg,
-          lead = hyp(_g.x - f.x, _g.y - f.y) / (11 * T) * sk,
-          a = Math.atan2(_g.y + _g.mvy * lead - f.y, _g.x + _g.mvx * lead - f.x) + A.err;
+          _lead = hyp(_g.x - f.x, _g.y - f.y) / (11 * T) * sk,
+          a = Math.atan2(_g.y + _g.mvy * _lead - f.y, _g.x + _g.mvx * _lead - f.x) + A.err;
         f.fx = Math.cos(a);
         f.fy = Math.sin(a);
       }
       if (A.aim <= 0) act(s, f, "throw", false);
       return [0, 0];
     }
+    if (f.hider) {
+      if (!A.set) {
+        if (!A.spot) A.spot = freeSpot(s, (1 + Math.random() * (COLS - 2)) * T, (1 + Math.random() * (ROWS - 2)) * T);
+        if (hyp(A.spot[0] - f.x, A.spot[1] - f.y) < 4 || s.rt > 2.3) A.set = true;else {
+          var q = path(s, f, A.spot[0], A.spot[1]);
+          return to(q[0], q[1]);
+        }
+      }
+      if (e && ed < 1.7 * T) A.flee = 1.4;
+      if ((A.flee -= dt) > 0 && e) {
+        var b = null,
+          bd = -1;
+        [[1.5, 1.5], [COLS - 1.5, 1.5], [1.5, ROWS - 1.5], [COLS - 1.5, ROWS - 1.5], [COLS / 2, 1.5], [COLS / 2, ROWS - 1.5]].forEach(function (c) {
+          var d = hyp(c[0] * T - e.x, c[1] * T - e.y);
+          if (d > bd) {
+            bd = d;
+            b = c;
+          }
+        });
+        var _g2 = freeSpot(s, b[0] * T, b[1] * T),
+          _p2 = path(s, f, _g2[0], _g2[1]);
+        if (ed < 1.3 * T && f.dashCd <= 0 && Math.random() < sk) {
+          var d = to(_p2[0], _p2[1]);
+          f.fx = d[0];
+          f.fy = d[1];
+          act(s, f, "dash", true);
+        }
+        return hyp(_p2[0] - f.x, _p2[1] - f.y) < 3 ? [0, 0] : to(_p2[0], _p2[1]);
+      }
+      return [0, 0];
+    }
     if (f.has === 0) {
       A.noR += dt;
       f.recall = A.noR > 0.5 + 1.2 * (1 - sk);
       var best = null,
-        bd = 1e9;
+        _bd = 1e9;
       s.rangs.forEach(function (r) {
         if (r.o !== f || r.st !== "ground") return;
         var d = hyp(r.x - f.x, r.y - f.y);
-        if (d < bd) {
-          bd = d;
+        if (d < _bd) {
+          _bd = d;
           best = r;
         }
       });
       if (best) {
-        var _p = path(s, f, best.x, best.y);
-        return to(_p[0], _p[1]);
+        var _p3 = path(s, f, best.x, best.y);
+        return to(_p3[0], _p3[1]);
       }
       if (e && ed < 3 * T) {
-        var d = to(e.x, e.y);
-        return [-d[0], -d[1]];
+        var _d2 = to(e.x, e.y);
+        return [-_d2[0], -_d2[1]];
       }
       return [0, 0];
     }
@@ -609,15 +795,16 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         it = o;
       }
     });
+    if (gd && !gd.held && !(e && ed < 2 * T)) it = gd;
     if (e) {
       if (ed < 1.25 * T) {
-        var _d = to(e.x, e.y);
-        f.fx = _d[0];
-        f.fy = _d[1];
+        var _d3 = to(e.x, e.y);
+        f.fx = _d3[0];
+        f.fy = _d3[1];
         if (f.slashCd <= 0 && Math.random() < dt * (3 + 8 * sk)) act(s, f, "slash", true);
       } else if (A.cool <= 0 && ed < 8.5 * T && los(s, f.x, f.y, e.x, e.y)) {
         A.tg = e;
-        A.err = (Math.random() - 0.5) * 0.7 * (1 - sk);
+        A.err = (Math.random() - 0.5) * (0.7 * (1 - sk) + (f.conf > 0 ? 3 : 0));
         A.aim = 0.12 + clamp((ed / T - 4.5) / 7, 0, 1) * 0.8;
         A.cool = 1.2 + (1 - sk) * 1.8 + Math.random() * 0.8;
         act(s, f, "throw", true);
@@ -630,6 +817,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         A.wt = 2;
         A.wx = (1 + Math.random() * (COLS - 2)) * T;
         A.wy = (1 + Math.random() * (ROWS - 2)) * T;
+        var h = s.mode === "seek" && s.f.filter(function (o) {
+          return o.hider && o.alive;
+        })[0];
+        if (h && Math.random() < 0.3 + 0.5 * sk) {
+          var _c = freeSpot(s, h.x + (Math.random() - 0.5) * 5 * T, h.y + (Math.random() - 0.5) * 5 * T);
+          A.wx = _c[0];
+          A.wy = _c[1];
+        }
       }
     }
     var g = it || e || {
@@ -638,6 +833,64 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       },
       p = path(s, f, g.x, g.y);
     return hyp(p[0] - f.x, p[1] - f.y) < 3 ? [0, 0] : to(p[0], p[1]);
+  }
+  var lead = function lead(s) {
+    return s.tp[s.f[0].team] - Math.max.apply(null, s.f.filter(function (f) {
+      return f.team !== s.f[0].team;
+    }).map(function (f) {
+      return s.tp[f.team];
+    }));
+  };
+  function spawn(s, f) {
+    var T = s.T,
+      i = s.f.indexOf(f);
+    for (var y = 0; y < ROWS; y++) {
+      var x = s.map[y].indexOf(String(i + 1));
+      if (x >= 0) {
+        f.x = (x + 0.5) * T;
+        f.y = (y + 0.5) * T;
+      }
+    }
+    var d = hyp(COLS * T / 2 - f.x, ROWS * T / 2 - f.y);
+    f.fx = (COLS * T / 2 - f.x) / d;
+    f.fy = (ROWS * T / 2 - f.y) / d;
+    Object.assign(f, {
+      alive: true,
+      has: f.max,
+      charge: -1,
+      recall: false,
+      slashT: 0,
+      slashCd: 0,
+      dashT: 0,
+      dashCd: 0,
+      inv: 0,
+      frozen: 0,
+      chill: 0,
+      burn: null,
+      kx: 0,
+      ky: 0,
+      mvx: 0,
+      mvy: 0,
+      hid: false,
+      fake: false,
+      conf: 0,
+      still: 0,
+      rs: 0
+    });
+    f.ai = {
+      cool: 1 + Math.random() * 1.5,
+      aware: 0,
+      aim: 0,
+      noR: 0,
+      err: 0,
+      tg: null,
+      wt: 0,
+      wx: f.x,
+      wy: f.y,
+      flee: 0
+    };
+    f.hider = s.mode === "seek" && f.team === s.hide;
+    if (f.hider) f.has = 0;
   }
   function startRound(G) {
     var s = G.s,
@@ -650,60 +903,63 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     s.booms = [];
     s.fx = [];
     s.pops = [];
+    s.decoys = [];
+    s.storm = null;
     s.rt = 0;
     s.phase = "intro";
     s.pt = 1.4;
-    var best = Math.max.apply(null, s.f.slice(1).map(function (f) {
-      return f.pts;
-    }));
-    s.skill = clamp(0.2 + s.round * 0.04 + (s.f[0].pts - best) * 0.05, 0.15, 0.95);
-    s.f.forEach(function (f, i) {
-      for (var y = 0; y < ROWS; y++) {
-        var x = s.map[y].indexOf(String(i + 1));
-        if (x >= 0) {
-          f.x = (x + 0.5) * T;
-          f.y = (y + 0.5) * T;
+    s.skill = clamp(0.2 + s.round * 0.04 + lead(s) * 0.05, 0.15, 0.95);
+    if (s.mode === "seek") {
+      s.hide = s.round % 2;
+      var rows = s.map.map(function (r) {
+        return r.split("");
+      });
+      for (var n = 0, k = 0; n < 10 && k < 200; k++) {
+        var cx = Math.floor(Math.random() * COLS),
+          cy = Math.floor(Math.random() * ROWS);
+        if (rows[cy][cx] === "." && edge(s, (cx + 0.5) * T, (cy + 0.5) * T) > 0) {
+          rows[cy][cx] = "b";
+          n++;
         }
       }
-      var d = hyp(COLS * T / 2 - f.x, ROWS * T / 2 - f.y);
-      f.fx = (COLS * T / 2 - f.x) / d;
-      f.fy = (ROWS * T / 2 - f.y) / d;
-      Object.assign(f, {
-        alive: true,
-        has: f.max,
-        charge: -1,
-        recall: false,
-        slashT: 0,
-        slashCd: 0,
-        dashT: 0,
-        dashCd: 0,
-        inv: 0,
-        frozen: 0,
-        chill: 0,
-        burn: null,
-        kx: 0,
-        ky: 0,
-        mvx: 0,
-        mvy: 0,
-        hid: false
+      s.map = rows.map(function (r) {
+        return r.join("");
       });
-      f.ai = {
-        cool: 1 + Math.random() * 1.5,
-        aware: 0,
-        aim: 0,
-        noR: 0,
-        err: 0,
-        tg: null,
-        wt: 0,
-        wx: f.x,
-        wy: f.y
-      };
+    }
+    s.f.forEach(function (f) {
+      return spawn(s, f);
     });
+    if (s.mode === "gold") {
+      var c = freeSpot(s, COLS * T / 2, ROWS * T / 2);
+      s.gold = {
+        x: c[0],
+        y: c[1],
+        held: null
+      };
+    }
+  }
+  function pick(G, mode) {
+    var s = G.s;
+    s.mode = mode;
+    s.f.forEach(function (f, i) {
+      return f.team = mode === "teams" || mode === "seek" ? i === 0 || i === 3 ? 0 : 1 : i;
+    });
+    G.sfx("pop");
+    startRound(G);
+  }
+  function finish(G) {
+    var s = G.s,
+      p = s.f[0],
+      L = leader(s),
+      won = L[2].team === p.team,
+      mine = Math.floor(s.tp[p.team]);
+    G.over(mine * 100 + (won ? 1000 + (mine - L[1]) * 150 : 0), won ? s.kos >= 8 ? "Boomerang master!" : "Top dawg!" : (s.mode === "teams" || s.mode === "seek" ? "Mittens and Rusty win" : L[2].who.name + " wins") + ". Rematch?");
   }
   function step(G, dt) {
     var s = G.s,
       T = s.T,
       p = s.f[0];
+    if (s.phase === "menu") return;
     s.shake = Math.max(0, s.shake - dt);
     s.fx.forEach(function (o) {
       o.t -= dt;
@@ -735,15 +991,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         s.phase = "fight";
         return;
       }
-      var top = s.f.slice().sort(function (a, b) {
-        return b.pts - a.pts;
-      });
-      if (top[0].pts >= GOAL && top[0].pts > top[1].pts) {
-        var won = top[0] === p,
-          sc = p.pts * 100 + (won ? 1000 + (p.pts - top[1].pts) * 150 : 0);
-        return G.over(sc, won ? s.kos >= 8 ? "Boomerang master!" : "Top dawg!" : top[0].who.name + " wins. Rematch?");
-      }
-      return startRound(G);
+      var L = leader(s);
+      return L[0] >= GOAL && L[0] > L[1] ? finish(G) : startRound(G);
     }
     s.rt += dt;
     s.patches.forEach(function (q) {
@@ -753,29 +1002,32 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       return q.t > 0;
     });
     s.itemT -= dt;
-    if (s.itemT <= 0 && s.items.length < 2) {
+    if (s.itemT <= 0 && s.items.length < 2 && s.mode !== "seek") {
       s.itemT = 5 + Math.random() * 3;
-      var _loop = function _loop() {
+      var _loop2 = function _loop2() {
           var cx = Math.floor(Math.random() * COLS),
             cy = Math.floor(Math.random() * ROWS),
             x = (cx + 0.5) * T,
             y = (cy + 0.5) * T;
-          if (s.map[cy][cx] !== "." || s.f.some(function (f) {
+          if (s.map[cy][cx] !== "." || stormAt(s, x, y) || s.f.some(function (f) {
             return f.alive && hyp(f.x - x, f.y - y) < 2 * T;
           })) return 0;
+          var pool = PWK.filter(function (k) {
+            return !(k === "royale" && (s.mode === "gold" || s.storm));
+          });
           s.items.push({
             x: x,
             y: y,
-            k: PWK[Math.floor(Math.random() * PWK.length)],
+            k: pool[Math.floor(Math.random() * pool.length)],
             t: 0
           });
           return 1;
         },
-        _ret;
+        _ret2;
       for (var _k = 0; _k < 30; _k++) {
-        _ret = _loop();
-        if (_ret === 0) continue;
-        if (_ret === 1) break;
+        _ret2 = _loop2();
+        if (_ret2 === 0) continue;
+        if (_ret2 === 1) break;
       }
     }
     s.items.forEach(function (o) {
@@ -791,7 +1043,84 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       mx = kx / n;
       my = ky / n;
     }
-    if (p.alive) stepF(s, p, mx, my, dt);
+    s.inx = mx;
+    s.iny = my;
+    s.decoys.forEach(function (d) {
+      d.t -= dt;
+      if (d.t <= 0) {
+        d.alive = false;
+        puff(s, d.x, d.y, "#e5e7eb", 8);
+      }
+    });
+    s.decoys = s.decoys.filter(function (d) {
+      return d.alive;
+    });
+    if (s.storm) {
+      var st = s.storm;
+      st.t -= dt;
+      if (st.t <= 0 && st.n < 3) {
+        st.n++;
+        st.t = 2.5;
+        s.shake = 0.2;
+      }
+      s.f.forEach(function (f) {
+        if (f.alive && edge(s, f.x, f.y) < st.n) {
+          pop(s, f.x, f.y - T * 0.6, "ZAPPED!", "#c4b5fd");
+          f.pw = f.pw.filter(function (k) {
+            return k !== "shield";
+          });
+          f.inv = 0;
+          hit(s, f, null);
+        }
+      });
+      s.rangs.forEach(function (r) {
+        if (r.st === "ground" && edge(s, r.x, r.y) < st.n) {
+          var c = freeSpot(s, r.x, r.y);
+          r.x = c[0];
+          r.y = c[1];
+        }
+      });
+    }
+    if (s.mode === "gold") {
+      var g = s.gold;
+      s.skill = clamp(0.45 + lead(s) * 0.05, 0.3, 0.9);
+      if (g.held && !g.held.alive) {
+        var c = freeSpot(s, g.held.x, g.held.y);
+        g.x = c[0];
+        g.y = c[1];
+        g.held = null;
+      }
+      if (!g.held) {
+        var f = s.f.find(function (f) {
+          return f.alive && hyp(f.x - g.x, f.y - g.y) < T * 0.6;
+        });
+        if (f) {
+          g.held = f;
+          pop(s, f.x, f.y - T * 0.8, "GOT THE GOLD!", "#fde047");
+          if (f === p) G.sfx("pass");
+        }
+      }
+      if (g.held) {
+        s.tp[g.held.team] += dt / 2.5;
+        if (s.tp[g.held.team] >= GOAL) {
+          s.phase = "end";
+          s.pt = 1.7;
+          s.last = g.held;
+          if (g.held.team === p.team) G.sfx("win");
+          return;
+        }
+      }
+      s.f.forEach(function (f) {
+        if (!f.alive && (f.rs -= dt) <= 0) {
+          s.rangs = s.rangs.filter(function (r) {
+            return r.o !== f;
+          });
+          spawn(s, f);
+          f.inv = 1.2;
+        }
+      });
+    }
+    if (p.alive) stepF(s, p, counting(s, p) ? 0 : mx, counting(s, p) ? 0 : my, dt);
     s.f.forEach(function (f) {
       if (f.cpu && f.alive) {
         var m = think(s, f, dt);
@@ -803,16 +1132,38 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       for (var i = s.items.length - 1; i >= 0; i--) if (hyp(s.items[i].x - f.x, s.items[i].y - f.y) < T * 0.6) give(s, f, s.items.splice(i, 1)[0].k);
     });
     stepRangs(s, dt);
+    if (s.mode === "gold") return;
+    if (s.mode === "seek") {
+      var left = s.f.filter(function (f) {
+        return f.hider && f.alive;
+      });
+      if (!left.length || s.rt > 32.5) {
+        s.phase = "end";
+        s.pt = 1.9;
+        s.left = left.length;
+        s.tp[s.hide] += left.length * 2;
+        s.last = left[0] || s.f.find(function (f) {
+          return !f.hider;
+        });
+        if (left.length > 0 === (p.team === s.hide)) G.sfx("win");
+      }
+      return;
+    }
     var alive = s.f.filter(function (f) {
-      return f.alive;
-    });
-    if (alive.length <= 1 || s.rt > 60) {
+        return f.alive;
+      }),
+      sides = alive.map(function (f) {
+        return f.team;
+      }).filter(function (t, i, a) {
+        return a.indexOf(t) === i;
+      });
+    if (sides.length <= 1 || s.rt > 60) {
       s.phase = "end";
       s.pt = 1.7;
-      s.last = alive.length === 1 ? alive[0] : null;
+      s.last = sides.length === 1 ? alive[0] : null;
       if (s.last) {
-        s.last.pts++;
-        if (s.last === p) G.sfx("win");
+        s.tp[s.last.team]++;
+        if (s.last.team === p.team) G.sfx("win");
       }
     }
   }
@@ -842,14 +1193,27 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     name: "Boomerang Dawgs",
     icon: "🪃",
     max: 9999,
-    blurb: "Throw, slash, dash. One hit and you're out. First to 10.",
-    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.",
+    blurb: "Throw, slash, dash. One hit and you're out. 4 modes.",
+    how: "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. Pick a mode at the start. Free For All: everyone for themselves. Teams: you and Bao against Mittens and Rusty, and you can't hurt your partner. Golden Boomerang: pick up the gold one and hang on to it; holding it fills your score, knockouts just make them drop it, and anyone knocked out comes back. Hide & Seek: same teams, 30 second rounds, swapping sides each round. Hiders have no boomerang and turn into a bush whenever they stand still; seekers get 2 for each hider they find and hiders get 2 for each one still hidden at the buzzer. More power-ups: ghost dash (dash through walls), telekinesis (steer your boomerang in the air), decoy (dashing leaves a copy of you), disguise (stand still to look like a bush), battle royale (the walls close in on everyone) and bamboozled (everyone else walks backwards). On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.",
     lay: function lay(G) {
       var s = G.s;
       s.T = Math.max(16, Math.floor(Math.min(G.W / COLS, (G.H - HUD - CTRL) / ROWS)));
       s.ox = Math.round((G.W - COLS * s.T) / 2);
       s.oy = HUD + Math.round((G.H - HUD - CTRL - ROWS * s.T) / 2);
       var y = G.H - CTRL / 2;
+      var mw = Math.min(G.W - 36, 330),
+        mh = Math.min(78, (G.H - 150) / 4 - 10);
+      s.menu = MODES.map(function (o, i) {
+        return {
+          m: o.m,
+          t: o.t,
+          d: o.d,
+          x: (G.W - mw) / 2,
+          y: 110 + i * (mh + 10),
+          w: mw,
+          h: mh
+        };
+      });
       s.btn = [{
         k: "throw",
         x: G.W - 54,
@@ -871,12 +1235,18 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }];
     },
     reset: function reset(G) {
-      var s = G.s = {
+      G.s = {
+        phase: "menu",
+        mode: "ffa",
         round: 0,
         kos: 0,
         shake: 0,
         itemT: 2,
+        tp: [0, 0, 0, 0],
         keys: {},
+        fx: [],
+        pops: [],
+        booms: [],
         stick: {
           x: 0,
           y: 0,
@@ -890,14 +1260,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           return {
             who: w,
             cpu: i > 0,
-            pts: 0,
+            team: i,
             pw: [],
-            max: 1
+            max: 1,
+            ai: {}
           };
         })
       };
       this.lay(G);
-      startRound(G);
       this.hook();
     },
     hook: function hook() {
@@ -912,7 +1282,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           r = w.getBoundingClientRect(),
           st = s.stick,
           end = e.type !== "touchstart" && e.type !== "touchmove";
-        var _loop2 = function _loop2() {
+        var _loop3 = function _loop3() {
             var t = e.changedTouches[i],
               x = t.clientX - r.left,
               y = t.clientY - r.top;
@@ -949,10 +1319,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             } else if (end) act(s, s.f[0], kind, false);
             if (end) delete ids[t.identifier];
           },
-          _ret2;
+          _ret3;
         for (var i = 0; i < e.changedTouches.length; i++) {
-          _ret2 = _loop2();
-          if (_ret2 === 0) continue;
+          _ret3 = _loop3();
+          if (_ret3 === 0) continue;
         }
       };
       ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(function (n) {
@@ -961,7 +1331,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         });
       });
     },
+    tap: function tap(G, x, y) {
+      var s = G.s;
+      if (s.phase !== "menu") return;
+      var b = s.menu.find(function (b) {
+        return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+      });
+      if (b) pick(G, b.m);
+    },
     onKey: function onKey(G, k, isDown) {
+      if (G.s.phase === "menu") {
+        if (isDown && k >= "1" && k <= "4") pick(G, MODES[+k - 1].m);
+        return;
+      }
       var s = G.s,
         m = {
           ArrowLeft: "l",
@@ -992,7 +1374,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     },
     update: function update(G, dt) {
       var s = G.s,
-        n = s.f[0].alive || s.phase !== "fight" ? 1 : 3;
+        n = s.f[0].alive || s.phase !== "fight" || s.mode === "gold" ? 1 : 3;
       for (var i = 0; i < n && G.state === "play"; i++) step(G, dt);
     },
     draw: function draw(G, c) {
@@ -1003,6 +1385,34 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         p = s.f[0];
       c.fillStyle = "#1c2a1e";
       c.fillRect(0, 0, W, H);
+      if (s.phase === "menu") {
+        G.text(c, "PICK A MODE", W / 2, 64, 14, "#ffd23f");
+        s.menu.forEach(function (b, i) {
+          c.fillStyle = "rgba(255,255,255,0.1)";
+          c.fillRect(b.x, b.y, b.w, b.h);
+          c.fillStyle = WHO[i].col;
+          c.fillRect(b.x, b.y, 5, b.h);
+          G.text(c, b.t, b.x + 18, b.y + b.h * 0.36, 11, "#fff", "left");
+          c.font = "13px system-ui, sans-serif";
+          c.textAlign = "left";
+          c.textBaseline = "middle";
+          c.fillStyle = "rgba(255,255,255,0.7)";
+          c.fillText(b.d, b.x + 18, b.y + b.h * 0.7);
+        });
+        return;
+      }
+      var bush = function bush(px, py) {
+        c.fillStyle = "#2f8f46";
+        c.beginPath();
+        c.arc(px - T * 0.2, py + T * 0.1, T * 0.36, 0, 7);
+        c.arc(px + T * 0.2, py + T * 0.1, T * 0.36, 0, 7);
+        c.arc(px, py - T * 0.15, T * 0.4, 0, 7);
+        c.fill();
+        c.fillStyle = "#46b05f";
+        c.beginPath();
+        c.arc(px - T * 0.05, py - T * 0.2, T * 0.2, 0, 7);
+        c.fill();
+      };
       c.save();
       c.translate(s.ox + (s.shake > 0 ? (Math.random() - 0.5) * 8 * s.shake * 4 : 0), s.oy + (s.shake > 0 ? (Math.random() - 0.5) * 8 * s.shake * 4 : 0));
       for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) {
@@ -1021,6 +1431,34 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           c.fillRect(px, py, T, T);
         }
       }
+      if (s.storm) for (var _y = 0; _y < ROWS; _y++) for (var _x = 0; _x < COLS; _x++) {
+        var e = Math.min(_x, _y, COLS - 1 - _x, ROWS - 1 - _y);
+        if (e < s.storm.n) {
+          c.fillStyle = Math.random() < 0.04 ? "rgba(233,213,255,0.9)" : "rgba(46,16,101,0.78)";
+          c.fillRect(_x * T, _y * T, T, T);
+        } else if (e === s.storm.n && s.storm.n < 3 && Math.floor(G.t * 5) % 2) {
+          c.fillStyle = "rgba(239,68,68,0.35)";
+          c.fillRect(_x * T, _y * T, T, T);
+        }
+      }
+      if (s.mode === "gold" && !s.gold.held) {
+        var g = s.gold;
+        c.fillStyle = "rgba(253,224,71," + (0.3 + 0.2 * Math.sin(G.t * 6)) + ")";
+        c.beginPath();
+        c.arc(g.x, g.y, T * 0.55, 0, 7);
+        c.fill();
+        rang(c, g.x, g.y, G.t * 3, T * 0.7, "#facc15");
+      }
+      s.decoys.forEach(function (d) {
+        c.fillStyle = d.who.col;
+        c.beginPath();
+        c.arc(d.x, d.y, T * 0.36, 0, 7);
+        c.fill();
+        if (d.who.face) G.img(c, d.who.face, d.x, d.y, T * 0.76);else {
+          c.fillStyle = "#000";
+          G.emoji(c, d.who.em, d.x, d.y + 1, T * 0.61);
+        }
+      });
       s.patches.forEach(function (q) {
         c.globalAlpha = Math.min(1, q.t) * 0.75;
         c.fillStyle = q.k === "fire" ? Math.random() < 0.5 ? "#fb923c" : "#ef4444" : "#bae6fd";
@@ -1029,9 +1467,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         c.fill();
       });
       c.globalAlpha = 1;
-      for (var _y = 0; _y < ROWS; _y++) for (var _x = 0; _x < COLS; _x++) if (s.map[_y][_x] === "#") {
-        var _px = _x * T,
-          _py = _y * T;
+      for (var _y2 = 0; _y2 < ROWS; _y2++) for (var _x2 = 0; _x2 < COLS; _x2++) if (s.map[_y2][_x2] === "#") {
+        var _px = _x2 * T,
+          _py = _y2 * T;
         c.fillStyle = "#5b4630";
         c.fillRect(_px, _py, T, T);
         c.fillStyle = "#8a6b47";
@@ -1055,8 +1493,21 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         return a.y - b.y;
       }).forEach(function (f) {
         if (!f.alive) return;
+        if (f.fake) return bush(f.x, f.y);
         var a = Math.atan2(f.fy, f.fx),
           R = T * 0.36;
+        if (s.mode === "gold" && s.gold.held === f) {
+          c.strokeStyle = "#facc15";
+          c.lineWidth = 4;
+          c.beginPath();
+          c.arc(f.x, f.y, R * 1.6 + Math.sin(G.t * 8) * 2, 0, 7);
+          c.stroke();
+          rang(c, f.x, f.y - R * 2, G.t * 3, T * 0.45, "#facc15");
+        }
+        if (f.conf > 0) {
+          c.fillStyle = "#000";
+          G.emoji(c, "😵", f.x + R, f.y - R * 1.3, R * 1.1);
+        }
         if (f.dashT > 0) {
           c.strokeStyle = "rgba(255,255,255,0.6)";
           c.lineWidth = R;
@@ -1135,19 +1586,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           rang(c, r.x, r.y, r.rot, T * 0.55, r.o.who.col);
         }
       });
-      for (var _y2 = 0; _y2 < ROWS; _y2++) for (var _x2 = 0; _x2 < COLS; _x2++) if (s.map[_y2][_x2] === "b") {
-        var _px2 = (_x2 + 0.5) * T,
-          _py2 = (_y2 + 0.5) * T;
-        c.fillStyle = "#2f8f46";
-        c.beginPath();
-        c.arc(_px2 - T * 0.2, _py2 + T * 0.1, T * 0.36, 0, 7);
-        c.arc(_px2 + T * 0.2, _py2 + T * 0.1, T * 0.36, 0, 7);
-        c.arc(_px2, _py2 - T * 0.15, T * 0.4, 0, 7);
-        c.fill();
-        c.fillStyle = "#46b05f";
-        c.beginPath();
-        c.arc(_px2 - T * 0.05, _py2 - T * 0.2, T * 0.2, 0, 7);
-        c.fill();
+      for (var _y3 = 0; _y3 < ROWS; _y3++) for (var _x3 = 0; _x3 < COLS; _x3++) if (s.map[_y3][_x3] === "b") {
+        bush((_x3 + 0.5) * T, (_y3 + 0.5) * T);
       }
       if (p.alive && p.hid) {
         c.strokeStyle = p.who.col;
@@ -1187,8 +1627,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       G.hud(c, "", "", "", {
         h: HUD
       });
-      s.f.forEach(function (f, i) {
-        var x = W * (i + 0.5) / 4;
+      var duo = s.mode === "teams" || s.mode === "seek";
+      (duo ? [s.f[0], s.f[3], s.f[1], s.f[2]] : s.f).forEach(function (f, i) {
+        var x = W * (i + 0.5) / 4 + (duo ? i < 2 ? -6 : 6 : 0);
         c.globalAlpha = f.alive ? 1 : 0.4;
         c.fillStyle = f.who.col;
         c.beginPath();
@@ -1198,7 +1639,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           c.fillStyle = "#000";
           G.emoji(c, f.who.em, x - 22, HUD / 2 + 1, 17);
         }
-        G.text(c, String(f.pts), x, HUD / 2 - 5, 12, "#fff", "left");
+        G.text(c, String(Math.floor(s.tp[f.team])), x, HUD / 2 - 5, 12, "#fff", "left");
         c.fillStyle = "#000";
         f.pw.forEach(function (k, j) {
           return G.emoji(c, PW[k][0], x + 5 + j * 12, HUD / 2 + 11, 10);
@@ -1226,7 +1667,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           c.arc(b.x, b.y, b.r, 0, 7);
           c.fill();
           c.fillStyle = "#000";
-          G.emoji(c, b.k === "throw" && p.has <= 0 ? "↩️" : b.em, b.x, b.y + 1, b.r * 0.9);
+          G.emoji(c, b.k === "throw" && p.hider ? "🌳" : b.k === "throw" && p.has <= 0 ? "↩️" : b.em, b.x, b.y + 1, b.r * 0.9);
           c.globalAlpha = 1;
         });
       } else {
@@ -1234,13 +1675,24 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         G.text(c, "Z SLASH   X DASH", W / 2, H - CTRL / 2 + 12, 9, "rgba(255,255,255,0.7)");
       }
       var my = s.oy + ROWS * T * 0.42;
+      var seek = s.mode === "seek",
+        mine = s.last && s.last.team === p.team;
+      if (duo) G.text(c, "VS", W / 2, HUD / 2, 9, "rgba(255,255,255,0.6)");
       if (s.phase === "intro") {
-        G.banner(c, "ROUND " + s.round, "#ffd23f", my);
-        G.text(c, "FIRST TO " + GOAL, W / 2, my + 34, 11, "#fff");
+        G.banner(c, seek ? p.hider ? "YOU HIDE!" : "YOU SEEK!" : s.mode === "gold" ? "GRAB THE GOLD" : "ROUND " + s.round, "#ffd23f", my);
+        G.text(c, seek ? p.hider ? "STAND STILL TO BE A BUSH" : "FIND THEM IN 30 SECONDS" : s.mode === "gold" ? "HOLD IT TO FILL UP TO " + GOAL : "FIRST TO " + GOAL, W / 2, my + 34, 10, "#fff");
       } else if (s.phase === "end") {
-        G.banner(c, s.last ? s.last === p ? "YOU WIN IT!" : s.last.who.name + "!" : "DRAW!", s.last ? s.last.who.col : "#fff", my);
-        if (s.last) G.text(c, "LAST ONE STANDING +1", W / 2, my + 34, 10, "#fff");
-      } else if (!p.alive) G.text(c, "YOU'RE OUT  >>", W / 2, s.oy + 14, 10, "#fff");
+        G.banner(c, !s.last ? "DRAW!" : seek ? s.left ? s.left + " STILL HIDDEN!" : "ALL FOUND!" : s.mode === "gold" ? mine ? "GOLD IS YOURS!" : s.last.who.name + " WINS!" : mine ? duo ? "YOUR TEAM!" : "YOU WIN IT!" : s.last.who.name + "!", s.last ? s.last.who.col : "#fff", my);
+        if (s.last && s.mode !== "gold") G.text(c, seek ? s.left ? "HIDERS +" + s.left * 2 : "SEEKERS GOT THEM" : "LAST ONE STANDING +1", W / 2, my + 34, 10, "#fff");
+      } else {
+        if (seek) G.text(c, (p.hider ? "HIDE  0:" : "SEEK  0:") + String(clamp(Math.ceil(32.5 - s.rt), 0, 30)).padStart(2, "0"), W / 2, s.oy - 12 > HUD + 8 ? s.oy - 12 : s.oy + 12, 11, s.rt > 26.5 ? "#f87171" : "#fff");
+        if (counting(s, p)) {
+          c.fillStyle = "rgba(10,14,12,0.96)";
+          c.fillRect(s.ox, s.oy, COLS * T, ROWS * T);
+          G.banner(c, "NO PEEKING  " + Math.ceil(2.5 - s.rt), "#ffd23f", my);
+        }
+        if (!p.alive) G.text(c, s.mode === "gold" ? "BACK IN " + Math.max(1, Math.ceil(p.rs)) : "YOU'RE OUT  >>", W / 2, s.oy + (seek ? 30 : 14), 10, "#fff");
+      }
     }
   });
 })();
