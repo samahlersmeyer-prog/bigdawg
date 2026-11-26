@@ -104,6 +104,8 @@ function dropDare(d) {
   renderArcSub();
 }
 var MEDALS = {
+  boom: [500, 2000, 2800],
+  cab: [300, 600, 1000],
   zoomies: [10, 30, 60],
   snake: [10, 25, 45],
   fetch: [500, 1500, 3500],
@@ -933,6 +935,8 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  boom: ["new", "2026-11-26"],
+  cab: ["new", "2026-11-26"],
   dash: ["upd", "2026-11-26"],
   blumji: ["upd", "2026-11-26"],
   pupshot: ["upd", "2026-11-26"],
@@ -987,12 +991,12 @@ var ARC_GROUPS = {
     icon: "🏃",
     name: "Run & Jump",
     sub: "Reflexes. Don't crash.",
-    keys: ["mad", "fall", "cliff", "hook", "dash", "drive", "hop", "jump", "zoomies", "snake", "blumji", "pupshot", "harvest"]
+    keys: ["cab", "mad", "fall", "cliff", "hook", "dash", "drive", "hop", "jump", "zoomies", "snake", "blumji", "pupshot", "harvest"]
   }, {
     icon: "💥",
     name: "Blast & Battle",
     sub: "Shoot, smash, defend.",
-    keys: ["dlords", "smash", "pop", "td", "dvz"]
+    keys: ["boom", "dlords", "smash", "pop", "td", "dvz"]
   }, {
     icon: "🧠",
     name: "Chill & Think",
@@ -3264,6 +3268,22 @@ document.addEventListener("click", function (e) {
   });
 })();
 defGameMeta([{
+  "file": "g_boom.js",
+  "key": "boom",
+  "name": "Boomerang Dawgs",
+  "icon": "🪃",
+  "blurb": "Throw, slash, dash. One hit and you're out. First to 10.",
+  "how": "A boomerang brawl against Mittens, Rusty and Bao. One hit knocks anyone out. Drag the left side of the screen to move. THROW: hold to wind up a longer throw and let go to fling it the way you're facing. It bounces off walls and curves back to you. Empty-handed? Hold THROW to call it back, and it can hit someone on the way home. SLASH cuts anyone right in front of you and bats flying boomerangs away. DASH is a quick burst that also gets you across water (walk into water and you're out). Bushes hide you. Grab scrolls for power-ups that last the whole match: you can hold 3, and fire and ice don't mix. +1 for every knockout and +1 for being the last one standing. First to 10 wins. On a keyboard: arrows or WASD to move, Space to throw, Z to slash, X to dash.",
+  "max": 9999
+}, {
+  "file": "g_cab.js",
+  "key": "cab",
+  "name": "Cab Dawg",
+  "icon": "🚕",
+  "blurb": "Pick up riders, beat their clock, upgrade the cab.",
+  "how": "You drive a cab around the city for 5 days. Hold the left or right side of the screen to steer. The gas is automatic, and holding both sides brakes and backs up (on a keyboard: up arrow or W for gas, left and right to steer, down to brake). Pull up next to a waving rider and the cab stops to let them in. The matching arrow points to their pin: get there before their timer runs out or they walk. Faster rides tip better, and bumps cost you the tip. Hitting traffic costs 2 seconds. Gold riders are VIPs: double fare, tighter clock. Parks are a slow shortcut. When the day's clock runs out, spend what you made on more seats, a faster engine, grippier tires, a longer shift or a better meter. Your score is every dollar you earn Monday to Friday.",
+  "max": 99999
+}, {
   "file": "g_unfair.js",
   "key": "unfair",
   "name": "Unfair Dawg",
