@@ -2,10 +2,12 @@
 // A stick-figure dawg swings from hooks. Hold to grab the nearest hook ahead, let go to fling.
 // Don't fall in the pit. Score = distance + bones + flips.
 // World x grows right, world y is screen y (down) shifted by camY (camera only rises when you fly high).
+// Swing push while hooked (px/s²): the base, plus a wind-up for every second you stay on one hook, plus more per full circle.
+const ASSIST = 260, WIND = 250, SPIN = 300;
 defGame({
   key: "hook", name: "Hook Dawg", icon: "🪝", max: 99999,
   blurb: "Hold to hook, let go to fling. Swing forever.",
-  how: "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
+  how: "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Keep holding one hook and the swing winds up until you go all the way around; every full circle spins you faster, then let go to launch. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
   reset(G) {
     const W = G.W, H = G.H;
     const s = G.s = {
@@ -62,7 +64,7 @@ defGame({
     if (s.auto && s.hook) return; // already hanging on the first hook
     const h = this.target(G); if (!h) return;
     s.hook = h; s.len = Math.max(70, Math.hypot(p.x - h.x, p.y - h.y)); s.auto = false;
-    s.airRot = 0; G.sfx("pop");
+    s.airRot = 0; s.taut = false; s.sweep = 0; s.loops = 0; s.hang = 0; G.sfx("pop");
   },
   release(G) {
     const s = G.s, p = s.p; s.held = false;
@@ -78,24 +80,32 @@ defGame({
     for (let i = 0; i < steps; i++) {
       p.vy += 1500 * h;
       if (s.hook) {
-        // a little swing assist so momentum doesn't die
+        // swing assist so momentum builds; once you're going all the way around, each full circle spins you up harder
         const dx = p.x - s.hook.x, dy = p.y - s.hook.y, d = Math.hypot(dx, dy) || 1;
         const tx = -dy / d, ty = dx / d, along = p.vx * tx + p.vy * ty;
-        const push = Math.sign(along) * 260 * h;
+        if (along * (s.sweep || 0) < 0) { s.sweep = 0; s.loops = 0; } // swung back the other way
+        s.sweep = (s.sweep || 0) + along / d * h;
+        const n = Math.floor(Math.abs(s.sweep) / (Math.PI * 2));
+        if (n > (s.loops || 0)) { s.loops = n; G.sfx("pop"); s.pops.push({ x: s.hook.x, y: s.hook.y - 30, t: 0.7, txt: "SPIN x" + n }); }
+        s.hang = (s.hang || 0) + h;
+        const push = Math.sign(along) * (ASSIST + WIND * Math.min(3, s.hang) + SPIN * Math.min(3, s.loops || 0)) * h;
         p.vx += tx * push; p.vy += ty * push;
       }
       p.x += p.vx * h; p.y += p.vy * h;
       if (s.hook) {
         const dx = p.x - s.hook.x, dy = p.y - s.hook.y, d = Math.hypot(dx, dy) || 1;
-        if (d > s.len) {
+        // once the rope has pulled tight it stays tight (a stiff rope), so a big swing carries over the top into full circles
+        if (d >= s.len) s.taut = true;
+        if (d > s.len || s.taut) {
           const nx = dx / d, ny = dy / d;
           p.x = s.hook.x + nx * s.len; p.y = s.hook.y + ny * s.len;
           const out = p.vx * nx + p.vy * ny;
-          if (out > 0) { p.vx -= out * nx; p.vy -= out * ny; }
+          if (out > 0 || s.taut) { p.vx -= out * nx; p.vy -= out * ny; }
         }
       }
     }
-    const sp = Math.hypot(p.vx, p.vy); if (sp > 1400) { p.vx *= 1400 / sp; p.vy *= 1400 / sp; }
+    // top speed: 1100 on a plain swing, 150 more for each full circle (up to 1700); a launch keeps what it had
+    const cap = s.hook ? Math.min(1700, 1100 + 150 * (s.loops || 0)) : 1700, sp = Math.hypot(p.vx, p.vy); if (sp > cap) { p.vx *= cap / sp; p.vy *= cap / sp; }
     // body rotation: hang along the rope, tumble in the air
     if (s.hook) {
       const want = Math.atan2(p.x - s.hook.x, -(p.y - s.hook.y)) + Math.PI;

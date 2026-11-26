@@ -1,13 +1,16 @@
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+var ASSIST = 260,
+  WIND = 250,
+  SPIN = 300;
 defGame({
   key: "hook",
   name: "Hook Dawg",
   icon: "🪝",
   max: 99999,
   blurb: "Hold to hook, let go to fling. Swing forever.",
-  how: "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
+  how: "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Keep holding one hook and the swing winds up until you go all the way around; every full circle spins you faster, then let go to launch. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
   reset: function reset(G) {
     var W = G.W,
       H = G.H;
@@ -135,6 +138,10 @@ defGame({
     s.len = Math.max(70, Math.hypot(p.x - h.x, p.y - h.y));
     s.auto = false;
     s.airRot = 0;
+    s.taut = false;
+    s.sweep = 0;
+    s.loops = 0;
+    s.hang = 0;
     G.sfx("pop");
   },
   release: function release(G) {
@@ -178,7 +185,24 @@ defGame({
         var tx = -dy / d,
           ty = dx / d,
           along = p.vx * tx + p.vy * ty;
-        var push = Math.sign(along) * 260 * h;
+        if (along * (s.sweep || 0) < 0) {
+          s.sweep = 0;
+          s.loops = 0;
+        }
+        s.sweep = (s.sweep || 0) + along / d * h;
+        var n = Math.floor(Math.abs(s.sweep) / (Math.PI * 2));
+        if (n > (s.loops || 0)) {
+          s.loops = n;
+          G.sfx("pop");
+          s.pops.push({
+            x: s.hook.x,
+            y: s.hook.y - 30,
+            t: 0.7,
+            txt: "SPIN x" + n
+          });
+        }
+        s.hang = (s.hang || 0) + h;
+        var push = Math.sign(along) * (ASSIST + WIND * Math.min(3, s.hang) + SPIN * Math.min(3, s.loops || 0)) * h;
         p.vx += tx * push;
         p.vy += ty * push;
       }
@@ -188,23 +212,25 @@ defGame({
         var _dx = p.x - s.hook.x,
           _dy = p.y - s.hook.y,
           _d = Math.hypot(_dx, _dy) || 1;
-        if (_d > s.len) {
+        if (_d >= s.len) s.taut = true;
+        if (_d > s.len || s.taut) {
           var nx = _dx / _d,
             ny = _dy / _d;
           p.x = s.hook.x + nx * s.len;
           p.y = s.hook.y + ny * s.len;
           var out = p.vx * nx + p.vy * ny;
-          if (out > 0) {
+          if (out > 0 || s.taut) {
             p.vx -= out * nx;
             p.vy -= out * ny;
           }
         }
       }
     }
-    var sp = Math.hypot(p.vx, p.vy);
-    if (sp > 1400) {
-      p.vx *= 1400 / sp;
-      p.vy *= 1400 / sp;
+    var cap = s.hook ? Math.min(1700, 1100 + 150 * (s.loops || 0)) : 1700,
+      sp = Math.hypot(p.vx, p.vy);
+    if (sp > cap) {
+      p.vx *= cap / sp;
+      p.vy *= cap / sp;
     }
     if (s.hook) {
       var want = Math.atan2(p.x - s.hook.x, -(p.y - s.hook.y)) + Math.PI;

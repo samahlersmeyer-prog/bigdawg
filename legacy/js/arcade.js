@@ -935,6 +935,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "sevens", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  hook: ["upd", "2026-11-26"],
   sevens: ["new", "2026-11-26"],
   boom: ["new", "2026-11-26"],
   cab: ["new", "2026-11-26"],
@@ -3329,7 +3330,7 @@ defGameMeta([{
   "name": "Hook Dawg",
   "icon": "🪝",
   "blurb": "Hold to hook, let go to fling. Swing forever.",
-  "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
+  "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Keep holding one hook and the swing winds up until you go all the way around; every full circle spins you faster, then let go to launch. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
   "max": 99999
 }, {
   "file": "g_airhockey.js",
