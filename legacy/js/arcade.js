@@ -933,6 +933,7 @@ var ARC_BLURB = {
 };
 var ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku", "euchre", "crib", "crazy", "rummy", "skipbo", "solitaire", "topdogs", "leash", "boneball", "mahjong", "party", "pupman", "pupshot", "blumji", "squad", "dig", "mjrush", "mjzen", "trap", "dash", "zoomies", "snake", "fetch", "mad", "drive", "hop", "blocks", "cross", "harvest", "td", "dvz", "pop", "trail", "putt", "putt18", "smash", "jump", "drip", "seven", "duck", "derby", "dawgball", "kickret", "fg", "hoops", "pks", "tennis", "volley", "punch", "airhockey", "golf", "golf18", "archery", "darts", "bowl", "pool", "swim", "shred"];
 var FRESH = {
+  feud: ["new", "2026-11-26"],
   mad: ["new", "2026-11-14"],
   seven: ["upd", "2026-11-08"],
   scapes: ["new", "2026-11-08"],
@@ -1044,11 +1045,13 @@ function renderArcSub() {
     if ($("sub-" + cat)) $("sub-" + cat).textContent = txt;
   });
 }
+var FEUD_END = "2026-11-29",
+  FEUD_ON = KEY <= FEUD_END;
 var DEN_SECTIONS = [{
   icon: "✏️",
   name: "Words",
   sub: "Crosswords, chains and word hunts.",
-  keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"]
+  keys: (FEUD_ON ? ["feud"] : []).concat(["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"])
 }, {
   icon: "🧩",
   name: "Logic",
@@ -1102,6 +1105,9 @@ function denStatus(k) {
   return n === 3 ? ["Done", true, "All 3 solved"] : n ? ["Continue", false, "".concat(n, " of 3 solved")] : ["Play", false, null];
 }
 var DEN_ICONS = {
+  feud: [5, 14.5, 24].map(function (y, i) {
+    return "<rect x=\"4\" y=\"".concat(y, "\" width=\"28\" height=\"7.5\" rx=\"2.5\" fill=\"").concat(i === 1 ? "#e9b949" : "#1f3a8a", "\"/>");
+  }).join(""),
   midi: '<rect x="3" y="3" width="30" height="30" rx="2" fill="var(--ink)"/>' + [[0, 0], [1, 0], [2, 0], [4, 0], [0, 1], [2, 1], [3, 1], [4, 1], [0, 2], [1, 2], [3, 2], [4, 2], [0, 3], [1, 3], [2, 3], [4, 3], [1, 4], [2, 4], [3, 4], [4, 4]].map(function (_ref3) {
     var _ref4 = _slicedToArray(_ref3, 2),
       x = _ref4[0],
@@ -1436,7 +1442,77 @@ function denPeople() {
   });
   return Object.values(ids);
 }
+var FEUD_SURVEY_END = "2026-11-28";
+var FEUD_QS = ["Besides the turkey, name something that gets stuffed on Thanksgiving.", "Name the person most likely to fall asleep on the couch before the pie comes out.", "Name an excuse people use to get out of doing the dishes.", "Name a dish that shows up every year even though nobody asked for it.", "Name something the dog is hoping falls off the table."];
+var feudSvKey = function feudSvKey() {
+  return "bdd:feudsv:" + (me ? me.id : "");
+};
+function renderFeudSurvey() {
+  var b = $("feud-survey");
+  if (!b) return;
+  b.hidden = !(me && KEY <= FEUD_SURVEY_END && !store.get(feudSvKey()));
+  if (b.hidden) return;
+  b.innerHTML = "";
+  var tx = el("span", "ds-tx");
+  tx.append(el("b", null, "🦃 Crew Survey"), el("span", "ds-sub", "5 quick questions. Your answers build Sunday's Feud."));
+  b.append(tx, el("span", "ds-chev", "›"));
+}
+function openFeudSurvey() {
+  var ins = FEUD_QS.map(function (q, i) {
+    var lab = el("label", "fs-q"),
+      inp = el("input", "fs-in");
+    inp.type = "text";
+    inp.maxLength = 40;
+    inp.autocomplete = "off";
+    inp.enterKeyHint = i < 4 ? "next" : "send";
+    lab.append(el("span", null, "".concat(i + 1, ". ").concat(q)), inp);
+    return {
+      lab: lab,
+      inp: inp
+    };
+  });
+  var go = el("button", "pill solid", "Lock in my answers"),
+    msg = el("p", "note center");
+  var send = function send() {
+    var a = ins.map(function (x) {
+        return x.inp.value.trim();
+      }),
+      miss = a.findIndex(function (x) {
+        return !x;
+      });
+    if (miss >= 0) {
+      msg.textContent = "Answer all 5 first.";
+      ins[miss].inp.focus();
+      return;
+    }
+    go.disabled = true;
+    msg.textContent = "Sending…";
+    var done = function done() {
+      store.set(feudSvKey(), 1);
+      closeModal();
+      renderFeudSurvey();
+      toast("Locked in! See your answers on Sunday's Feud 🦃", 2400);
+    };
+    API("sendFeudSurvey", me.id, a).then(done)["catch"](function (e) {
+      if (/already answered/.test(errMsg(e))) return done();
+      go.disabled = false;
+      msg.textContent = /Unknown call/.test(errMsg(e)) ? "The survey is still warming up. Try again in a few minutes." : errMsg(e);
+    });
+  };
+  ins.forEach(function (x, i) {
+    return x.inp.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      if (i < 4) ins[i + 1].inp.focus();else send();
+    });
+  });
+  go.addEventListener("click", send);
+  openModal([el("h2", null, "Crew Survey"), el("p", "sub", "One short answer each, first thing that comes to mind. Nobody sees who said what. Open through Saturday.")].concat(ins.map(function (x) {
+    return x.lab;
+  }), [go, msg]));
+}
+if ($("feud-survey")) $("feud-survey").addEventListener("click", openFeudSurvey);
 function renderDenStrip() {
+  renderFeudSurvey();
   var b = $("den-strip");
   if (!b) return;
   b.innerHTML = "";
@@ -3812,6 +3888,17 @@ defGameMeta([{
   "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.",
   "cat": "sports",
   "max": 9999
+}]);
+if (FEUD_ON) defGameMeta([{
+  file: "g_feud.js",
+  key: "feud",
+  name: "Feud",
+  icon: "🦃",
+  blurb: "Survey says! Through Sunday.",
+  how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Here through Sunday only.",
+  cat: "den",
+  puzzle: true,
+  max: 1000
 }]);
 Object.values(GAMEDEFS).forEach(function (d) {
   ARC[d.key] = {

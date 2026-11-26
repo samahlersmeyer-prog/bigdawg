@@ -372,7 +372,7 @@ const ARC_ORDER = ["unfair", "pede", "cube", "sgroups", "hive", "pips", "sudoku"
 // Sections inside the Arcade (4) and Sports (3) hubs. Order inside a section follows ARC_ORDER.
 // NEW / UPDATED tags. When a game ships or gets a real upgrade, add a line: key: ["new" or "upd", "YYYY-MM-DD"].
 // The tag shows on its card (and a NEW/UPDATED flag on the home hub button) for 7 days, then drops off on its own.
-const FRESH = { mad: ["new", "2026-11-14"], seven: ["upd", "2026-11-08"], scapes: ["new", "2026-11-08"], skipbo: ["new", "2026-11-07"], rummy: ["upd", "2026-11-07"], unfair: ["new", "2026-11-07"], pede: ["new", "2026-11-07"], cube: ["new", "2026-11-07"], fall: ["new", "2026-11-06"], cliff: ["new", "2026-11-06"], hook: ["upd", "2026-11-26"], waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["upd", "2026-11-07"], dawgball: ["upd", "2026-11-02"] };
+const FRESH = { feud: ["new", "2026-11-26"], mad: ["new", "2026-11-14"], seven: ["upd", "2026-11-08"], scapes: ["new", "2026-11-08"], skipbo: ["new", "2026-11-07"], rummy: ["upd", "2026-11-07"], unfair: ["new", "2026-11-07"], pede: ["new", "2026-11-07"], cube: ["new", "2026-11-07"], fall: ["new", "2026-11-06"], cliff: ["new", "2026-11-06"], hook: ["upd", "2026-11-26"], waffle: ["new", "2026-11-04"], guess: ["new", "2026-11-04"], midi: ["new", "2026-11-04"], links: ["new", "2026-11-04"], dlords: ["upd", "2026-11-07"], dawgball: ["upd", "2026-11-02"] };
 function freshTag(k) { const f = FRESH[k]; if (!f) return null; const age = (Date.now() - new Date(f[1] + "T00:00:00").getTime()) / 864e5; return age >= 0 && age < 7 ? f[0] : null; }
 function freshEl(k, cls) { const t = freshTag(k); return t ? el("span", "fresh " + t + (cls ? " " + cls : ""), t === "new" ? "NEW" : "UPDATED") : null; }
 function markFreshHubs() {
@@ -413,8 +413,10 @@ function renderArcSub() {
 // The Den's dailies, in two sections, in a fixed order (re-ranked by hand every month or so from play counts, so the
 // order doesn't shift under people's thumbs day to day). NEW games are pinned first for their first week.
 // Finished puzzles sink to the bottom of their section as a slim row.
+// Feud: a temp Den game for Thanksgiving weekend 2026 (games/g_feud.js). After FEUD_END it isn't registered at all.
+const FEUD_END = "2026-11-29", FEUD_ON = KEY <= FEUD_END;
 const DEN_SECTIONS = [
-  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: ["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"] },
+  { icon: "✏️", name: "Words", sub: "Crosswords, chains and word hunts.", keys: (FEUD_ON ? ["feud"] : []).concat(["scapes", "links", "guess", "hive", "waffle", "midi", "sgroups"]) },
   { icon: "🧩", name: "Logic", sub: "Numbers, grids and paths.", compact: true, keys: ["leash", "topdogs", "mahjong", "sudoku", "boneball", "pips"] }
 ];
 const DEN_PUZ = DEN_SECTIONS.flatMap(g => g.keys);
@@ -433,6 +435,7 @@ function denStatus(k) {
 }
 // Little drawn icons for the Den dailies, in the same spirit as the core four's (no emoji in a big box).
 const DEN_ICONS = {
+  feud: [5, 14.5, 24].map((y, i) => `<rect x="4" y="${y}" width="28" height="7.5" rx="2.5" fill="${i === 1 ? "#e9b949" : "#1f3a8a"}"/>`).join(""),
   midi: '<rect x="3" y="3" width="30" height="30" rx="2" fill="var(--ink)"/>' + [[0,0],[1,0],[2,0],[4,0],[0,1],[2,1],[3,1],[4,1],[0,2],[1,2],[3,2],[4,2],[0,3],[1,3],[2,3],[4,3],[1,4],[2,4],[3,4],[4,4]].map(([x, y]) => `<rect x="${4.5 + x * 5.6}" y="${4.5 + y * 5.6}" width="4.6" height="4.6" fill="var(--bg)"/>`).join(""),
   waffle: [0,1,2,3,4].flatMap(y => [0,1,2,3,4].filter(x => !(x % 2 && y % 2)).map(x => `<rect x="${3 + x * 6.2}" y="${3 + y * 6.2}" width="5.2" height="5.2" rx="1" fill="${(x + y * 3) % 4 ? "var(--hit)" : "var(--near)"}"/>`)).join(""),
   links: '<path d="M18 9v18" stroke="var(--ink)" stroke-width="2.5"/>' + [3, 14, 25].map((y, i) => `<rect x="6" y="${y}" width="24" height="8" rx="4" fill="${i === 1 ? "var(--near)" : "var(--hit)"}"/>`).join(""),
@@ -556,7 +559,44 @@ function denPeople() {
   const ids = {}; DEN_PUZ.forEach(k => ((arcade && arcade.games && arcade.games[k] && arcade.games[k].today) || []).forEach(x => { if (!me || x.id !== me.id) ids[x.id] = x.name; }));
   return Object.values(ids);
 }
+// ---- Feud crew survey (Thanksgiving 2026): 5 questions, answered once, open through Saturday. The answers stay
+// secret on the server until Sunday, when g_feud.js turns them into the Crew Edition board. ----
+const FEUD_SURVEY_END = "2026-11-28";
+const FEUD_QS = [
+  "Besides the turkey, name something that gets stuffed on Thanksgiving.",
+  "Name the person most likely to fall asleep on the couch before the pie comes out.",
+  "Name an excuse people use to get out of doing the dishes.",
+  "Name a dish that shows up every year even though nobody asked for it.",
+  "Name something the dog is hoping falls off the table."
+];
+const feudSvKey = () => "bdd:feudsv:" + (me ? me.id : "");
+function renderFeudSurvey() {
+  const b = $("feud-survey"); if (!b) return;
+  b.hidden = !(me && KEY <= FEUD_SURVEY_END && !store.get(feudSvKey())); if (b.hidden) return;
+  b.innerHTML = ""; const tx = el("span", "ds-tx");
+  tx.append(el("b", null, "🦃 Crew Survey"), el("span", "ds-sub", "5 quick questions. Your answers build Sunday's Feud."));
+  b.append(tx, el("span", "ds-chev", "›"));
+}
+function openFeudSurvey() {
+  const ins = FEUD_QS.map((q, i) => { const lab = el("label", "fs-q"), inp = el("input", "fs-in"); inp.type = "text"; inp.maxLength = 40; inp.autocomplete = "off"; inp.enterKeyHint = i < 4 ? "next" : "send"; lab.append(el("span", null, `${i + 1}. ${q}`), inp); return { lab, inp }; });
+  const go = el("button", "pill solid", "Lock in my answers"), msg = el("p", "note center");
+  const send = () => {
+    const a = ins.map(x => x.inp.value.trim()), miss = a.findIndex(x => !x);
+    if (miss >= 0) { msg.textContent = "Answer all 5 first."; ins[miss].inp.focus(); return; }
+    go.disabled = true; msg.textContent = "Sending…";
+    const done = () => { store.set(feudSvKey(), 1); closeModal(); renderFeudSurvey(); toast("Locked in! See your answers on Sunday's Feud 🦃", 2400); };
+    API("sendFeudSurvey", me.id, a).then(done).catch(e => {
+      if (/already answered/.test(errMsg(e))) return done();
+      go.disabled = false; msg.textContent = /Unknown call/.test(errMsg(e)) ? "The survey is still warming up. Try again in a few minutes." : errMsg(e);
+    });
+  };
+  ins.forEach((x, i) => x.inp.addEventListener("keydown", e => { if (e.key !== "Enter") return; if (i < 4) ins[i + 1].inp.focus(); else send(); }));
+  go.addEventListener("click", send);
+  openModal([el("h2", null, "Crew Survey"), el("p", "sub", "One short answer each, first thing that comes to mind. Nobody sees who said what. Open through Saturday.")].concat(ins.map(x => x.lab), [go, msg]));
+}
+if ($("feud-survey")) $("feud-survey").addEventListener("click", openFeudSurvey);
 function renderDenStrip() {
+  renderFeudSurvey();
   const b = $("den-strip"); if (!b) return; b.innerHTML = "";
   if (!arcade && me && !arcBusy) setTimeout(() => { if (!arcade) refreshArcade(true); }, 1200);
   const ks = DEN_PUZ.filter(k => ARC[k]), done = ks.filter(k => denStatus(k)[1]).length;
@@ -1251,6 +1291,8 @@ defGameMeta([{"file": "g_unfair.js", "key": "unfair", "name": "Unfair Dawg", "ic
 {"file": "g_trail.js", "key": "trail", "name": "Dawg Trail", "icon": "🐂", "blurb": "Wagon-trail adventure. Get the pack west.", "how": "Lead 4 pups 1,200 miles to the Great Dog Park. Tap TRAVEL to roll on a day. Fast pace covers more ground but eats more kibble and gets pups sick. HUNT to catch squirrels for kibble (tap them before they run off). REST heals sick pups. Cross rivers, shop at forts. Score: pups who make it, kibble and treats left, plus a speed bonus.", "max": 9999},
 {"file": "g_trap.js", "key": "trap", "name": "Pup Trap", "icon": "🧀", "blurb": "Push crates. Trap the cats. Eat the cheese.", "how": "You're the pup. Tap or hold on the side you want to move. Walk into crates to push the whole row (if there's room at the end). Box in the cats: when EVERY cat on the board is stuck, they all turn into 🧀 cheese. Eat cheese for points. Clear 3 waves to finish a level. Gray rocks don't move. Get caught 3 times and it's over.", "max": 999999},
 {"file": "g_volley.js", "key": "volley", "name": "Beach Dawgs", "icon": "🏐", "blurb": "2-on-2 beach volleyball. Bump, set, SPIKE.", "how": "Hold and drag anywhere to run: your dawg follows your finger. The big shadow on the sand shows where the ball will land, so get under it. Tap when the ball reaches your head to BUMP it to your pup. The pup sets it up by the net: tap to jump and SPIKE (hit it at the top of your jump). Tap to serve. Rally scoring, first to 11. Points x100, +500 for a win, +25 per spike kill.", "cat": "sports", "max": 9999}]);
+
+if (FEUD_ON) defGameMeta([{ file: "g_feud.js", key: "feud", name: "Feud", icon: "🦃", blurb: "Survey says! Through Sunday.", how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Here through Sunday only.", cat: "den", puzzle: true, max: 1000 }]);
 
 // Register the newer games with the shared arcade lists.
 Object.values(GAMEDEFS).forEach(d => { ARC[d.key] = { name: d.name, icon: d.icon, how: d.how, cat: d.cat || "arcade", puzzle: !!d.puzzle, blurb: d.blurb || "" }; ARC_BLURB[d.key] = d.blurb; if (aBest[d.key] == null) aBest[d.key] = 0; });
