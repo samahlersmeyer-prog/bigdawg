@@ -1281,11 +1281,12 @@ const FEUD_CLOSE = '2026-11-29';
 const FEUD_HEADERS = ['date', 'playerId', 'a1', 'a2', 'a3', 'a4', 'a5'];
 function feudSheet_() { return tabSheet_('FeudSurvey', FEUD_HEADERS, 'B:G'); }
 function feudOpen_() { return asDateKey_(new Date(), tz_()) < FEUD_CLOSE; }
-function getFeudSurvey(id) {
+// host = true: Feud's host mode, where one person runs a game for the room off the answers so far.
+function getFeudSurvey(id, host) {
   id = cleanId_(id);
   const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
   const out = { n: rows.length, mine: rows.some(r => String(r[1]) === id), open: feudOpen_() };
-  if (!out.open) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+  if (!out.open || host === true) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
   return out;
 }
 function sendFeudSurvey(id, answers) {

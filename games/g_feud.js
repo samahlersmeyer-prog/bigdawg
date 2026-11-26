@@ -69,10 +69,84 @@
   const got = (s, i) => s.found[i].reduce((a, j) => a + s.qs[i].a[j].pts, 0);
   const qScore = (s, i) => tot(s.qs[i]) ? Math.round(200 * got(s, i) / tot(s.qs[i])) : 0;
   const scoreOf = s => s.qs.reduce((a, q, i) => a + qScore(s, i), 0);
+  // ---- shared drawing and typing bits (solo and host) ----
+  const TOP = 34; // room for the Solo | Host switch
+  const pal = G => { const dk = G.dark(); return { dk, ink: dk ? "#fff" : "#121213", bg: dk ? "#121213" : "#fff", mute: dk ? "#a3a3a8" : "#66666b", line: dk ? "#3a3a3c" : "#d3d6da" }; };
+  const typeKey = (s, k) => { if (k === "<") s.typed = s.typed.slice(0, -1); else if (k === " ") { if (s.typed && !/ $/.test(s.typed) && s.typed.length < 26) s.typed += " "; } else if (s.typed.length < 26) s.typed += k; };
+  // Question and its source line; returns the y where the board starts.
+  function question(G, c, P, q, y) {
+    const qf = G.H < 560 ? 17 : 19; c.font = `700 ${qf}px ${G.TITLE}`; c.fillStyle = P.ink; c.textAlign = "center";
+    wrap(c, q.q, G.W - 32).slice(0, 3).forEach(l => { c.fillText(l, G.W / 2, y); y += qf + 4; });
+    fit(c, q.src, G.W - 28, 11.5, 500, G.UI); c.fillStyle = P.mute; c.fillText(q.src, G.W / 2, y); return y + 16;
+  }
+  // The answer board: two columns, numbered down the left column first.
+  // st(j): 0 hidden, 1 found, 2 shown but missed, 3 hidden with the host's peek. Returns the slot rectangles.
+  function board(G, c, P, q, y, sh, st) {
+    const s = G.s, rows = Math.ceil(q.a.length / 2), gap = 6, cw = (G.W - 24 - gap) / 2;
+    return q.a.map((a, j) => {
+      const col = j < rows ? 0 : 1, x = 12 + col * (cw + gap), yy = y + (j - col * rows) * (sh + gap), v = st(j), mid = yy + sh / 2 + 1;
+      rr(c, x, yy, cw, sh, 8); c.fillStyle = v === 1 ? (s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949") : v === 2 ? (P.dk ? "#2c2c2e" : "#ecece6") : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
+      if (v) {
+        c.fillStyle = v === 1 ? "#2b1a10" : v === 2 ? P.mute : "rgba(255,255,255,.72)"; c.textAlign = "left"; fit(c, a.label, cw - 46, 14, 700, G.UI); c.fillText(a.label, x + 9, mid);
+        c.textAlign = "right"; c.font = `700 14px ${G.UI}`; c.fillText(a.pts, x + cw - 9, mid);
+      } else { c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 ${Math.min(16, sh * 0.5)}px ${G.UI}`; c.fillText(j + 1, x + cw / 2, mid); }
+      return { x, y: yy, w: cw, h: sh, slot: j };
+    });
+  }
+  function strikes(c, P, n, x, y) {
+    for (let k = 0; k < 3; k++) {
+      const xx = x + k * 32, used = k < n;
+      rr(c, xx, y, 26, 26, 6); if (used) { c.fillStyle = "#d64545"; c.fill(); } else { c.lineWidth = 1.5; c.strokeStyle = P.line; c.stroke(); }
+      c.fillStyle = used ? "#fff" : P.line; c.textAlign = "center"; c.font = "700 15px sans-serif"; c.fillText("✕", xx + 13, y + 14);
+    }
+  }
+  // The answer box. Feedback on the last guess shows in the box itself until the next letter.
+  function inputBox(G, c, P, y, hint) {
+    const s = G.s, bx = 14 + (s.shake > 0 ? Math.sin(s.shake * 60) * 5 : 0), bw = G.W - 28, bh = 42;
+    rr(c, bx, y, bw, bh, 8); c.lineWidth = 2; c.strokeStyle = s.typed ? P.ink : P.line; c.stroke();
+    c.textAlign = "left"; c.font = `700 17px ${G.UI}`;
+    if (s.typed) { c.fillStyle = P.ink; c.fillText(s.typed, bx + 12, y + bh / 2 + 1); } else { const m = s.msgT > 0 && s.msg; c.fillStyle = m ? P.ink : P.mute; c.font = `${m ? 600 : 500} 15px ${G.UI}`; c.fillText(m || hint, bx + 12, y + bh / 2 + 1); }
+    if (s.t % 1 < 0.55 && (s.typed || !(s.msgT > 0))) { const tw = s.typed ? (c.font = `700 17px ${G.UI}`, c.measureText(s.typed).width) : 0; c.fillStyle = P.ink; c.fillRect(bx + 13 + tw, y + 10, 2, bh - 20); }
+  }
+  function keys(G, c, P, kbH) {
+    const W = G.W, ky = G.H - kbH, kh = (kbH - 12) / 4 - 6, kw = (W - 12) / 10 - 5;
+    KB.forEach((row, r) => {
+      const ks = row.split(""), wide = k => k === " " ? kw * 5 + 20 : (k === "<" || k === ">") ? kw * 1.5 + 2.5 : kw;
+      let x = (W - ks.reduce((a, k) => a + wide(k) + 5, -5)) / 2;
+      ks.forEach(k => {
+        const w = wide(k), yy = ky + 6 + r * (kh + 6);
+        rr(c, x, yy, w, kh, 5); c.fillStyle = P.dk ? "#818384" : "#d3d6da"; c.fill();
+        c.fillStyle = P.ink; c.font = `700 ${k === "<" || k === ">" || k === " " ? 13 : 16}px ${G.UI}`; c.textAlign = "center";
+        c.fillText(k === "<" ? "⌫" : k === ">" ? "ENTER" : k === " " ? "space" : k, x + w / 2, yy + kh / 2 + 1);
+        G.s.btns.push({ x, y: yy, w, h: kh, key: k }); x += w + 5;
+      });
+    });
+  }
+  // ---- host mode state: one game at a time, kept on this device so a reload picks it back up ----
+  const HK = "bdd:feud:host", TEAMS = ["Team Turkey", "Team Gravy"];
+  let MODE = "solo", HS = null, HD = null;
+  // Crew deck = the crew's survey answers so far. Polls deck = every daily board up to the day
+  // the game started plus the spare board, so hosting never spoils a solo board that hasn't come out yet.
+  const deckOf = h => h.name === "crew" ? crewBoard(h.raw) : [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
+  const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; };
+  const hSave = () => store.set(HK, HS);
+  const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
+  let ac;
+  function tone(type, f, dur, vol) {
+    if (typeof fxOn === "function" && !fxOn()) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime; o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur);
+    } catch (e) {}
+  }
+  const ding = () => { tone("sine", 1568, 0.9, 0.18); tone("sine", 2093, 0.6, 0.09); };
+  const buzzer = () => { tone("sawtooth", 130, 0.8, 0.2); tone("square", 137, 0.8, 0.1); };
   defGame({
     key: "feud", name: "Feud", icon: "🦃", max: 1000, cat: "den", puzzle: true,
     blurb: "Survey says! Through Sunday.",
-    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Here through Sunday only.",
+    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. Here through Sunday only.",
     reset(G) {
       const s = G.s = { typed: "", msg: "", msgT: 0, btns: [], postT: 0, flash: -1, flashT: 0, shake: 0, t: 0 };
       let qs = DAYS[KEY] || DAYS["2026-11-26"];
@@ -127,20 +201,28 @@
     press(G, k) {
       const s = G.s; if (s.done || s.over[s.qi]) return;
       if (k === ">") return this.enter(G);
-      if (k === "<") { s.typed = s.typed.slice(0, -1); return; }
-      if (k === " ") { if (s.typed && !/ $/.test(s.typed) && s.typed.length < 26) s.typed += " "; return; }
-      if (s.typed.length < 26) s.typed += k;
+      typeKey(s, k);
     },
     update(G, dt) {
-      const s = G.s; if (!s.qs) return;
-      s.t += dt;
+      const s = G.s; s.t += dt;
+      if (s.msgT > 0) s.msgT -= dt; if (s.shake > 0) s.shake -= dt; if (s.flashT > 0) s.flashT -= dt; if (s.bigX > 0) s.bigX -= dt; if (s.quitT > 0) s.quitT -= dt;
+      if (MODE === "host" || !s.qs) return;
       if (!s.done) { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
-      if (s.msgT > 0) s.msgT -= dt; if (s.shake > 0) s.shake -= dt; if (s.flashT > 0) s.flashT -= dt;
       if (s.done && !s.posted && s.postT > 0) { s.postT -= dt; if (s.postT <= 0) { s.posted = true; this.persist(G); G.post(scoreOf(s), this.info(G)); } }
     },
     draw(G, c) {
-      const s = G.s, dk = G.dark(), ink = dk ? "#fff" : "#121213", bg = dk ? "#121213" : "#fff", mute = dk ? "#a3a3a8" : "#66666b", line = dk ? "#3a3a3c" : "#d3d6da", W = G.W, H = G.H; s.btns = [];
-      c.fillStyle = bg; c.fillRect(0, 0, W, H); c.textBaseline = "middle";
+      const s = G.s, P = pal(G), { ink, mute } = P, W = G.W, H = G.H; s.btns = [];
+      c.fillStyle = P.bg; c.fillRect(0, 0, W, H); c.textBaseline = "middle";
+      // Solo | Host switch
+      const gw = 168, gx = W / 2 - gw / 2;
+      rr(c, gx, 4, gw, 28, 14); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
+      ["solo", "host"].forEach((m, k) => {
+        const on = MODE === m, x = gx + k * gw / 2;
+        if (on) { rr(c, x + 2, 6, gw / 2 - 4, 24, 12); c.fillStyle = ink; c.fill(); }
+        c.fillStyle = on ? P.bg : mute; c.textAlign = "center"; c.font = `700 13px ${G.UI}`; c.fillText(k ? "Host" : "Solo", x + gw / 4, 19);
+        s.btns.push({ x, y: 0, w: gw / 2, h: 36, k: "mode", m });
+      });
+      if (MODE === "host") return this.hostDraw(G, c, P);
       if (!s.qs) {
         c.fillStyle = ink; c.textAlign = "center"; c.font = `600 16px ${G.UI}`;
         c.fillText(s.err ? "Couldn't load the crew's answers." : "Loading the crew's answers…", W / 2, H * 0.4);
@@ -148,57 +230,19 @@
         return;
       }
       const i = s.qi, q = s.qs[i], over = s.over[i], typing = !over && !s.done;
-      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`${s.crew ? "Crew Edition" : "Survey says"} · ${i + 1} of ${s.qs.length}`, 14, 16);
-      c.textAlign = "right"; c.fillText(`${scoreOf(s)} pts`, W - 14, 16);
-      const qf = H < 560 ? 17 : 19; c.font = `700 ${qf}px ${G.TITLE}`; c.fillStyle = ink; c.textAlign = "center";
-      let y = 44; wrap(c, q.q, W - 32).slice(0, 3).forEach(l => { c.fillText(l, W / 2, y); y += qf + 4; });
-      fit(c, q.src, W - 28, 11.5, 500, G.UI); c.fillStyle = mute; c.fillText(q.src, W / 2, y); y += 16;
-      // the board: two columns, numbered down the left column first
-      const kbH = typing ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2), gap = 6;
-      const sh = Math.max(26, Math.min(44, (H - y - kbH - 100) / rows - gap)), cw = (W - 24 - gap) / 2;
-      q.a.forEach((a, j) => {
-        const col = j < rows ? 0 : 1, x = 12 + col * (cw + gap), yy = y + (j - col * rows) * (sh + gap);
-        const hit = s.found[i].includes(j), shown = hit || over;
-        rr(c, x, yy, cw, sh, 8); c.fillStyle = hit ? (s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949") : shown ? (dk ? "#2c2c2e" : "#ecece6") : (dk ? "#27386b" : "#1f3a8a"); c.fill();
-        if (shown) {
-          const fg = hit ? "#2b1a10" : mute, pw = 30;
-          c.fillStyle = fg; c.textAlign = "left"; fit(c, a.label, cw - pw - 16, 14, 700, G.UI); c.fillText(a.label, x + 9, yy + sh / 2 + 1);
-          c.textAlign = "right"; c.font = `700 14px ${G.UI}`; c.fillText(a.pts, x + cw - 9, yy + sh / 2 + 1);
-        } else {
-          c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 ${Math.min(16, sh * 0.5)}px ${G.UI}`; c.fillText(j + 1, x + cw / 2, yy + sh / 2 + 1);
-        }
-      });
-      y += rows * (sh + gap) + 6;
-      // strikes, plus Pass while guessing
-      const sq = 26, sx = typing ? 14 : W / 2 - (3 * sq + 12) / 2;
-      for (let k = 0; k < 3; k++) {
-        const x = sx + k * (sq + 6), used = k < s.strikes[i];
-        rr(c, x, y, sq, sq, 6); if (used) { c.fillStyle = "#d64545"; c.fill(); } else { c.lineWidth = 1.5; c.strokeStyle = line; c.stroke(); }
-        c.fillStyle = used ? "#fff" : line; c.textAlign = "center"; c.font = `700 15px ${G.UI}`; c.fillText("✕", x + sq / 2, y + sq / 2 + 1);
-      }
+      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`${s.crew ? "Crew Edition" : "Survey says"} · ${i + 1} of ${s.qs.length}`, 14, TOP + 14);
+      c.textAlign = "right"; c.fillText(`${scoreOf(s)} pts`, W - 14, TOP + 14);
+      let y = question(G, c, P, q, TOP + 40);
+      const kbH = typing ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2);
+      const sh = Math.max(26, Math.min(44, (H - y - kbH - 100) / rows - 6));
+      board(G, c, P, q, y, sh, j => s.found[i].includes(j) ? 1 : over ? 2 : 0);
+      y += rows * (sh + 6) + 6;
+      strikes(c, P, s.strikes[i], typing ? 14 : W / 2 - 45, y);
       if (typing) {
         s.btns.push(Object.assign(G.pill(c, W - 14 - 84, y - 4, 84, 34, "Pass"), { k: "pass" }));
-        y += sq + 10;
-        const bx = 14 + (s.shake > 0 ? Math.sin(s.shake * 60) * 5 : 0), bw = W - 28, bh = 42;
-        rr(c, bx, y, bw, bh, 8); c.lineWidth = 2; c.strokeStyle = s.typed ? ink : line; c.stroke();
-        c.textAlign = "left"; c.font = `700 17px ${G.UI}`;
-        // feedback on the last guess shows in the box itself until the next letter
-        if (s.typed) { c.fillStyle = ink; c.fillText(s.typed, bx + 12, y + bh / 2 + 1); } else { const m = s.msgT > 0 && s.msg; c.fillStyle = m ? ink : mute; c.font = `${m ? 600 : 500} 15px ${G.UI}`; c.fillText(m || "Type an answer", bx + 12, y + bh / 2 + 1); }
-        if (s.t % 1 < 0.55 && (s.typed || !(s.msgT > 0))) { const tw = s.typed ? (c.font = `700 17px ${G.UI}`, c.measureText(s.typed).width) : 0; c.fillStyle = ink; c.fillRect(bx + 13 + tw, y + 10, 2, bh - 20); }
-        const ky = H - kbH, kh = (kbH - 12) / 4 - 6, kw = (W - 12) / 10 - 5;
-        KB.forEach((row, r) => {
-          const keys = row.split(""), wide = k => k === " " ? kw * 5 + 20 : (k === "<" || k === ">") ? kw * 1.5 + 2.5 : kw;
-          const tw = keys.reduce((a, k) => a + wide(k) + 5, -5); let x = (W - tw) / 2;
-          keys.forEach(k => {
-            const w = wide(k), yy = ky + 6 + r * (kh + 6);
-            rr(c, x, yy, w, kh, 5); c.fillStyle = dk ? "#818384" : "#d3d6da"; c.fill();
-            c.fillStyle = ink; c.font = `700 ${k === "<" || k === ">" || k === " " ? 13 : 16}px ${G.UI}`; c.textAlign = "center";
-            c.fillText(k === "<" ? "⌫" : k === ">" ? "ENTER" : k === " " ? "space" : k, x + w / 2, yy + kh / 2 + 1);
-            s.btns.push({ x, y: yy, w, h: kh, key: k }); x += w + 5;
-          });
-        });
+        inputBox(G, c, P, y + 36, "Type an answer"); keys(G, c, P, kbH);
       } else {
-        y += sq + 16;
+        y += 42;
         c.fillStyle = ink; c.textAlign = "center"; c.font = `600 15px ${G.UI}`;
         c.fillText(`${s.found[i].length} of ${q.a.length} answers · ${qScore(s, i)} of 200 pts`, W / 2, y); y += 22;
         const last = i === s.qs.length - 1, bw = Math.min(240, W - 60);
@@ -213,6 +257,8 @@
     },
     tap(G, x, y) {
       const s = G.s, b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return;
+      if (b.k === "mode") { if (MODE !== b.m) { MODE = b.m; s.typed = ""; s.msgT = 0; if (MODE === "host" && !HS) hLoad(); } return; }
+      if (MODE === "host") return this.hostTap(G, b);
       if (b.k === "retry") { s.err = false; s.loading = true; return this.fetchCrew(G); }
       if (b.k === "res") return G.results(this.info(G));
       if (b.k === "prev") { if (s.qi > 0) s.qi--; return; }
@@ -221,11 +267,131 @@
       if (b.key) return this.press(G, b.key);
     },
     onKey(G, k, d) {
-      if (!d || !G.s.qs) return;
-      if (k === "Enter") this.press(G, ">"); else if (k === "Backspace") this.press(G, "<");
-      else if (k === " ") this.press(G, " ");
-      else if (/^[a-z0-9]$/i.test(k)) this.press(G, k.toUpperCase());
+      if (!d) return;
+      const host = MODE === "host", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
+      if (host) { G.s.hkb = true; this.hPress(G, key); } else this.press(G, key);
     },
-    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf }
+
+    // ---- Host mode: one screen for the room, run like the show. Two teams; the host flips answers (tap with Peek on,
+    // or type what a player said), hits Strike on a miss, then gives the pot to the team that won the round.
+    // Last round is triple points, the one before it double. Nothing here touches the daily solo score. ----
+    hostNew(G, name, raw) {
+      HS = { name, raw: raw || null, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
+      ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
+      G.s.peek = false; G.s.hkb = false; hSave();
+    },
+    hReveal(G, j) {
+      const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
+      h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
+      s.flash = j; s.flashT = 0.7; ding(); hSave();
+    },
+    hStrike(G) {
+      const s = G.s, h = HS, i = h.qi;
+      if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
+      s.bigX = 1.3; buzzer(); G.buzz(); hSave();
+    },
+    hEnter(G) {
+      const s = G.s, h = HS, i = h.qi, n = norm(s.typed); if (n.length < 2) return; s.typed = "";
+      const hits = match(HD[i], n), open = hits.filter(j => !h.shown[i].includes(j));
+      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 2.2);
+      if (!open.length && hits.length) return this.say(G, "Already on the board");
+      if (open.length) { this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!"); return this.hReveal(G, open[0]); }
+      this.say(G, "Not on the board"); this.hStrike(G);
+    },
+    hPress(G, k) { if (k === ">") return this.hEnter(G); typeKey(G.s, k); },
+    hostTap(G, b) {
+      const s = G.s, h = HS;
+      if (b.k === "hpolls") return this.hostNew(G, "polls");
+      if (b.k === "hcrew") {
+        if (s.hload) return; s.hload = true; s.hmsg = "";
+        API("getFeudSurvey", me ? me.id : "", true).then(r => {
+          s.hload = false;
+          if (!r || !r.answers) s.hmsg = "The crew's answers aren't ready on the server yet. Try again in a few minutes.";
+          else if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";
+          else this.hostNew(G, "crew", r.answers);
+        }).catch(() => { s.hload = false; s.hmsg = "Couldn't load the crew's answers. Check your connection."; });
+        return;
+      }
+      if (!h) return;
+      const quit = () => { HS = HD = null; store.set(HK, null); s.quitT = 0; s.hmsg = ""; };
+      if (b.k === "hnew") return quit();
+      if (b.k === "hquit") { if (s.quitT > 0) quit(); else s.quitT = 3; return; }
+      const i = h.qi, q = HD[i];
+      if (b.slot != null) return this.hReveal(G, b.slot);
+      if (b.k === "hstrike") return this.hStrike(G);
+      if (b.k === "hpeek") { s.peek = !s.peek; return; }
+      if (b.k === "hkb") { s.hkb = !s.hkb; s.typed = ""; return; }
+      if (b.k === "hwin0" || b.k === "hwin1") {
+        if (h.won[i] >= 0 || !h.pot) return;
+        const t = b.k === "hwin0" ? 0 : 1; h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
+      }
+      if (b.k === "hall") { q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
+      if (b.k === "hnext") {
+        if (h.won[i] < 0 && h.pot) return;
+        s.peek = false; s.typed = ""; if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
+        return hSave();
+      }
+      if (b.key) return this.hPress(G, b.key);
+    },
+    hostDraw(G, c, P) {
+      const s = G.s, W = G.W, H = G.H, h = HS, { ink, mute } = P;
+      const lines = (t, y, font, col) => { c.font = font; c.fillStyle = col; c.textAlign = "center"; wrap(c, t, W - 48).forEach(l => { c.fillText(l, W / 2, y); y += 21; }); return y; };
+      const bw = Math.min(280, W - 60), bx = W / 2 - bw / 2;
+      if (!h) {
+        lines("Host a game", TOP + 44, `700 24px ${G.TITLE}`, ink);
+        let y = lines("One screen for the whole room, two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Play the crew's answers", true, s.hload), { k: "hcrew" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 62, bw, 50, "Play America's polls", false, s.hload), { k: "hpolls" }));
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, y + 144, `600 14px ${G.UI}`, ink);
+        return;
+      }
+      if (h.over) {
+        const [a, b] = h.score;
+        lines(a === b ? "It's a tie!" : `${TEAMS[a > b ? 0 : 1]} wins! 🦃`, TOP + 60, `700 26px ${G.TITLE}`, ink);
+        lines(`${TEAMS[0]} ${a}  ·  ${TEAMS[1]} ${b}`, TOP + 100, `600 16px ${G.UI}`, mute);
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 50, "New game", true), { k: "hnew" }));
+        return;
+      }
+      const i = h.qi, q = HD[i], m = mult(i), won = h.won[i], kb = s.hkb, T = TOP + 6;
+      // scoreboard: team, pot, team
+      const pw = 88, tw = (W - 24 - pw - 12) / 2;
+      [0, 1].forEach(t => {
+        const x = t ? W - 12 - tw : 12; rr(c, x, T, tw, 50, 10); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
+        c.textAlign = "center"; c.fillStyle = mute; c.font = `600 11.5px ${G.UI}`; c.fillText(TEAMS[t], x + tw / 2, T + 15);
+        c.fillStyle = ink; c.font = `700 22px ${G.UI}`; c.fillText(h.score[t], x + tw / 2, T + 35);
+      });
+      rr(c, W / 2 - pw / 2, T, pw, 50, 10); c.fillStyle = "#1f3a8a"; c.fill();
+      c.fillStyle = "#e9b949"; c.font = `700 11.5px ${G.UI}`; c.fillText("POT", W / 2, T + 15); c.font = `700 22px ${G.UI}`; c.fillText(h.pot, W / 2, T + 35);
+      let y = T + 68;
+      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`Round ${i + 1} of ${HD.length}${m > 1 ? (m === 2 ? " · DOUBLE" : " · TRIPLE") : ""}`, 14, y);
+      c.textAlign = "right"; c.fillStyle = s.quitT > 0 ? "#d64545" : mute; c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
+      s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
+      y = question(G, c, P, q, y + 28);
+      const kbH = kb ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2);
+      const sh = Math.max(26, Math.min(44, (H - y - kbH - (kb ? 96 : 160)) / rows - 6));
+      const slots = board(G, c, P, q, y, sh, j => h.shown[i].includes(j) ? (h.free[i].includes(j) ? 2 : 1) : s.peek ? 3 : 0);
+      if (s.peek) slots.forEach(b => s.btns.push(b));
+      if (s.bigX > 0) { // the big red X
+        const n = s.bigN || 1, z = Math.min(84, (W - 60) / 3), bh = rows * (sh + 6), x0 = W / 2 - (n * z + (n - 1) * 10) / 2;
+        c.save(); c.globalAlpha = Math.min(1, s.bigX * 3);
+        for (let k = 0; k < n; k++) { const x = x0 + k * (z + 10), yy = y + bh / 2 - z / 2; rr(c, x, yy, z, z, 12); c.fillStyle = P.bg; c.fill(); c.lineWidth = 6; c.strokeStyle = "#d64545"; c.stroke(); c.fillStyle = "#d64545"; c.textAlign = "center"; c.font = `700 ${z * 0.72}px ${G.UI}`; c.fillText("✕", x + z / 2, yy + z / 2 + 3); }
+        c.restore();
+      }
+      y += rows * (sh + 6) + 6;
+      strikes(c, P, h.strikes[i], 14, y);
+      const aw = W - 28 - 104, w1 = aw * 0.4, w2 = (aw - w1 - 12) / 2; let x = 14 + 104;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w1, 34, "Strike"), { k: "hstrike" })); x += w1 + 6;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Peek", s.peek), { k: "hpeek" })); x += w2 + 6;
+      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Keys", kb), { k: "hkb" }));
+      if (kb) { inputBox(G, c, P, y + 36, "Type what they said"); keys(G, c, P, kbH); return; }
+      y += 42; const hw = (W - 36) / 2, last = i === HD.length - 1;
+      if (won < 0) [0, 1].forEach(t => s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), y, hw, 46, `Pot → ${TEAMS[t].slice(5)}`, true, !h.pot), { k: "hwin" + t })));
+      else lines(`${TEAMS[won]} banked it`, y + 23, `600 15px ${G.UI}`, ink);
+      y += 56;
+      s.btns.push(Object.assign(G.pill(c, 12, y, hw, 46, "Reveal all", false, h.shown[i].length === q.a.length), { k: "hall" }));
+      s.btns.push(Object.assign(G.pill(c, 24 + hw, y, hw, 46, last ? "Final score" : "Next round ›", false, won < 0 && h.pot > 0), { k: "hnext" }));
+    },
+    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; } }
   });
 })();
