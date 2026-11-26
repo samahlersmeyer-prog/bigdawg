@@ -943,7 +943,7 @@ var FRESH = {
   cube: ["new", "2026-11-07"],
   fall: ["new", "2026-11-06"],
   cliff: ["new", "2026-11-06"],
-  hook: ["new", "2026-11-05"],
+  hook: ["upd", "2026-11-26"],
   waffle: ["new", "2026-11-04"],
   guess: ["new", "2026-11-04"],
   midi: ["new", "2026-11-04"],
@@ -3229,8 +3229,8 @@ defGameMeta([{
   "key": "hook",
   "name": "Hook Dawg",
   "icon": "🪝",
-  "blurb": "Hold to hook, let go to fling. Swing forever.",
-  "how": "Hold anywhere to grab the glowing hook and swing. Let go to fling yourself forward. Let go on the upswing to fly far. Bounce pads at the bottom save you, but miss them and you're in the pit. Grab bones for +25, and do a full flip in the air for +50 (more for doubles). Hooks get farther apart and start to drift the farther you go.",
+  "blurb": "Hold to hook, let go to fling. 24 levels.",
+  "how": "Hold anywhere to grab the nearest hook and swing. You can only grab a hook when you're inside its dashed ring. Let go to fling yourself forward, and let go on the upswing to fly far. Round bumpers bounce you, striped blocks are solid. Fall off the bottom and the level just starts over. Swing past the checkered line to clear it. Each level is worth 1000, plus up to 500 for speed, and your score is the total of your best on every level. Tap ↻ to restart, and the arrows to replay a level you've cleared.",
   "max": 99999
 }, {
   "file": "g_airhockey.js",

@@ -48,6 +48,10 @@ Dawg takes on old arcade games. Unfair Dawg (`g_unfair.js`): troll platformer, 5
 ## Mad Dawg (Drive Mad-style)
 `g_mad.js`: side-view physics car levels (Run & Jump). Its own small rigid-body engine at the top of the file (no library: polygons/circles, sequential impulses, pin / wheel-suspension / rope joints; meters, y up, 1/120 s steps). 30 levels in `LEVELS`, each built from an op list (`f` flat, `c` curve, `gap`, `br` bridge hinge|crumble, `see`, `el` elevator, `mv` slider, `bx`, `bl`, `wr` wrecking ball, `cr` crusher, `sp` spring, `bo` boost, `ce` ceiling); 8 cars in `CARS`. Head/roof touching ground or a static/moving part = restart. Progress per player in `bdd:mad:<id>`; score = career total (best per level, 1000 + up to 500 vs `PAR`), posted with `G.postQuiet`. When changing physics or levels, check every level is still beatable with a headless bot (load the file in Node `vm` with a `defGame` stub; `GAMEDEFS.mad._t` exposes `build`/`LEVELS`), and reset `PAR` to about 1.1x the bot's times. Keep up-steps under ~0.8x the car's wheel radius and slider platforms longer than the longest car.
 
+## Hook Dawg (Stickman Hook-style)
+`g_hook.js`: 24 swing levels instead of the old endless run (Nov 26, 2026): grab only inside a hook's dashed ring, rope reels in (adds speed), round bumpers, striped solid blocks, checkered finish, fall = instant restart. Score = career total like Mad Dawg (best per level, 1000 + up to 500 vs `PAR`), progress in `bdd:hook:<id>`. Levels and `PAR` come from `node tools/hook.mjs gen` (seeded generator + hook-to-hook bot, sorted easiest first); `node tools/hook.mjs` re-checks every level is beatable, so run it after any physics change.
+- Poki look-alikes still to bring closer to the originals, one at a time: Dawg Dash (Subway Surfers), Blumji Bounce (Blumgi Slime), Pup Shot (Blumgi Ball), Dawg Lords (Top Lords), Mad Dawg (Drive Mad).
+
 ## Leash
 `g_leash.js` drag fills in every square between touch points (phones skip squares on quick drags) and bridges a corner cut through the open corner square; without this the path got stuck behind the finger.
 
