@@ -27,7 +27,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     max: 1000,
     cat: "den",
     blurb: "Build up and down from the 7s. First one out wins.",
-    how: "You vs Rex, Biscuit and Duke, 13 cards each. Whoever holds the 7 of diamonds starts with it. On your turn, play a 7 to open a new suit, or add the next card to a suit that's already on the table: up from the 7 (8, 9, 10, J, Q, K) or down from it (6, 5, 4, 3, 2, A). If you have a card that fits you have to play one, but you pick which, so hang on to the cards the pups are waiting for. Nothing fits? You knock and it moves on. First one out of cards wins the hand, and everyone else takes 1 point for each card they're stuck with. Three hands, lowest total wins. Score: 900 minus 25 per card you got stuck with, +100 for winning the match.",
+    how: "You vs Rex, Biscuit and Duke, 13 cards each. Whoever holds the 7 of spades starts with it. On your turn, play a 7 to open a new suit, or add the next card to a suit that's already on the table: up from the 7 (8, 9, 10, J, Q, K) or down from it (6, 5, 4, 3, 2, A). If you have a card that fits you have to play one, but you pick which, so hang on to the cards the pups are waiting for. Nothing fits? You knock and it moves on. First one out of cards wins the hand, and everyone else takes 1 point for each card they're stuck with. Three hands, lowest total wins. Score: 900 minus 25 per card you got stuck with, +100 for winning the match.",
     save: function save(G) {
       var s = G.s;
       if (s.phase !== "play") return null;
@@ -87,13 +87,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       s.wait = 0.9;
       s.turn = s.hands.findIndex(function (h) {
         return h.some(function (k) {
-          return k.s === 2 && k.r === 7;
+          return k.s === 0 && k.r === 7;
         });
       });
-      s.msg = "".concat(who(s.turn), " ").concat(s.turn ? "has" : "have", " the 7\u2666 and ").concat(s.turn ? "starts" : "start");
+      s.msg = "".concat(who(s.turn), " ").concat(s.turn ? "has" : "have", " the 7\u2660 and ").concat(s.turn ? "starts" : "start");
     },
     legal: function legal(s, k) {
-      if (s.first) return k.s === 2 && k.r === 7;
+      if (s.first) return k.s === 0 && k.r === 7;
       return s.lo[k.s] ? k.r === s.lo[k.s] - 1 || k.r === s.hi[k.s] + 1 : k.r === 7;
     },
     say: function say(s, p, txt) {
@@ -400,7 +400,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (s.turn !== 0 || s.phase !== "play" || s.wait > 0) return;
       var k = s.hands[0][b.i];
       if (!this.legal(s, k)) {
-        s.msg = s.first ? "The 7♦ has to go first" : "".concat(G.rankTxt(k.r)).concat(G.SUIT[k.s], " doesn't fit yet");
+        s.msg = s.first ? "The 7♠ has to go first" : "".concat(G.rankTxt(k.r)).concat(G.SUIT[k.s], " doesn't fit yet");
         G.buzz();
         return;
       }
