@@ -52,9 +52,10 @@ defGame({
   // so it takes a lane that isn't the open lane of those rows and has no parked train, and the barriers it would drive through are removed.
   spawnMover(s) {
     const len = 8, a = this.ZMAX / this.MV - 7, b = a + 14 + len / this.MV, open = s.rows.filter(r => r.end > a - 2 && r.z - 11 < b).map(r => r.free);
-    const lanes = [-1, 0, 1].filter(l => !open.includes(l) && !s.objs.some(o => o.k === "train" && o.lane === l && !o.gone)); // never through a parked train if (!lanes.length || s.objs.some(o => o.mv)) return;
+    const lanes = [-1, 0, 1].filter(l => !open.includes(l) && !s.objs.some(o => o.k === "train" && o.lane === l && !o.gone)); // never through a parked train
+    if (!lanes.length || s.objs.some(o => o.mv)) return;
     const lane = lanes[Math.floor(Math.random() * lanes.length)];
-    s.objs.forEach(o => { if (o.lane === lane && o.z > a - 8 && o.z < b) o.gone = 1; });
+    s.objs.forEach(o => { if (o.lane === lane && o.z > a - 8) o.gone = 1; }); // everything it will drive over before it passes you
     s.objs.push({ k: "train", lane, z: this.ZMAX, len, mv: 1 });
   },
   swipe(G, dx, dy) {

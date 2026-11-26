@@ -192,9 +192,12 @@ defGame({
         return o.k === "train" && o.lane === l && !o.gone;
       });
     });
+    if (!lanes.length || s.objs.some(function (o) {
+      return o.mv;
+    })) return;
     var lane = lanes[Math.floor(Math.random() * lanes.length)];
     s.objs.forEach(function (o) {
-      if (o.lane === lane && o.z > a - 8 && o.z < b) o.gone = 1;
+      if (o.lane === lane && o.z > a - 8) o.gone = 1;
     });
     s.objs.push({
       k: "train",
