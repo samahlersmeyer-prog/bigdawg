@@ -70,7 +70,7 @@
   const qScore = (s, i) => tot(s.qs[i]) ? Math.round(200 * got(s, i) / tot(s.qs[i])) : 0;
   const scoreOf = s => s.qs.reduce((a, q, i) => a + qScore(s, i), 0);
   // ---- shared drawing and typing bits (solo and host) ----
-  const TOP = 34; // room for the Solo | Host switch
+  const TOP = 34; // room for the Solo | Host | TV switch
   const pal = G => { const dk = G.dark(); return { dk, ink: dk ? "#fff" : "#121213", bg: dk ? "#121213" : "#fff", mute: dk ? "#a3a3a8" : "#66666b", line: dk ? "#3a3a3c" : "#d3d6da" }; };
   const typeKey = (s, k) => { if (k === "<") s.typed = s.typed.slice(0, -1); else if (k === " ") { if (s.typed && !/ $/.test(s.typed) && s.typed.length < 26) s.typed += " "; } else if (s.typed.length < 26) s.typed += k; };
   // Question and its source line; returns the y where the board starts.
@@ -128,9 +128,75 @@
   // Crew deck = the crew's survey answers so far. Polls deck = every daily board up to the day
   // the game started plus the spare board, so hosting never spoils a solo board that hasn't come out yet.
   const deckOf = h => h.name === "crew" ? crewBoard(h.raw) : [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
-  const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; };
-  const hSave = () => store.set(HK, HS);
+  const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; if (HS) { askCode(); hPush(); } };
+  const hSave = () => { store.set(HK, HS); hPush(); };
   const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
+  // ---- TV link: the host's phone pushes what the room may see (feudPush); a second device, say a computer on the TV,
+  // shows it (TV mode, feudWatch). Only flipped answers ever leave the phone. ----
+  const view = () => {
+    const h = HS, i = h.qi, q = HD[i];
+    return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
+      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: TEAMS, won: h.won[i], over: h.over };
+  };
+  let pushing = false, dirty = false;
+  function hPush() {
+    if (!HS || !HS.code || !me) return;
+    if (pushing) { dirty = true; return; }
+    pushing = true; dirty = false;
+    API("feudPush", me.id, HS.code, view()).catch(() => {}).then(() => { pushing = false; if (dirty) hPush(); });
+  }
+  // Ask the server for a TV code for a game that doesn't have one yet (a polls game starts before the code arrives).
+  function askCode() {
+    const h = HS; if (!h || h.code || h.asking || !me) return; h.asking = true;
+    API("feudHost", me.id, "").then(r => { if (HS === h && r && r.code) { h.code = r.code; hSave(); } }).catch(() => {}).then(() => { delete h.asking; });
+  }
+  let TV = null;
+  function tvClose() {
+    if (!TV) return; TV.alive = false; clearTimeout(TV.xt);
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+    try { if (TV.wake) TV.wake.release(); } catch (e) {}
+    TV.root.remove(); TV = null;
+  }
+  function tvOpen(code, v) {
+    tvClose();
+    const root = el("div", "ftv"), mk = (cls, parent, text) => { const n = el("div", cls, text); (parent || root).append(n); return n; };
+    const top = mk("ftv-top"), t0 = mk("ftv-team", top), mid = mk("ftv-mid", top), t1 = mk("ftv-team", top);
+    const T = TV = { root, alive: true, last: null, key: "", n0: mk("ftv-tn", t0), s0: mk("ftv-ts", t0), rd: mk("ftv-rd", mid), pot: mk("ftv-pot", mid), n1: mk("ftv-tn", t1), s1: mk("ftv-ts", t1),
+      q: mk("ftv-q", null, "Waiting for the host…"), board: mk("ftv-board"), st: mk("ftv-st"), x: mk("ftv-x"), win: mk("ftv-win") };
+    const foot = mk("ftv-foot"); mk("ftv-code", foot, `Big Dawg Feud · TV code ${code}`);
+    const fs = el("button", "ftv-btn", "Full screen"), ex = el("button", "ftv-btn", "Exit"); foot.append(fs, ex);
+    fs.addEventListener("click", () => { try { (root.requestFullscreen || root.webkitRequestFullscreen).call(root); } catch (e) {} });
+    ex.addEventListener("click", tvClose);
+    document.body.append(root);
+    try { navigator.wakeLock.request("screen").then(w => { T.wake = w; }).catch(() => {}); } catch (e) {}
+    tvRender(v);
+    const poll = () => { if (T.alive) API("feudWatch", code).then(tvRender).catch(() => {}).then(() => setTimeout(poll, 700)); };
+    setTimeout(poll, 700);
+  }
+  function tvRender(v) {
+    const T = TV; if (!T || !T.alive || !v) return;
+    const L = T.last;
+    T.n0.textContent = v.tm[0]; T.n1.textContent = v.tm[1]; T.s0.textContent = v.sc[0]; T.s1.textContent = v.sc[1]; T.pot.textContent = v.pot;
+    T.rd.textContent = `ROUND ${v.r} OF ${v.of}` + (v.m > 1 ? (v.m === 2 ? " · DOUBLE" : " · TRIPLE") : "");
+    const key = v.r + "|" + v.q;
+    if (key !== T.key) {
+      T.key = key; T.q.textContent = v.q; T.board.textContent = "";
+      const rows = Math.ceil(v.a.length / 2), cols = [el("div", "ftv-col"), el("div", "ftv-col")]; T.board.append(cols[0], cols[1]);
+      T.slots = v.a.map((a, j) => { const n = el("div", "ftv-slot"); cols[j < rows ? 0 : 1].append(n); return n; }); T.sig = v.a.map(() => null);
+    }
+    v.a.forEach((a, j) => {
+      const sig = a ? a.join("|") : "", n = T.slots[j]; if (T.sig[j] === sig) return; T.sig[j] = sig; n.textContent = "";
+      if (a) { n.className = "ftv-slot on" + (a[2] ? " free" : ""); n.append(el("span", "ftv-al", a[0]), el("span", "ftv-ap", a[1])); }
+      else { n.className = "ftv-slot"; n.append(el("span", "ftv-num", j + 1)); }
+    });
+    T.st.textContent = "✕".repeat(v.st);
+    if (L && v.x > L.x) { T.x.textContent = "✕".repeat(v.xn || 1); T.x.classList.add("go"); buzzer(); clearTimeout(T.xt); T.xt = setTimeout(() => T.x.classList.remove("go"), 1500); }
+    if (L && v.d > L.d) ding();
+    if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
+    T.win.textContent = v.over ? (v.sc[0] === v.sc[1] ? "It's a tie!" : `${v.tm[v.sc[0] > v.sc[1] ? 0 : 1]} wins! 🦃`) : ""; T.win.classList.toggle("go", !!v.over);
+    if (v.over && L && !L.over && typeof celebrate === "function") celebrate();
+    T.last = v;
+  }
   let ac;
   function tone(type, f, dur, vol) {
     if (typeof fxOn === "function" && !fxOn()) return;
@@ -146,7 +212,7 @@
   defGame({
     key: "feud", name: "Feud", icon: "🦃", max: 1000, cat: "den", puzzle: true,
     blurb: "Survey says! Through Sunday.",
-    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. Here through Sunday only.",
+    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. To put the board on a TV, open Feud on a computer, tap TV and type the code from the host's phone. Here through Sunday only.",
     reset(G) {
       const s = G.s = { typed: "", msg: "", msgT: 0, btns: [], postT: 0, flash: -1, flashT: 0, shake: 0, t: 0 };
       let qs = DAYS[KEY] || DAYS["2026-11-26"];
@@ -206,23 +272,30 @@
     update(G, dt) {
       const s = G.s; s.t += dt;
       if (s.msgT > 0) s.msgT -= dt; if (s.shake > 0) s.shake -= dt; if (s.flashT > 0) s.flashT -= dt; if (s.bigX > 0) s.bigX -= dt; if (s.quitT > 0) s.quitT -= dt;
-      if (MODE === "host" || !s.qs) return;
+      if (MODE !== "solo" || !s.qs) return;
       if (!s.done) { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
       if (s.done && !s.posted && s.postT > 0) { s.postT -= dt; if (s.postT <= 0) { s.posted = true; this.persist(G); G.post(scoreOf(s), this.info(G)); } }
     },
     draw(G, c) {
       const s = G.s, P = pal(G), { ink, mute } = P, W = G.W, H = G.H; s.btns = [];
       c.fillStyle = P.bg; c.fillRect(0, 0, W, H); c.textBaseline = "middle";
-      // Solo | Host switch
-      const gw = 168, gx = W / 2 - gw / 2;
+      // Solo | Host | TV switch
+      const gw = 216, sw = gw / 3, gx = W / 2 - gw / 2;
       rr(c, gx, 4, gw, 28, 14); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
-      ["solo", "host"].forEach((m, k) => {
-        const on = MODE === m, x = gx + k * gw / 2;
-        if (on) { rr(c, x + 2, 6, gw / 2 - 4, 24, 12); c.fillStyle = ink; c.fill(); }
-        c.fillStyle = on ? P.bg : mute; c.textAlign = "center"; c.font = `700 13px ${G.UI}`; c.fillText(k ? "Host" : "Solo", x + gw / 4, 19);
-        s.btns.push({ x, y: 0, w: gw / 2, h: 36, k: "mode", m });
+      ["solo", "host", "tv"].forEach((m, k) => {
+        const on = MODE === m, x = gx + k * sw;
+        if (on) { rr(c, x + 2, 6, sw - 4, 24, 12); c.fillStyle = ink; c.fill(); }
+        c.fillStyle = on ? P.bg : mute; c.textAlign = "center"; c.font = `700 13px ${G.UI}`; c.fillText(["Solo", "Host", "TV"][k], x + sw / 2, 19);
+        s.btns.push({ x, y: 0, w: sw, h: 36, k: "mode", m });
       });
       if (MODE === "host") return this.hostDraw(G, c, P);
+      if (MODE === "tv") { // this device becomes the room's screen
+        c.fillStyle = ink; c.textAlign = "center"; c.font = `700 24px ${G.TITLE}`; c.fillText("Put the game on this screen", W / 2, TOP + 44);
+        c.font = `500 14.5px ${G.UI}`; c.fillStyle = mute; let y = TOP + 80;
+        wrap(c, "Start a game in Host mode on your phone, then type its TV code here. This screen shows the board for the room, and the phone runs the game.", W - 48).forEach(l => { c.fillText(l, W / 2, y); y += 21; });
+        inputBox(G, c, P, y + 8, "TV code"); keys(G, c, P, Math.min(214, H * 0.34));
+        return;
+      }
       if (!s.qs) {
         c.fillStyle = ink; c.textAlign = "center"; c.font = `600 16px ${G.UI}`;
         c.fillText(s.err ? "Couldn't load the crew's answers." : "Loading the crew's answers…", W / 2, H * 0.4);
@@ -259,6 +332,7 @@
       const s = G.s, b = s.btns.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); if (!b) return;
       if (b.k === "mode") { if (MODE !== b.m) { MODE = b.m; s.typed = ""; s.msgT = 0; if (MODE === "host" && !HS) hLoad(); } return; }
       if (MODE === "host") return this.hostTap(G, b);
+      if (MODE === "tv") { if (b.key) this.tvPress(G, b.key); return; }
       if (b.k === "retry") { s.err = false; s.loading = true; return this.fetchCrew(G); }
       if (b.k === "res") return G.results(this.info(G));
       if (b.k === "prev") { if (s.qi > 0) s.qi--; return; }
@@ -268,7 +342,8 @@
     },
     onKey(G, k, d) {
       if (!d) return;
-      const host = MODE === "host", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      const host = MODE === "host", tv = MODE === "tv", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      if (tv) { if (key) this.tvPress(G, key); return; }
       if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
       if (host) { G.s.hkb = true; this.hPress(G, key); } else this.press(G, key);
     },
@@ -276,19 +351,27 @@
     // ---- Host mode: one screen for the room, run like the show. Two teams; the host flips answers (tap with Peek on,
     // or type what a player said), hits Strike on a miss, then gives the pot to the team that won the round.
     // Last round is triple points, the one before it double. Nothing here touches the daily solo score. ----
-    hostNew(G, name, raw) {
-      HS = { name, raw: raw || null, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
+    tvPress(G, k) {
+      const s = G.s; if (k !== ">") return typeKey(s, k);
+      const code = s.typed.replace(/[^A-Z]/g, ""); s.typed = ""; if (code.length !== 4) return this.say(G, "The code is 4 letters", 2.5);
+      tone("sine", 30, 0.02, 0.0001); if (ac && ac.resume) ac.resume(); // this key press is what lets the TV play sound later
+      this.say(G, "Connecting…", 20);
+      API("feudWatch", code).then(v => { s.msgT = 0; tvOpen(code, v); }).catch(e => this.say(G, /No game/.test(errMsg(e)) ? "No game with that code" : /Unknown call/.test(errMsg(e)) ? "Server is updating. Try again in a few minutes." : "Couldn't connect. Try again.", 4));
+    },
+    hostNew(G, name, raw, code) {
+      HS = { name, raw: raw || null, code: code || "", day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
       ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
-      G.s.peek = false; G.s.hkb = false; hSave();
+      G.s.peek = false; G.s.hkb = false; hSave(); askCode();
     },
     hReveal(G, j) {
       const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
       h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
-      s.flash = j; s.flashT = 0.7; ding(); hSave();
+      s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); hSave();
     },
     hStrike(G) {
       const s = G.s, h = HS, i = h.qi;
       if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
+      h.nx = (h.nx || 0) + 1; h.xn = s.bigN;
       s.bigX = 1.3; buzzer(); G.buzz(); hSave();
     },
     hEnter(G) {
@@ -305,12 +388,11 @@
       if (b.k === "hpolls") return this.hostNew(G, "polls");
       if (b.k === "hcrew") {
         if (s.hload) return; s.hload = true; s.hmsg = "";
-        API("getFeudSurvey", me ? me.id : "", true).then(r => {
+        // the crew's answers only ever come down as part of a host game, and the server logs who started it
+        API("feudHost", me ? me.id : "", "crew").then(r => {
           s.hload = false;
-          if (!r || !r.answers) s.hmsg = "The crew's answers aren't ready on the server yet. Try again in a few minutes.";
-          else if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";
-          else this.hostNew(G, "crew", r.answers);
-        }).catch(() => { s.hload = false; s.hmsg = "Couldn't load the crew's answers. Check your connection."; });
+          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first."; else this.hostNew(G, "crew", r.answers, r.code);
+        }).catch(e => { s.hload = false; s.hmsg = /Unknown call/.test(errMsg(e)) ? "The server is still updating. Try again in a few minutes." : "Couldn't load the crew's answers. Check your connection."; });
         return;
       }
       if (!h) return;
@@ -364,7 +446,7 @@
       rr(c, W / 2 - pw / 2, T, pw, 50, 10); c.fillStyle = "#1f3a8a"; c.fill();
       c.fillStyle = "#e9b949"; c.font = `700 11.5px ${G.UI}`; c.fillText("POT", W / 2, T + 15); c.font = `700 22px ${G.UI}`; c.fillText(h.pot, W / 2, T + 35);
       let y = T + 68;
-      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`Round ${i + 1} of ${HD.length}${m > 1 ? (m === 2 ? " · DOUBLE" : " · TRIPLE") : ""}`, 14, y);
+      c.font = `600 13px ${G.UI}`; c.fillStyle = mute; c.textAlign = "left"; c.fillText(`Round ${i + 1} of ${HD.length}${m > 1 ? (m === 2 ? " · DOUBLE" : " · TRIPLE") : ""}${h.code ? " · TV code " + h.code : ""}`, 14, y);
       c.textAlign = "right"; c.fillStyle = s.quitT > 0 ? "#d64545" : mute; c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
       s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
       y = question(G, c, P, q, y + 28);
@@ -392,6 +474,6 @@
       s.btns.push(Object.assign(G.pill(c, 12, y, hw, 46, "Reveal all", false, h.shown[i].length === q.a.length), { k: "hall" }));
       s.btns.push(Object.assign(G.pill(c, 24 + hw, y, hw, 46, last ? "Final score" : "Next round ›", false, won < 0 && h.pot > 0), { k: "hnext" }));
     },
-    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; } }
+    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; }, view, tvOpen, tvRender }
   });
 })();

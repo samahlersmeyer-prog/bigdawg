@@ -1239,7 +1239,7 @@ function answerDare(id, dateKey, dareId, score) {
 // When everyone opens the app at once, the same tabs used to be read over and over. Read-only calls now share
 // one copy of the big tabs for up to 30 seconds. Any call that changes data bumps a version number before and
 // after it runs, so nobody sees an old copy after a change, and calls that write always read the sheet fresh.
-const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1 };
+const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1, feudPush: 1, feudWatch: 1 };
 const RC_SECS_ = 30;
 let READONLY_ = false, RC_VER_ = null, TZ_ = null;
 function rcVer_() { if (RC_VER_ == null) { try { RC_VER_ = CacheService.getScriptCache().get('rc:ver') || '0'; } catch (e) { RC_VER_ = 'x' + Date.now(); } } return RC_VER_; }
@@ -1281,12 +1281,11 @@ const FEUD_CLOSE = '2026-11-29';
 const FEUD_HEADERS = ['date', 'playerId', 'a1', 'a2', 'a3', 'a4', 'a5'];
 function feudSheet_() { return tabSheet_('FeudSurvey', FEUD_HEADERS, 'B:G'); }
 function feudOpen_() { return asDateKey_(new Date(), tz_()) < FEUD_CLOSE; }
-// host = true: Feud's host mode, where one person runs a game for the room off the answers so far.
-function getFeudSurvey(id, host) {
+function getFeudSurvey(id) {
   id = cleanId_(id);
   const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
   const out = { n: rows.length, mine: rows.some(r => String(r[1]) === id), open: feudOpen_() };
-  if (!out.open || host === true) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+  if (!out.open) out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
   return out;
 }
 function sendFeudSurvey(id, answers) {
@@ -1305,6 +1304,45 @@ function sendFeudSurvey(id, answers) {
   return true;
 }
 
+// Feud host games. A host (phone) starts a game and gets a 4-letter TV code; while it plays it pushes what the room may
+// see, and a second screen (a computer on the TV) reads that with the code. Game state lives in the script cache only,
+// so play never touches the Sheet. The crew's survey answers are locked until Sunday except here: starting a host
+// game on the crew deck hands them to that host's phone, and every such start is logged in the FeudHosts tab.
+function feudCode_(code) { code = String(code || '').toUpperCase().replace(/[^A-Z]/g, ''); if (code.length !== 4) throw new Error('No game with that code.'); return code; }
+function feudHost(id, deck) {
+  id = cleanId_(id);
+  if (!readPlayers_().some(p => p.id === id)) throw new Error('Unknown player.');
+  const cache = CacheService.getScriptCache(), abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let tries = 0; tries < 20; tries++) {
+    code = ''; for (let k = 0; k < 4; k++) code += abc.charAt(Math.floor(Math.random() * abc.length));
+    if (!cache.get('feudg:' + code)) break;
+  }
+  cache.put('feudg:' + code, id, 21600);
+  const out = { code: code };
+  if (deck === 'crew') {
+    const rows = tabValues_('feud', feudSheet_, FEUD_HEADERS.length);
+    out.n = rows.length; out.answers = [2, 3, 4, 5, 6].map(c => rows.map(r => String(r[c])));
+    tabSheet_('FeudHosts', ['date', 'playerId', 'code'], 'B:C').appendRow([new Date(), id, code]);
+  }
+  return out;
+}
+function feudPush(id, code, state) {
+  id = cleanId_(id); code = feudCode_(code);
+  const cache = CacheService.getScriptCache();
+  if (cache.get('feudg:' + code) !== id) throw new Error('No game with that code.');
+  const s = JSON.stringify(state || null);
+  if (s.length > 6000) throw new Error('Too big.');
+  cache.put('feudv:' + code, s, 21600); cache.put('feudg:' + code, id, 21600);
+  return true;
+}
+function feudWatch(code) {
+  code = feudCode_(code);
+  const cache = CacheService.getScriptCache(), s = cache.get('feudv:' + code);
+  if (!s && !cache.get('feudg:' + code)) throw new Error('No game with that code.');
+  return s ? JSON.parse(s) : null;
+}
+
 // The game page can live on a fast static host (GitHub Pages) and talk to this script over HTTPS.
 // The page sends {fn, args} as plain text (no CORS preflight); only the functions listed here can be called.
 const API_FNS = {
@@ -1313,7 +1351,7 @@ const API_FNS = {
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
   bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview,
-  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey
+  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey, feudHost: feudHost, feudPush: feudPush, feudWatch: feudWatch
 };
 function doPost(e) {
   let req = {};

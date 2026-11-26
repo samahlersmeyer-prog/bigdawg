@@ -321,13 +321,195 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var hLoad = function hLoad() {
     HS = store.get(HK);
     HD = HS ? deckOf(HS) : null;
+    if (HS) {
+      askCode();
+      hPush();
+    }
   };
   var hSave = function hSave() {
-    return store.set(HK, HS);
+    store.set(HK, HS);
+    hPush();
   };
   var mult = function mult(i) {
     return i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
   };
+  var view = function view() {
+    var h = HS,
+      i = h.qi,
+      q = HD[i];
+    return {
+      r: i + 1,
+      of: HD.length,
+      m: mult(i),
+      q: q.q,
+      a: q.a.map(function (a, j) {
+        return h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0;
+      }),
+      st: h.strikes[i],
+      x: h.nx || 0,
+      xn: h.xn || 1,
+      d: h.nd || 0,
+      pot: h.pot,
+      sc: h.score,
+      tm: TEAMS,
+      won: h.won[i],
+      over: h.over
+    };
+  };
+  var pushing = false,
+    dirty = false;
+  function hPush() {
+    if (!HS || !HS.code || !me) return;
+    if (pushing) {
+      dirty = true;
+      return;
+    }
+    pushing = true;
+    dirty = false;
+    API("feudPush", me.id, HS.code, view())["catch"](function () {}).then(function () {
+      pushing = false;
+      if (dirty) hPush();
+    });
+  }
+  function askCode() {
+    var h = HS;
+    if (!h || h.code || h.asking || !me) return;
+    h.asking = true;
+    API("feudHost", me.id, "").then(function (r) {
+      if (HS === h && r && r.code) {
+        h.code = r.code;
+        hSave();
+      }
+    })["catch"](function () {}).then(function () {
+      delete h.asking;
+    });
+  }
+  var TV = null;
+  function tvClose() {
+    if (!TV) return;
+    TV.alive = false;
+    clearTimeout(TV.xt);
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+    } catch (e) {}
+    try {
+      if (TV.wake) TV.wake.release();
+    } catch (e) {}
+    TV.root.remove();
+    TV = null;
+  }
+  function tvOpen(code, v) {
+    tvClose();
+    var root = el("div", "ftv"),
+      mk = function mk(cls, parent, text) {
+        var n = el("div", cls, text);
+        (parent || root).append(n);
+        return n;
+      };
+    var top = mk("ftv-top"),
+      t0 = mk("ftv-team", top),
+      mid = mk("ftv-mid", top),
+      t1 = mk("ftv-team", top);
+    var T = TV = {
+      root: root,
+      alive: true,
+      last: null,
+      key: "",
+      n0: mk("ftv-tn", t0),
+      s0: mk("ftv-ts", t0),
+      rd: mk("ftv-rd", mid),
+      pot: mk("ftv-pot", mid),
+      n1: mk("ftv-tn", t1),
+      s1: mk("ftv-ts", t1),
+      q: mk("ftv-q", null, "Waiting for the host…"),
+      board: mk("ftv-board"),
+      st: mk("ftv-st"),
+      x: mk("ftv-x"),
+      win: mk("ftv-win")
+    };
+    var foot = mk("ftv-foot");
+    mk("ftv-code", foot, "Big Dawg Feud \xB7 TV code ".concat(code));
+    var fs = el("button", "ftv-btn", "Full screen"),
+      ex = el("button", "ftv-btn", "Exit");
+    foot.append(fs, ex);
+    fs.addEventListener("click", function () {
+      try {
+        (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+      } catch (e) {}
+    });
+    ex.addEventListener("click", tvClose);
+    document.body.append(root);
+    try {
+      navigator.wakeLock.request("screen").then(function (w) {
+        T.wake = w;
+      })["catch"](function () {});
+    } catch (e) {}
+    tvRender(v);
+    var _poll = function poll() {
+      if (T.alive) API("feudWatch", code).then(tvRender)["catch"](function () {}).then(function () {
+        return setTimeout(_poll, 700);
+      });
+    };
+    setTimeout(_poll, 700);
+  }
+  function tvRender(v) {
+    var T = TV;
+    if (!T || !T.alive || !v) return;
+    var L = T.last;
+    T.n0.textContent = v.tm[0];
+    T.n1.textContent = v.tm[1];
+    T.s0.textContent = v.sc[0];
+    T.s1.textContent = v.sc[1];
+    T.pot.textContent = v.pot;
+    T.rd.textContent = "ROUND ".concat(v.r, " OF ").concat(v.of) + (v.m > 1 ? v.m === 2 ? " · DOUBLE" : " · TRIPLE" : "");
+    var key = v.r + "|" + v.q;
+    if (key !== T.key) {
+      T.key = key;
+      T.q.textContent = v.q;
+      T.board.textContent = "";
+      var rows = Math.ceil(v.a.length / 2),
+        cols = [el("div", "ftv-col"), el("div", "ftv-col")];
+      T.board.append(cols[0], cols[1]);
+      T.slots = v.a.map(function (a, j) {
+        var n = el("div", "ftv-slot");
+        cols[j < rows ? 0 : 1].append(n);
+        return n;
+      });
+      T.sig = v.a.map(function () {
+        return null;
+      });
+    }
+    v.a.forEach(function (a, j) {
+      var sig = a ? a.join("|") : "",
+        n = T.slots[j];
+      if (T.sig[j] === sig) return;
+      T.sig[j] = sig;
+      n.textContent = "";
+      if (a) {
+        n.className = "ftv-slot on" + (a[2] ? " free" : "");
+        n.append(el("span", "ftv-al", a[0]), el("span", "ftv-ap", a[1]));
+      } else {
+        n.className = "ftv-slot";
+        n.append(el("span", "ftv-num", j + 1));
+      }
+    });
+    T.st.textContent = "✕".repeat(v.st);
+    if (L && v.x > L.x) {
+      T.x.textContent = "✕".repeat(v.xn || 1);
+      T.x.classList.add("go");
+      buzzer();
+      clearTimeout(T.xt);
+      T.xt = setTimeout(function () {
+        return T.x.classList.remove("go");
+      }, 1500);
+    }
+    if (L && v.d > L.d) ding();
+    if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
+    T.win.textContent = v.over ? v.sc[0] === v.sc[1] ? "It's a tie!" : "".concat(v.tm[v.sc[0] > v.sc[1] ? 0 : 1], " wins! \uD83E\uDD83") : "";
+    T.win.classList.toggle("go", !!v.over);
+    if (v.over && L && !L.over && typeof celebrate === "function") celebrate();
+    T.last = v;
+  }
   var ac;
   function tone(type, f, dur, vol) {
     if (typeof fxOn === "function" && !fxOn()) return;
@@ -363,7 +545,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     cat: "den",
     puzzle: true,
     blurb: "Survey says! Through Sunday.",
-    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. Here through Sunday only.",
+    how: "Five survey questions a day. Type an answer you think is on the board and hit Enter. Get it right and it flips over with its points. Miss and it's a strike, and three strikes ends the question (or tap Pass to move on). Thursday to Saturday use real polls, so you're guessing what America said, and the source is under each question. Sunday is the Crew Edition, built from the crew's own survey answers. Each question is worth up to 200: your share of the points on its board. Got a room full of people? Flip the switch at the top to Host: two teams on one screen, you flip the answers, hit Strike, and hand the pot to the team that wins the round. To put the board on a TV, open Feud on a computer, tap TV and type the code from the host's phone. Here through Sunday only.",
     reset: function reset(G) {
       var s = G.s = {
         typed: "",
@@ -517,7 +699,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (s.flashT > 0) s.flashT -= dt;
       if (s.bigX > 0) s.bigX -= dt;
       if (s.quitT > 0) s.quitT -= dt;
-      if (MODE === "host" || !s.qs) return;
+      if (MODE !== "solo" || !s.qs) return;
       if (!s.done) {
         s.el += dt;
         s.ck = (s.ck || 0) + dt;
@@ -546,33 +728,50 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       c.fillStyle = P.bg;
       c.fillRect(0, 0, W, H);
       c.textBaseline = "middle";
-      var gw = 168,
+      var gw = 216,
+        sw = gw / 3,
         gx = W / 2 - gw / 2;
       rr(c, gx, 4, gw, 28, 14);
       c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6";
       c.fill();
-      ["solo", "host"].forEach(function (m, k) {
+      ["solo", "host", "tv"].forEach(function (m, k) {
         var on = MODE === m,
-          x = gx + k * gw / 2;
+          x = gx + k * sw;
         if (on) {
-          rr(c, x + 2, 6, gw / 2 - 4, 24, 12);
+          rr(c, x + 2, 6, sw - 4, 24, 12);
           c.fillStyle = ink;
           c.fill();
         }
         c.fillStyle = on ? P.bg : mute;
         c.textAlign = "center";
         c.font = "700 13px ".concat(G.UI);
-        c.fillText(k ? "Host" : "Solo", x + gw / 4, 19);
+        c.fillText(["Solo", "Host", "TV"][k], x + sw / 2, 19);
         s.btns.push({
           x: x,
           y: 0,
-          w: gw / 2,
+          w: sw,
           h: 36,
           k: "mode",
           m: m
         });
       });
       if (MODE === "host") return this.hostDraw(G, c, P);
+      if (MODE === "tv") {
+        c.fillStyle = ink;
+        c.textAlign = "center";
+        c.font = "700 24px ".concat(G.TITLE);
+        c.fillText("Put the game on this screen", W / 2, TOP + 44);
+        c.font = "500 14.5px ".concat(G.UI);
+        c.fillStyle = mute;
+        var _y = TOP + 80;
+        wrap(c, "Start a game in Host mode on your phone, then type its TV code here. This screen shows the board for the room, and the phone runs the game.", W - 48).forEach(function (l) {
+          c.fillText(l, W / 2, _y);
+          _y += 21;
+        });
+        inputBox(G, c, P, _y + 8, "TV code");
+        keys(G, c, P, Math.min(214, H * 0.34));
+        return;
+      }
       if (!s.qs) {
         c.fillStyle = ink;
         c.textAlign = "center";
@@ -649,6 +848,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         return;
       }
       if (MODE === "host") return this.hostTap(G, b);
+      if (MODE === "tv") {
+        if (b.key) this.tvPress(G, b.key);
+        return;
+      }
       if (b.k === "retry") {
         s.err = false;
         s.loading = true;
@@ -672,17 +875,40 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     onKey: function onKey(G, k, d) {
       if (!d) return;
       var host = MODE === "host",
+        tv = MODE === "tv",
         key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      if (tv) {
+        if (key) this.tvPress(G, key);
+        return;
+      }
       if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
       if (host) {
         G.s.hkb = true;
         this.hPress(G, key);
       } else this.press(G, key);
     },
-    hostNew: function hostNew(G, name, raw) {
+    tvPress: function tvPress(G, k) {
+      var _this2 = this;
+      var s = G.s;
+      if (k !== ">") return typeKey(s, k);
+      var code = s.typed.replace(/[^A-Z]/g, "");
+      s.typed = "";
+      if (code.length !== 4) return this.say(G, "The code is 4 letters", 2.5);
+      tone("sine", 30, 0.02, 0.0001);
+      if (ac && ac.resume) ac.resume();
+      this.say(G, "Connecting…", 20);
+      API("feudWatch", code).then(function (v) {
+        s.msgT = 0;
+        tvOpen(code, v);
+      })["catch"](function (e) {
+        return _this2.say(G, /No game/.test(errMsg(e)) ? "No game with that code" : /Unknown call/.test(errMsg(e)) ? "Server is updating. Try again in a few minutes." : "Couldn't connect. Try again.", 4);
+      });
+    },
+    hostNew: function hostNew(G, name, raw, code) {
       HS = {
         name: name,
         raw: raw || null,
+        code: code || "",
         day: KEY,
         qi: 0,
         pot: 0,
@@ -704,6 +930,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       G.s.peek = false;
       G.s.hkb = false;
       hSave();
+      askCode();
     },
     hReveal: function hReveal(G, j) {
       var s = G.s,
@@ -714,6 +941,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j;
       s.flashT = 0.7;
+      h.nd = (h.nd || 0) + 1;
       ding();
       hSave();
     },
@@ -725,6 +953,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         h.strikes[i]++;
         s.bigN = h.strikes[i];
       } else s.bigN = 1;
+      h.nx = (h.nx || 0) + 1;
+      h.xn = s.bigN;
       s.bigX = 1.3;
       buzzer();
       G.buzz();
@@ -755,7 +985,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       typeKey(G.s, k);
     },
     hostTap: function hostTap(G, b) {
-      var _this2 = this;
+      var _this3 = this;
       var s = G.s,
         h = HS;
       if (b.k === "hpolls") return this.hostNew(G, "polls");
@@ -763,12 +993,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (s.hload) return;
         s.hload = true;
         s.hmsg = "";
-        API("getFeudSurvey", me ? me.id : "", true).then(function (r) {
+        API("feudHost", me ? me.id : "", "crew").then(function (r) {
           s.hload = false;
-          if (!r || !r.answers) s.hmsg = "The crew's answers aren't ready on the server yet. Try again in a few minutes.";else if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";else _this2.hostNew(G, "crew", r.answers);
-        })["catch"](function () {
+          if (r.n < 3) s.hmsg = "Need at least 3 survey answers first.";else _this3.hostNew(G, "crew", r.answers, r.code);
+        })["catch"](function (e) {
           s.hload = false;
-          s.hmsg = "Couldn't load the crew's answers. Check your connection.";
+          s.hmsg = /Unknown call/.test(errMsg(e)) ? "The server is still updating. Try again in a few minutes." : "Couldn't load the crew's answers. Check your connection.";
         });
         return;
       }
@@ -848,14 +1078,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         bx = W / 2 - bw / 2;
       if (!h) {
         lines("Host a game", TOP + 44, "700 24px ".concat(G.TITLE), ink);
-        var _y = lines("One screen for the whole room, two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
-        s.btns.push(Object.assign(G.pill(c, bx, _y, bw, 50, "Play the crew's answers", true, s.hload), {
+        var _y2 = lines("One screen for the whole room, two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, _y2, bw, 50, "Play the crew's answers", true, s.hload), {
           k: "hcrew"
         }));
-        s.btns.push(Object.assign(G.pill(c, bx, _y + 62, bw, 50, "Play America's polls", false, s.hload), {
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 62, bw, 50, "Play America's polls", false, s.hload), {
           k: "hpolls"
         }));
-        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y + 144, "600 14px ".concat(G.UI), ink);
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 144, "600 14px ".concat(G.UI), ink);
         return;
       }
       if (h.over) {
@@ -902,7 +1132,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       c.font = "600 13px ".concat(G.UI);
       c.fillStyle = mute;
       c.textAlign = "left";
-      c.fillText("Round ".concat(i + 1, " of ").concat(HD.length).concat(m > 1 ? m === 2 ? " · DOUBLE" : " · TRIPLE" : ""), 14, y);
+      c.fillText("Round ".concat(i + 1, " of ").concat(HD.length).concat(m > 1 ? m === 2 ? " · DOUBLE" : " · TRIPLE" : "").concat(h.code ? " · TV code " + h.code : ""), 14, y);
       c.textAlign = "right";
       c.fillStyle = s.quitT > 0 ? "#d64545" : mute;
       c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
@@ -1000,7 +1230,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       },
       mode: function mode(m) {
         MODE = m;
-      }
+      },
+      view: view,
+      tvOpen: tvOpen,
+      tvRender: tvRender
     }
   });
 })();
