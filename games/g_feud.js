@@ -51,6 +51,25 @@
     P("Name where people do their holiday shopping.", "NRF holiday survey, 2026", [["Online", 53, "amazon|internet|web"], ["Grocery stores", 43, "grocery|supermarket|kroger|meijer"], ["Discount stores", 43, "discount|walmart|target|dollar store"], ["Department stores", 42, "department|macys|kohls|mall"]]),
     P("Name a common Thanksgiving hosting fail.", "OnePoll for Omaha Steaks, 2019", [["Food isn't done on time", 31, "late|food late|not ready|running late|dinner late|behind"], ["Dishes done at different times", 29, "timing|cold food|food cold|cold"], ["Ran out of wine", 28, "wine|out of wine|alcohol|booze|beer|drink"], ["Spilled a dish", 28, "spill|spilled|drop|dropped|dropped food|dropped turkey"], ["Forgot an ingredient", 28, "forgot|forgot something|missing ingredient|forgot ingredient"]])
   ];
+  // Host-only boards: never a solo daily, so hosting them spoils nothing. Same rule as above: real published polls only.
+  const MORE = [
+    P("Name America's favorite Halloween candy.", "Monmouth University Poll, 2019", [["Reese's Peanut Butter Cups", 36], ["Snickers", 18], ["M&M's", 11], ["Hershey bar", 6], ["Candy corn", 6], ["Skittles", 5], ["Starburst", 4], ["Tootsie Pops", 2]]),
+    P("Name America's favorite Christmas cookie.", "Monmouth University Poll, 2023", [["Frosted sugar cookies", 32], ["Gingerbread", 12], ["Chocolate chip", 11], ["Snickerdoodles", 6]]),
+    P("Name America's favorite season.", "Morning Consult, 2022", [["Fall", 41], ["Spring", 24], ["Summer", 24], ["Winter", 11]]),
+    P("Name America's favorite day of the week.", "YouGov, 2021", [["Saturday", 35], ["Friday", 29], ["Sunday", 14]]),
+    P("Name a New Year's resolution people are making.", "YouGov, Dec 2025", [["Exercise more", 25], ["Be happy", 23], ["Eat healthier", 22], ["Save more money", 21], ["Improve my health", 21]]),
+    P("Name a vegetable people say they don't like.", "OnePoll for Dr. Praeger's, 2019", [["Turnips", 27], ["Beets", 26], ["Radishes", 23], ["Brussels sprouts", 21], ["Artichokes", 20], ["Eggplant", 20], ["Butternut squash", 20]]),
+    P("Name a vegetable almost everybody likes.", "OnePoll for Dr. Praeger's, 2019", [["Corn", 91], ["Potatoes", 91], ["Carrots", 89], ["Tomatoes", 89], ["Onions", 87], ["Green beans", 87], ["Cucumbers", 86], ["Broccoli", 85]]),
+    P("Name something people plan to do this holiday season.", "YouGov holiday survey", [["Listen to holiday music", 75], ["Watch a holiday movie", 72], ["Look at holiday lights", 70], ["Exchange presents", 70], ["Drink hot chocolate", 67], ["Decorate a tree", 66]]),
+    P("Name a favorite breakfast food.", "National Honey Board survey", [["Eggs", 69], ["Bacon or sausage", 46], ["Cereal", 44], ["Fruit", 42], ["Oatmeal", 39], ["Hash browns", 30], ["Biscuits and gravy", 17]]),
+    P("Name America's favorite ice cream flavor.", "YouGov, 2022", [["Vanilla", 11], ["Chocolate", 10], ["Cookies and cream", 7], ["Strawberry", 6], ["Cookie dough", 6]]),
+    P("Name a favorite ice cream topping.", "YouGov, 2022", [["Hot fudge", 40], ["Chocolate syrup", 33], ["Whipped cream", 32], ["Caramel", 32]]),
+    P("Name something people put on a hamburger.", "YouGov", [["Ketchup", 71], ["Onions", 64], ["Mustard", 50], ["Mayonnaise", 48]]),
+    P("Name a household chore people hate.", "TaskRabbit survey, 2019", [["Cleaning the bathroom", 63], ["Yard work", 43], ["Cleaning up after the pet", 42], ["Laundry", 31], ["Vacuuming", 31]]),
+    P("Name a food Americans say they hate.", "YouGov, 2025", [["Liver", 40], ["Anchovies", 36], ["Sardines", 35]]),
+    P("Name a favorite winter holiday drink.", "Harris Poll for Instacart", [["Hot chocolate", 58], ["Eggnog", 42], ["Cider", 26], ["Mulled wine", 13], ["Hot toddy", 13]]),
+    P("Name America's favorite meal of the day.", "YouGov, Jan 2025", [["Dinner", 50], ["Breakfast", 23], ["Lunch", 19]])
+  ];
   const CK = "bdd:feud:crew"; // Sunday's crew answers, cached once the survey has closed
   const tidy = t => { t = String(t).trim().slice(0, 24); return t.charAt(0).toUpperCase() + t.slice(1); };
   const crewBoard = lists => FEUD_QS.map((q, i) => {
@@ -123,26 +142,49 @@
     });
   }
   // ---- host mode state: one game at a time, kept on this device so a reload picks it back up ----
-  const HK = "bdd:feud:host", CODE = "bdd:feud:code", TEAMS = ["Team Turkey", "Team Gravy"];
-  let MODE = "solo", HS = null, HD = null;
-  // Crew deck = the crew's survey answers so far. Polls deck = every daily board up to the day
-  // the game started plus the spare board, so hosting never spoils a solo board that hasn't come out yet.
-  // Mix = a 5-round party game: three national boards from Thursday (already out, so nothing upcoming is spoiled) with two
-  // of the crew's questions in between, ending on the triple round with the biggest board.
-  const deckOf = h => {
+  const HK = "bdd:feud:host", CODE = "bdd:feud:code", USED = "bdd:feud:used", TM = "bdd:feud:tm", TEAMS = ["Team Turkey", "Team Gravy"];
+  let MODE = "solo", HS = null, HD = null, hist = [];
+  // Host boards always add up to 100, like the show: each answer's share of its board, rounded so the total is exact.
+  const to100 = b => {
+    const t = tot(b) || 1, raw = b.a.map(a => 100 * a.pts / t), fl = raw.map(Math.floor); let left = 100 - fl.reduce((x, y) => x + y, 0);
+    raw.map((r, j) => [r - fl[j], j]).sort((x, y) => y[0] - x[0]).forEach(p => { if (left-- > 0) fl[p[1]]++; });
+    return { q: b.q, src: b.src + " · scaled to 100", a: b.a.map((a, j) => ({ label: a.label, pts: fl[j] })).sort((x, y) => y.pts - x.pts) };
+  };
+  // n boards this phone hasn't hosted yet, in random order; when the pile runs short it starts over.
+  function pick(list, n) {
+    let used = store.get(USED) || [], f = list.filter(b => !used.includes(b.q));
+    if (f.length < n) { used = used.filter(q => !list.some(b => b.q === q)); f = list.slice(); }
+    f = f.map(b => [Math.random(), b]).sort((x, y) => x[0] - y[0]).slice(0, n).map(p => p[1]);
+    store.set(USED, used.concat(f.map(b => b.q))); return f;
+  }
+  // Every game is 5 rounds. Polls = the daily boards already out (so hosting never spoils an upcoming solo board), the spare
+  // board and the host-only ones. Party mix puts two of the crew's questions 2nd and 4th. The biggest poll board is the
+  // triple round at the end. Crew = all of the crew's questions.
+  function newDeck(name, raw) {
+    const cb = raw ? crewBoard(raw).filter(b => b.a.length > 1) : [];
+    if (name === "crew") return cb.map(to100);
+    const c = name === "mix" ? pick(cb, Math.min(2, cb.length)) : [];
+    const d = pick([].concat(...Object.keys(DAYS).filter(d => d <= KEY && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE, MORE), 5 - c.length).sort((x, y) => x.a.length - y.a.length);
+    c.forEach((b, i) => d.splice(1 + 2 * i, 0, b)); return d.map(to100);
+  }
+  // A game started before decks were saved with the game (Nov 26) keeps its old boards and points.
+  const oldDeck = h => {
     if (h.name === "polls") return [].concat(...Object.keys(DAYS).filter(d => d <= h.day && Array.isArray(DAYS[d])).map(d => DAYS[d]), SPARE);
     const cb = crewBoard(h.raw), T = DAYS["2026-11-26"];
     return h.name === "mix" ? [T[1], cb[4], T[2], cb[0], T[0]] : cb;
   };
-  const hLoad = () => { HS = store.get(HK); HD = HS ? deckOf(HS) : null; if (HS) { askCode(); hPush(); } };
+  const hLoad = () => { HS = store.get(HK); hist = []; if (HS && !HS.deck) { HS.deck = oldDeck(HS); delete HS.raw; } HD = HS ? HS.deck : null; if (HS) { askCode(); hPush(); } };
   const hSave = () => { store.set(HK, HS); hPush(); };
+  // Undo: every host action saves the game first. The TV's strike and ding counters keep counting up, so undo never replays a sound.
+  const snap = () => { hist.push(JSON.stringify(HS)); if (hist.length > 30) hist.shift(); };
+  function undo() { if (!hist.length) return; const o = HS; HS = Object.assign(JSON.parse(hist.pop()), { code: o.code, nx: o.nx, nd: o.nd, tm: o.tm }); HD = HS.deck; hSave(); }
   const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
   // ---- TV link: the host's phone pushes what the room may see (feudPush); a second device, say a computer on the TV,
   // shows it (TV mode, feudWatch). Only flipped answers ever leave the phone. ----
   const view = () => {
     const h = HS, i = h.qi, q = HD[i];
     return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
-      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: TEAMS, won: h.won[i], over: h.over };
+      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: h.tm || TEAMS, won: h.won[i], over: h.over };
   };
   // A push that fails is sent again (the newest view, up to 5 tries, 2 s apart) so the TV never sticks on an old screen.
   let pushing = false, dirty = false, fails = 0, asking = false;
@@ -159,7 +201,7 @@
   // Ask the server for a TV code for a game that doesn't have one yet (a polls game starts before the code arrives).
   function askCode() {
     const h = HS; if (!h || h.code || asking || !me) return; asking = true;
-    API("feudHost", me.id, "").then(r => { asking = false; if (HS === h && r && r.code) { h.code = r.code; store.set(CODE, r.code); hSave(); } }, () => { asking = false; });
+    API("feudHost", me.id, "").then(r => { asking = false; if (HS && !HS.code && r && r.code) { HS.code = r.code; store.set(CODE, r.code); hSave(); } }, () => { asking = false; });
   }
   let TV = null;
   function tvClose() {
@@ -353,14 +395,13 @@
     },
     onKey(G, k, d) {
       if (!d) return;
-      const host = MODE === "host", tv = MODE === "tv", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
+      const tv = MODE === "tv", key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
       if (tv) { if (key) this.tvPress(G, key); return; }
-      if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
-      if (host) { G.s.hkb = true; this.hPress(G, key); } else this.press(G, key);
+      if (key && MODE === "solo" && G.s.qs) this.press(G, key);
     },
 
-    // ---- Host mode: one screen for the room, run like the show. Two teams; the host flips answers (tap with Peek on,
-    // or type what a player said), hits Strike on a miss, then gives the pot to the team that won the round.
+    // ---- Host mode: run like the show. Two teams; the host's phone shows every answer (Hide covers them when the phone
+    // is also the room's screen), the host taps one to flip it, hits Strike on a miss, then gives the pot to the team that won the round.
     // Last round is triple points, the one before it double. Nothing here touches the daily solo score. ----
     tvPress(G, k) {
       const s = G.s; if (k !== ">") return typeKey(s, k);
@@ -370,31 +411,22 @@
       API("feudWatch", code).then(v => { s.msgT = 0; tvOpen(code, v); }).catch(e => this.say(G, /No game/.test(errMsg(e)) ? "No game with that code" : /Unknown call/.test(errMsg(e)) ? "Server is updating. Try again in a few minutes." : "Couldn't connect. Try again.", 4));
     },
     hostNew(G, name, raw, code) {
-      code = store.get(CODE) || code || ""; if (code) store.set(CODE, code); fails = 0;
-      HS = { name, raw: raw || null, code, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false }; HD = deckOf(HS);
+      code = store.get(CODE) || code || ""; if (code) store.set(CODE, code); fails = 0; hist = [];
+      HS = { name, deck: newDeck(name, raw), code, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false, tm: store.get(TM) || TEAMS.slice() }; HD = HS.deck;
       ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
-      G.s.peek = false; G.s.hkb = false; hSave(); askCode();
+      G.s.hide = false; hSave(); askCode();
     },
     hReveal(G, j) {
       const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
-      h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
+      snap(); h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); hSave();
     },
     hStrike(G) {
-      const s = G.s, h = HS, i = h.qi;
+      const s = G.s, h = HS, i = h.qi; snap();
       if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
       h.nx = (h.nx || 0) + 1; h.xn = s.bigN;
       s.bigX = 1.3; buzzer(); G.buzz(); hSave();
     },
-    hEnter(G) {
-      const s = G.s, h = HS, i = h.qi, n = norm(s.typed); if (n.length < 2) return; s.typed = "";
-      const hits = match(HD[i], n), open = hits.filter(j => !h.shown[i].includes(j));
-      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 2.2);
-      if (!open.length && hits.length) return this.say(G, "Already on the board");
-      if (open.length) { this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!"); return this.hReveal(G, open[0]); }
-      this.say(G, "Not on the board"); this.hStrike(G);
-    },
-    hPress(G, k) { if (k === ">") return this.hEnter(G); typeKey(G.s, k); },
     hostTap(G, b) {
       const s = G.s, h = HS;
       if (b.k === "hpolls") return this.hostNew(G, "polls");
@@ -408,25 +440,26 @@
         return;
       }
       if (!h) return;
-      const quit = () => { HS = HD = null; store.set(HK, null); s.quitT = 0; s.hmsg = ""; };
+      const quit = () => { HS = HD = null; hist = []; store.set(HK, null); s.quitT = 0; s.hmsg = ""; };
       if (b.k === "hnew") return quit();
       if (b.k === "hquit") { if (s.quitT > 0) quit(); else s.quitT = 3; return; }
+      if (b.k === "hundo") return undo();
+      if (h.over) return;
       const i = h.qi, q = HD[i];
+      if (b.k === "hname") { const v = (prompt("Team name", h.tm[b.t]) || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 12); if (v) { h.tm[b.t] = v; store.set(TM, h.tm); hSave(); } return; }
       if (b.slot != null) return this.hReveal(G, b.slot);
       if (b.k === "hstrike") return this.hStrike(G);
-      if (b.k === "hpeek") { s.peek = !s.peek; return; }
-      if (b.k === "hkb") { s.hkb = !s.hkb; s.typed = ""; return; }
+      if (b.k === "hhide") { s.hide = !s.hide; return; }
       if (b.k === "hwin0" || b.k === "hwin1") {
         if (h.won[i] >= 0 || !h.pot) return;
-        const t = b.k === "hwin0" ? 0 : 1; h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
+        const t = b.k === "hwin0" ? 0 : 1; snap(); h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
       }
-      if (b.k === "hall") { q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
+      if (b.k === "hall") { if (h.shown[i].length === q.a.length) return; snap(); q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
       if (b.k === "hnext") {
         if (h.won[i] < 0 && h.pot) return;
-        s.peek = false; s.typed = ""; if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
+        snap(); if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
         return hSave();
       }
-      if (b.key) return this.hPress(G, b.key);
     },
     hostDraw(G, c, P) {
       const s = G.s, W = G.W, H = G.H, h = HS, { ink, mute } = P;
@@ -434,27 +467,30 @@
       const bw = Math.min(280, W - 60), bx = W / 2 - bw / 2;
       if (!h) {
         lines("Host a game", TOP + 44, `700 24px ${G.TITLE}`, ink);
-        let y = lines("Two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round. Party mix is America's polls with the crew's own answers mixed in.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
-        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Party mix · 5 rounds", true, s.hload), { k: "hmix" }));
-        s.btns.push(Object.assign(G.pill(c, bx, y + 60, bw, 46, "Crew answers only", false, s.hload), { k: "hcrew" }));
-        s.btns.push(Object.assign(G.pill(c, bx, y + 114, bw, 46, "America's polls only", false, s.hload), { k: "hpolls" }));
+        let y = lines("Two teams, five rounds. Your phone shows every answer: read the question out loud, tap an answer when someone says it, hit Strike on a miss, then give the pot to the team that won the round. Every board adds up to 100, and each new game uses surveys you haven't played yet.", TOP + 80, `500 14.5px ${G.UI}`, mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, y, bw, 50, "Party mix · polls + crew", true, s.hload), { k: "hmix" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 60, bw, 46, "America's polls only", false, s.hload), { k: "hpolls" }));
+        s.btns.push(Object.assign(G.pill(c, bx, y + 114, bw, 46, "Crew answers only", false, s.hload), { k: "hcrew" }));
         if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, y + 190, `600 14px ${G.UI}`, ink);
         return;
       }
+      const tm = h.tm || TEAMS;
       if (h.over) {
         const [a, b] = h.score;
-        lines(a === b ? "It's a tie!" : `${TEAMS[a > b ? 0 : 1]} wins! 🦃`, TOP + 60, `700 26px ${G.TITLE}`, ink);
-        lines(`${TEAMS[0]} ${a}  ·  ${TEAMS[1]} ${b}`, TOP + 100, `600 16px ${G.UI}`, mute);
+        lines(a === b ? "It's a tie!" : `${tm[a > b ? 0 : 1]} wins! 🦃`, TOP + 60, `700 26px ${G.TITLE}`, ink);
+        lines(`${tm[0]} ${a}  ·  ${tm[1]} ${b}`, TOP + 100, `600 16px ${G.UI}`, mute);
         s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 50, "New game", true), { k: "hnew" }));
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 194, bw, 44, "↩ Undo", false, !hist.length), { k: "hundo" }));
         return;
       }
-      const i = h.qi, q = HD[i], m = mult(i), won = h.won[i], kb = s.hkb, T = TOP + 6;
-      // scoreboard: team, pot, team
+      const i = h.qi, q = HD[i], m = mult(i), won = h.won[i], st = h.strikes[i], n = q.a.length, left = n - h.shown[i].length, last = i === HD.length - 1, T = TOP + 6;
+      // scoreboard: team, pot, team (tap a team to rename it)
       const pw = 88, tw = (W - 24 - pw - 12) / 2;
       [0, 1].forEach(t => {
         const x = t ? W - 12 - tw : 12; rr(c, x, T, tw, 50, 10); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
-        c.textAlign = "center"; c.fillStyle = mute; c.font = `600 11.5px ${G.UI}`; c.fillText(TEAMS[t], x + tw / 2, T + 15);
+        c.textAlign = "center"; c.fillStyle = mute; fit(c, tm[t] + " ✎", tw - 12, 11.5, 600, G.UI); c.fillText(tm[t] + " ✎", x + tw / 2, T + 15);
         c.fillStyle = ink; c.font = `700 22px ${G.UI}`; c.fillText(h.score[t], x + tw / 2, T + 35);
+        s.btns.push({ x, y: T, w: tw, h: 50, k: "hname", t });
       });
       rr(c, W / 2 - pw / 2, T, pw, 50, 10); c.fillStyle = "#1f3a8a"; c.fill();
       c.fillStyle = "#e9b949"; c.font = `700 11.5px ${G.UI}`; c.fillText("POT", W / 2, T + 15); c.font = `700 22px ${G.UI}`; c.fillText(h.pot, W / 2, T + 35);
@@ -463,30 +499,48 @@
       c.textAlign = "right"; c.fillStyle = s.quitT > 0 ? "#d64545" : mute; c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
       s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
       y = question(G, c, P, q, y + 28);
-      const kbH = kb ? Math.min(214, H * 0.34) : 0, rows = Math.ceil(q.a.length / 2);
-      const sh = Math.max(26, Math.min(44, (H - y - kbH - (kb ? 96 : 160)) / rows - 6));
-      const slots = board(G, c, P, q, y, sh, j => h.shown[i].includes(j) ? (h.free[i].includes(j) ? 2 : 1) : s.peek ? 3 : 0);
-      if (s.peek) slots.forEach(b => s.btns.push(b));
+      // what the host does next
+      const tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.")
+        : !left ? "Board cleared! Give the pot to the team that was playing."
+        : st >= 3 ? "3 strikes. The other team gets ONE guess to steal, then give the pot."
+        : s.hide ? "Answers are hidden. Tap Show to flip one."
+        : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it."
+        : "Tap answers as they're said. Wrong answer? Hit Strike.";
+      rr(c, 12, y - 8, W - 24, 24, 8); c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0"; c.fill();
+      c.fillStyle = ink; c.textAlign = "center"; fit(c, tip, W - 40, 12.5, 600, G.UI); c.fillText(tip, W / 2, y + 5); y += 24;
+      // the answers: one tall column when they fit, else two (numbered down the left column first)
+      const bot = H - 170, cols = (bot - y) / n >= 36 ? 1 : 2, rows = Math.ceil(n / cols), gap = 5, rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)), cw = (W - 24 - (cols - 1) * 6) / cols;
+      q.a.forEach((a, j) => {
+        const col = j < rows ? 0 : 1, x = 12 + col * (cw + 6), yy = y + (j - col * rows) * (rh + gap), mid = yy + rh / 2 + 1, on = h.shown[i].includes(j), free = on && h.free[i].includes(j);
+        rr(c, x, yy, cw, rh, 8); c.fillStyle = free ? (P.dk ? "#2c2c2e" : "#ecece6") : on ? (s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949") : s.hide ? (P.dk ? "#27386b" : "#1f3a8a") : P.bg; c.fill();
+        if (!on && !s.hide) { c.lineWidth = 1.5; c.strokeStyle = P.dk ? "#6d87d8" : "#1f3a8a"; c.stroke(); }
+        if (!on && s.hide) { c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 ${Math.min(16, rh * 0.5)}px ${G.UI}`; c.fillText(j + 1, x + cw / 2, mid); return; }
+        const col2 = free ? mute : on ? "#2b1a10" : ink, ps = (on && !free ? "✓ " : "") + a.pts;
+        c.fillStyle = on ? col2 : mute; c.textAlign = "left"; c.font = `700 12px ${G.UI}`; c.fillText(j + 1, x + 9, mid);
+        c.fillStyle = col2; c.textAlign = "right"; c.font = `700 15px ${G.UI}`; c.fillText(ps, x + cw - 9, mid); const pwid = c.measureText(ps).width;
+        c.textAlign = "left"; fit(c, a.label, cw - 44 - pwid, 15, 700, G.UI); c.fillText(a.label, x + 26, mid);
+        if (!on) s.btns.push({ x, y: yy, w: cw, h: rh, slot: j });
+      });
       if (s.bigX > 0) { // the big red X
-        const n = s.bigN || 1, z = Math.min(84, (W - 60) / 3), bh = rows * (sh + 6), x0 = W / 2 - (n * z + (n - 1) * 10) / 2;
+        const k2 = s.bigN || 1, z = Math.min(84, (W - 60) / 3), bh = rows * (rh + gap), x0 = W / 2 - (k2 * z + (k2 - 1) * 10) / 2;
         c.save(); c.globalAlpha = Math.min(1, s.bigX * 3);
-        for (let k = 0; k < n; k++) { const x = x0 + k * (z + 10), yy = y + bh / 2 - z / 2; rr(c, x, yy, z, z, 12); c.fillStyle = P.bg; c.fill(); c.lineWidth = 6; c.strokeStyle = "#d64545"; c.stroke(); c.fillStyle = "#d64545"; c.textAlign = "center"; c.font = `700 ${z * 0.72}px ${G.UI}`; c.fillText("✕", x + z / 2, yy + z / 2 + 3); }
+        for (let k = 0; k < k2; k++) { const x = x0 + k * (z + 10), yy = y + bh / 2 - z / 2; rr(c, x, yy, z, z, 12); c.fillStyle = P.bg; c.fill(); c.lineWidth = 6; c.strokeStyle = "#d64545"; c.stroke(); c.fillStyle = "#d64545"; c.textAlign = "center"; c.font = `700 ${z * 0.72}px ${G.UI}`; c.fillText("✕", x + z / 2, yy + z / 2 + 3); }
         c.restore();
       }
-      y += rows * (sh + 6) + 6;
-      strikes(c, P, h.strikes[i], 14, y);
-      const aw = W - 28 - 104, w1 = aw * 0.4, w2 = (aw - w1 - 12) / 2; let x = 14 + 104;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w1, 34, "Strike"), { k: "hstrike" })); x += w1 + 6;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Peek", s.peek), { k: "hpeek" })); x += w2 + 6;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Keys", kb), { k: "hkb" }));
-      if (kb) { inputBox(G, c, P, y + 36, "Type what they said"); keys(G, c, P, kbH); return; }
-      y += 42; const hw = (W - 36) / 2, last = i === HD.length - 1;
-      if (won < 0) [0, 1].forEach(t => s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), y, hw, 46, `Pot → ${TEAMS[t].slice(5)}`, true, !h.pot), { k: "hwin" + t })));
-      else lines(`${TEAMS[won]} banked it`, y + 23, `600 15px ${G.UI}`, ink);
-      y += 56;
-      s.btns.push(Object.assign(G.pill(c, 12, y, hw, 46, "Reveal all", false, h.shown[i].length === q.a.length), { k: "hall" }));
-      s.btns.push(Object.assign(G.pill(c, 24 + hw, y, hw, 46, last ? "Final score" : "Next round ›", false, won < 0 && h.pot > 0), { k: "hnext" }));
+      // controls, fixed at the bottom: Strike and Undo, the pot, then the round
+      let by = H - 164; const uw = 96, sw = W - 24 - uw - 8, hw = (W - 36) / 2, w3 = (W - 24 - 16) / 3;
+      rr(c, 12, by, sw, 52, 14); c.fillStyle = "#d64545"; c.fill();
+      c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 18px ${G.UI}`; c.fillText(`✕  STRIKE   ${"●".repeat(st)}${"○".repeat(3 - st)}`, 12 + sw / 2, by + 27);
+      s.btns.push({ x: 12, y: by, w: sw, h: 52, k: "hstrike" });
+      s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), { k: "hundo" }));
+      by += 60;
+      if (won < 0) [0, 1].forEach(t => s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), by, hw, 46, `Pot → ${tm[t]}`, true, !h.pot), { k: "hwin" + t })));
+      else lines(`${tm[won]} banked it`, by + 23, `600 15px ${G.UI}`, ink);
+      by += 54;
+      s.btns.push(Object.assign(G.pill(c, 12, by, w3, 44, s.hide ? "👀 Show" : "🙈 Hide", s.hide), { k: "hhide" }));
+      s.btns.push(Object.assign(G.pill(c, 20 + w3, by, w3, 44, "Show rest", false, !left), { k: "hall" }));
+      s.btns.push(Object.assign(G.pill(c, 28 + 2 * w3, by, w3, 44, last ? "Final score" : "Next ›", false, won < 0 && h.pot > 0), { k: "hnext" }));
     },
-    _t: { norm, match, alike, crewBoard, DAYS, SPARE, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; }, view, tvOpen, tvRender }
+    _t: { norm, match, alike, crewBoard, DAYS, SPARE, MORE, to100, newDeck, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; }, view, tvOpen, tvRender }
   });
 })();

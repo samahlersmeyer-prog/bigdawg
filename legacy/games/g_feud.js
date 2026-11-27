@@ -71,6 +71,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     "2026-11-29": "crew"
   };
   var SPARE = [P("Besides turkey, name a Thanksgiving main dish.", "YouGov, 2020 · % of head-to-head matchups won", [["Ham", 67], ["Beef", 54, "roast beef|prime rib|steak|brisket|roast"], ["Chicken", 53]]), P("Name something people expect to talk about at Thanksgiving dinner.", "Pew Research Center, 2024", [["Work or school", 35, "work|school|job|class"], ["The election", 26, "politics|election|trump|president"], ["Pop culture", 24, "movie|tv|show|music|celebrity|sport"]]), P("Name a kind of gift card people give.", "NRF holiday survey", [["Restaurant", 30, "food|dinner"], ["Visa or bank card", 26, "visa|bank|mastercard|amex|prepaid"], ["Department store", 26, "store|macys|kohls|target|walmart"], ["Coffee shop", 21, "coffee|starbucks|dunkin"]]), P("Name where people do their holiday shopping.", "NRF holiday survey, 2026", [["Online", 53, "amazon|internet|web"], ["Grocery stores", 43, "grocery|supermarket|kroger|meijer"], ["Discount stores", 43, "discount|walmart|target|dollar store"], ["Department stores", 42, "department|macys|kohls|mall"]]), P("Name a common Thanksgiving hosting fail.", "OnePoll for Omaha Steaks, 2019", [["Food isn't done on time", 31, "late|food late|not ready|running late|dinner late|behind"], ["Dishes done at different times", 29, "timing|cold food|food cold|cold"], ["Ran out of wine", 28, "wine|out of wine|alcohol|booze|beer|drink"], ["Spilled a dish", 28, "spill|spilled|drop|dropped|dropped food|dropped turkey"], ["Forgot an ingredient", 28, "forgot|forgot something|missing ingredient|forgot ingredient"]])];
+  var MORE = [P("Name America's favorite Halloween candy.", "Monmouth University Poll, 2019", [["Reese's Peanut Butter Cups", 36], ["Snickers", 18], ["M&M's", 11], ["Hershey bar", 6], ["Candy corn", 6], ["Skittles", 5], ["Starburst", 4], ["Tootsie Pops", 2]]), P("Name America's favorite Christmas cookie.", "Monmouth University Poll, 2023", [["Frosted sugar cookies", 32], ["Gingerbread", 12], ["Chocolate chip", 11], ["Snickerdoodles", 6]]), P("Name America's favorite season.", "Morning Consult, 2022", [["Fall", 41], ["Spring", 24], ["Summer", 24], ["Winter", 11]]), P("Name America's favorite day of the week.", "YouGov, 2021", [["Saturday", 35], ["Friday", 29], ["Sunday", 14]]), P("Name a New Year's resolution people are making.", "YouGov, Dec 2025", [["Exercise more", 25], ["Be happy", 23], ["Eat healthier", 22], ["Save more money", 21], ["Improve my health", 21]]), P("Name a vegetable people say they don't like.", "OnePoll for Dr. Praeger's, 2019", [["Turnips", 27], ["Beets", 26], ["Radishes", 23], ["Brussels sprouts", 21], ["Artichokes", 20], ["Eggplant", 20], ["Butternut squash", 20]]), P("Name a vegetable almost everybody likes.", "OnePoll for Dr. Praeger's, 2019", [["Corn", 91], ["Potatoes", 91], ["Carrots", 89], ["Tomatoes", 89], ["Onions", 87], ["Green beans", 87], ["Cucumbers", 86], ["Broccoli", 85]]), P("Name something people plan to do this holiday season.", "YouGov holiday survey", [["Listen to holiday music", 75], ["Watch a holiday movie", 72], ["Look at holiday lights", 70], ["Exchange presents", 70], ["Drink hot chocolate", 67], ["Decorate a tree", 66]]), P("Name a favorite breakfast food.", "National Honey Board survey", [["Eggs", 69], ["Bacon or sausage", 46], ["Cereal", 44], ["Fruit", 42], ["Oatmeal", 39], ["Hash browns", 30], ["Biscuits and gravy", 17]]), P("Name America's favorite ice cream flavor.", "YouGov, 2022", [["Vanilla", 11], ["Chocolate", 10], ["Cookies and cream", 7], ["Strawberry", 6], ["Cookie dough", 6]]), P("Name a favorite ice cream topping.", "YouGov, 2022", [["Hot fudge", 40], ["Chocolate syrup", 33], ["Whipped cream", 32], ["Caramel", 32]]), P("Name something people put on a hamburger.", "YouGov", [["Ketchup", 71], ["Onions", 64], ["Mustard", 50], ["Mayonnaise", 48]]), P("Name a household chore people hate.", "TaskRabbit survey, 2019", [["Cleaning the bathroom", 63], ["Yard work", 43], ["Cleaning up after the pet", 42], ["Laundry", 31], ["Vacuuming", 31]]), P("Name a food Americans say they hate.", "YouGov, 2025", [["Liver", 40], ["Anchovies", 36], ["Sardines", 35]]), P("Name a favorite winter holiday drink.", "Harris Poll for Instacart", [["Hot chocolate", 58], ["Eggnog", 42], ["Cider", 26], ["Mulled wine", 13], ["Hot toddy", 13]]), P("Name America's favorite meal of the day.", "YouGov, Jan 2025", [["Dinner", 50], ["Breakfast", 23], ["Lunch", 19]])];
   var CK = "bdd:feud:crew";
   var tidy = function tidy(t) {
     t = String(t).trim().slice(0, 24);
@@ -307,13 +308,89 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   var HK = "bdd:feud:host",
     CODE = "bdd:feud:code",
+    USED = "bdd:feud:used",
+    TM = "bdd:feud:tm",
     TEAMS = ["Team Turkey", "Team Gravy"];
   var MODE = "solo",
     HS = null,
-    HD = null;
-  var deckOf = function deckOf(h) {
+    HD = null,
+    hist = [];
+  var to100 = function to100(b) {
+    var t = tot(b) || 1,
+      raw = b.a.map(function (a) {
+        return 100 * a.pts / t;
+      }),
+      fl = raw.map(Math.floor);
+    var left = 100 - fl.reduce(function (x, y) {
+      return x + y;
+    }, 0);
+    raw.map(function (r, j) {
+      return [r - fl[j], j];
+    }).sort(function (x, y) {
+      return y[0] - x[0];
+    }).forEach(function (p) {
+      if (left-- > 0) fl[p[1]]++;
+    });
+    return {
+      q: b.q,
+      src: b.src + " · scaled to 100",
+      a: b.a.map(function (a, j) {
+        return {
+          label: a.label,
+          pts: fl[j]
+        };
+      }).sort(function (x, y) {
+        return y.pts - x.pts;
+      })
+    };
+  };
+  function pick(list, n) {
+    var used = store.get(USED) || [],
+      f = list.filter(function (b) {
+        return !used.includes(b.q);
+      });
+    if (f.length < n) {
+      used = used.filter(function (q) {
+        return !list.some(function (b) {
+          return b.q === q;
+        });
+      });
+      f = list.slice();
+    }
+    f = f.map(function (b) {
+      return [Math.random(), b];
+    }).sort(function (x, y) {
+      return x[0] - y[0];
+    }).slice(0, n).map(function (p) {
+      return p[1];
+    });
+    store.set(USED, used.concat(f.map(function (b) {
+      return b.q;
+    })));
+    return f;
+  }
+  function newDeck(name, raw) {
     var _ref3;
-    if (h.name === "polls") return (_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
+    var cb = raw ? crewBoard(raw).filter(function (b) {
+      return b.a.length > 1;
+    }) : [];
+    if (name === "crew") return cb.map(to100);
+    var c = name === "mix" ? pick(cb, Math.min(2, cb.length)) : [];
+    var d = pick((_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
+      return d <= KEY && Array.isArray(DAYS[d]);
+    }).map(function (d) {
+      return DAYS[d];
+    })).concat([SPARE, MORE])), 5 - c.length).sort(function (x, y) {
+      return x.a.length - y.a.length;
+    });
+    c.forEach(function (b, i) {
+      return d.splice(1 + 2 * i, 0, b);
+    });
+    return d.map(to100);
+  }
+  var oldDeck = function oldDeck(h) {
+    var _ref4;
+    if (h.name === "polls") return (_ref4 = []).concat.apply(_ref4, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
       return d <= h.day && Array.isArray(DAYS[d]);
     }).map(function (d) {
       return DAYS[d];
@@ -324,7 +401,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   };
   var hLoad = function hLoad() {
     HS = store.get(HK);
-    HD = HS ? deckOf(HS) : null;
+    hist = [];
+    if (HS && !HS.deck) {
+      HS.deck = oldDeck(HS);
+      delete HS.raw;
+    }
+    HD = HS ? HS.deck : null;
     if (HS) {
       askCode();
       hPush();
@@ -334,6 +416,22 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     store.set(HK, HS);
     hPush();
   };
+  var snap = function snap() {
+    hist.push(JSON.stringify(HS));
+    if (hist.length > 30) hist.shift();
+  };
+  function undo() {
+    if (!hist.length) return;
+    var o = HS;
+    HS = Object.assign(JSON.parse(hist.pop()), {
+      code: o.code,
+      nx: o.nx,
+      nd: o.nd,
+      tm: o.tm
+    });
+    HD = HS.deck;
+    hSave();
+  }
   var mult = function mult(i) {
     return i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
   };
@@ -355,7 +453,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       d: h.nd || 0,
       pot: h.pot,
       sc: h.score,
-      tm: TEAMS,
+      tm: h.tm || TEAMS,
       won: h.won[i],
       over: h.over
     };
@@ -395,8 +493,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     asking = true;
     API("feudHost", me.id, "").then(function (r) {
       asking = false;
-      if (HS === h && r && r.code) {
-        h.code = r.code;
+      if (HS && !HS.code && r && r.code) {
+        HS.code = r.code;
         store.set(CODE, r.code);
         hSave();
       }
@@ -894,18 +992,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     },
     onKey: function onKey(G, k, d) {
       if (!d) return;
-      var host = MODE === "host",
-        tv = MODE === "tv",
+      var tv = MODE === "tv",
         key = k === "Enter" ? ">" : k === "Backspace" ? "<" : k === " " ? " " : /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : "";
       if (tv) {
         if (key) this.tvPress(G, key);
         return;
       }
-      if (!key || (host ? !HS || HS.over : !G.s.qs)) return;
-      if (host) {
-        G.s.hkb = true;
-        this.hPress(G, key);
-      } else this.press(G, key);
+      if (key && MODE === "solo" && G.s.qs) this.press(G, key);
     },
     tvPress: function tvPress(G, k) {
       var _this2 = this;
@@ -928,17 +1021,19 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       code = store.get(CODE) || code || "";
       if (code) store.set(CODE, code);
       fails = 0;
+      hist = [];
       HS = {
         name: name,
-        raw: raw || null,
+        deck: newDeck(name, raw),
         code: code,
         day: KEY,
         qi: 0,
         pot: 0,
         score: [0, 0],
-        over: false
+        over: false,
+        tm: store.get(TM) || TEAMS.slice()
       };
-      HD = deckOf(HS);
+      HD = HS.deck;
       ["shown", "free"].forEach(function (k) {
         HS[k] = HD.map(function () {
           return [];
@@ -950,8 +1045,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       HS.won = HD.map(function () {
         return -1;
       });
-      G.s.peek = false;
-      G.s.hkb = false;
+      G.s.hide = false;
       hSave();
       askCode();
     },
@@ -960,6 +1054,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         h = HS,
         i = h.qi;
       if (h.shown[i].includes(j)) return;
+      snap();
       h.shown[i].push(j);
       if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j;
@@ -972,6 +1067,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var s = G.s,
         h = HS,
         i = h.qi;
+      snap();
       if (h.strikes[i] < 3) {
         h.strikes[i]++;
         s.bigN = h.strikes[i];
@@ -982,30 +1078,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       buzzer();
       G.buzz();
       hSave();
-    },
-    hEnter: function hEnter(G) {
-      var s = G.s,
-        h = HS,
-        i = h.qi,
-        n = norm(s.typed);
-      if (n.length < 2) return;
-      s.typed = "";
-      var hits = match(HD[i], n),
-        open = hits.filter(function (j) {
-          return !h.shown[i].includes(j);
-        });
-      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 2.2);
-      if (!open.length && hits.length) return this.say(G, "Already on the board");
-      if (open.length) {
-        this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!");
-        return this.hReveal(G, open[0]);
-      }
-      this.say(G, "Not on the board");
-      this.hStrike(G);
-    },
-    hPress: function hPress(G, k) {
-      if (k === ">") return this.hEnter(G);
-      typeKey(G.s, k);
     },
     hostTap: function hostTap(G, b) {
       var _this3 = this;
@@ -1028,6 +1100,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (!h) return;
       var quit = function quit() {
         HS = HD = null;
+        hist = [];
         store.set(HK, null);
         s.quitT = 0;
         s.hmsg = "";
@@ -1037,22 +1110,29 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (s.quitT > 0) quit();else s.quitT = 3;
         return;
       }
+      if (b.k === "hundo") return undo();
+      if (h.over) return;
       var i = h.qi,
         q = HD[i];
-      if (b.slot != null) return this.hReveal(G, b.slot);
-      if (b.k === "hstrike") return this.hStrike(G);
-      if (b.k === "hpeek") {
-        s.peek = !s.peek;
+      if (b.k === "hname") {
+        var v = (prompt("Team name", h.tm[b.t]) || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 12);
+        if (v) {
+          h.tm[b.t] = v;
+          store.set(TM, h.tm);
+          hSave();
+        }
         return;
       }
-      if (b.k === "hkb") {
-        s.hkb = !s.hkb;
-        s.typed = "";
+      if (b.slot != null) return this.hReveal(G, b.slot);
+      if (b.k === "hstrike") return this.hStrike(G);
+      if (b.k === "hhide") {
+        s.hide = !s.hide;
         return;
       }
       if (b.k === "hwin0" || b.k === "hwin1") {
         if (h.won[i] >= 0 || !h.pot) return;
         var t = b.k === "hwin0" ? 0 : 1;
+        snap();
         h.score[t] += h.pot;
         h.pot = 0;
         h.won[i] = t;
@@ -1060,6 +1140,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         return hSave();
       }
       if (b.k === "hall") {
+        if (h.shown[i].length === q.a.length) return;
+        snap();
         q.a.forEach(function (a, j) {
           if (!h.shown[i].includes(j)) {
             h.shown[i].push(j);
@@ -1070,15 +1152,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }
       if (b.k === "hnext") {
         if (h.won[i] < 0 && h.pot) return;
-        s.peek = false;
-        s.typed = "";
+        snap();
         if (i === HD.length - 1) {
           h.over = true;
           G.sfx("win");
         } else h.qi++;
         return hSave();
       }
-      if (b.key) return this.hPress(G, b.key);
     },
     hostDraw: function hostDraw(G, c, P) {
       var s = G.s,
@@ -1101,27 +1181,31 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         bx = W / 2 - bw / 2;
       if (!h) {
         lines("Host a game", TOP + 44, "700 24px ".concat(G.TITLE), ink);
-        var _y2 = lines("Two teams. Read the question out loud, flip answers as they're guessed, hit Strike on a miss, then give the pot to the team that won the round. Party mix is America's polls with the crew's own answers mixed in.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
-        s.btns.push(Object.assign(G.pill(c, bx, _y2, bw, 50, "Party mix · 5 rounds", true, s.hload), {
+        var _y2 = lines("Two teams, five rounds. Your phone shows every answer: read the question out loud, tap an answer when someone says it, hit Strike on a miss, then give the pot to the team that won the round. Every board adds up to 100, and each new game uses surveys you haven't played yet.", TOP + 80, "500 14.5px ".concat(G.UI), mute) + 14;
+        s.btns.push(Object.assign(G.pill(c, bx, _y2, bw, 50, "Party mix · polls + crew", true, s.hload), {
           k: "hmix"
         }));
-        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 60, bw, 46, "Crew answers only", false, s.hload), {
-          k: "hcrew"
-        }));
-        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 114, bw, 46, "America's polls only", false, s.hload), {
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 60, bw, 46, "America's polls only", false, s.hload), {
           k: "hpolls"
+        }));
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 114, bw, 46, "Crew answers only", false, s.hload), {
+          k: "hcrew"
         }));
         if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 190, "600 14px ".concat(G.UI), ink);
         return;
       }
+      var tm = h.tm || TEAMS;
       if (h.over) {
         var _h$score = _slicedToArray(h.score, 2),
           a = _h$score[0],
           b = _h$score[1];
-        lines(a === b ? "It's a tie!" : "".concat(TEAMS[a > b ? 0 : 1], " wins! \uD83E\uDD83"), TOP + 60, "700 26px ".concat(G.TITLE), ink);
-        lines("".concat(TEAMS[0], " ").concat(a, "  \xB7  ").concat(TEAMS[1], " ").concat(b), TOP + 100, "600 16px ".concat(G.UI), mute);
+        lines(a === b ? "It's a tie!" : "".concat(tm[a > b ? 0 : 1], " wins! \uD83E\uDD83"), TOP + 60, "700 26px ".concat(G.TITLE), ink);
+        lines("".concat(tm[0], " ").concat(a, "  \xB7  ").concat(tm[1], " ").concat(b), TOP + 100, "600 16px ".concat(G.UI), mute);
         s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 50, "New game", true), {
           k: "hnew"
+        }));
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 194, bw, 44, "↩ Undo", false, !hist.length), {
+          k: "hundo"
         }));
         return;
       }
@@ -1129,7 +1213,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         q = HD[i],
         m = mult(i),
         won = h.won[i],
-        kb = s.hkb,
+        st = h.strikes[i],
+        n = q.a.length,
+        left = n - h.shown[i].length,
+        last = i === HD.length - 1,
         T = TOP + 6;
       var pw = 88,
         tw = (W - 24 - pw - 12) / 2;
@@ -1140,11 +1227,19 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         c.fill();
         c.textAlign = "center";
         c.fillStyle = mute;
-        c.font = "600 11.5px ".concat(G.UI);
-        c.fillText(TEAMS[t], x + tw / 2, T + 15);
+        fit(c, tm[t] + " ✎", tw - 12, 11.5, 600, G.UI);
+        c.fillText(tm[t] + " ✎", x + tw / 2, T + 15);
         c.fillStyle = ink;
         c.font = "700 22px ".concat(G.UI);
         c.fillText(h.score[t], x + tw / 2, T + 35);
+        s.btns.push({
+          x: x,
+          y: T,
+          w: tw,
+          h: 50,
+          k: "hname",
+          t: t
+        });
       });
       rr(c, W / 2 - pw / 2, T, pw, 50, 10);
       c.fillStyle = "#1f3a8a";
@@ -1170,26 +1265,76 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hquit"
       });
       y = question(G, c, P, q, y + 28);
-      var kbH = kb ? Math.min(214, H * 0.34) : 0,
-        rows = Math.ceil(q.a.length / 2);
-      var sh = Math.max(26, Math.min(44, (H - y - kbH - (kb ? 96 : 160)) / rows - 6));
-      var slots = board(G, c, P, q, y, sh, function (j) {
-        return h.shown[i].includes(j) ? h.free[i].includes(j) ? 2 : 1 : s.peek ? 3 : 0;
-      });
-      if (s.peek) slots.forEach(function (b) {
-        return s.btns.push(b);
+      var tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give the pot to the team that was playing." : st >= 3 ? "3 strikes. The other team gets ONE guess to steal, then give the pot." : s.hide ? "Answers are hidden. Tap Show to flip one." : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it." : "Tap answers as they're said. Wrong answer? Hit Strike.";
+      rr(c, 12, y - 8, W - 24, 24, 8);
+      c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0";
+      c.fill();
+      c.fillStyle = ink;
+      c.textAlign = "center";
+      fit(c, tip, W - 40, 12.5, 600, G.UI);
+      c.fillText(tip, W / 2, y + 5);
+      y += 24;
+      var bot = H - 170,
+        cols = (bot - y) / n >= 36 ? 1 : 2,
+        rows = Math.ceil(n / cols),
+        gap = 5,
+        rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)),
+        cw = (W - 24 - (cols - 1) * 6) / cols;
+      q.a.forEach(function (a, j) {
+        var col = j < rows ? 0 : 1,
+          x = 12 + col * (cw + 6),
+          yy = y + (j - col * rows) * (rh + gap),
+          mid = yy + rh / 2 + 1,
+          on = h.shown[i].includes(j),
+          free = on && h.free[i].includes(j);
+        rr(c, x, yy, cw, rh, 8);
+        c.fillStyle = free ? P.dk ? "#2c2c2e" : "#ecece6" : on ? s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949" : s.hide ? P.dk ? "#27386b" : "#1f3a8a" : P.bg;
+        c.fill();
+        if (!on && !s.hide) {
+          c.lineWidth = 1.5;
+          c.strokeStyle = P.dk ? "#6d87d8" : "#1f3a8a";
+          c.stroke();
+        }
+        if (!on && s.hide) {
+          c.fillStyle = "#fff";
+          c.textAlign = "center";
+          c.font = "700 ".concat(Math.min(16, rh * 0.5), "px ").concat(G.UI);
+          c.fillText(j + 1, x + cw / 2, mid);
+          return;
+        }
+        var col2 = free ? mute : on ? "#2b1a10" : ink,
+          ps = (on && !free ? "✓ " : "") + a.pts;
+        c.fillStyle = on ? col2 : mute;
+        c.textAlign = "left";
+        c.font = "700 12px ".concat(G.UI);
+        c.fillText(j + 1, x + 9, mid);
+        c.fillStyle = col2;
+        c.textAlign = "right";
+        c.font = "700 15px ".concat(G.UI);
+        c.fillText(ps, x + cw - 9, mid);
+        var pwid = c.measureText(ps).width;
+        c.textAlign = "left";
+        fit(c, a.label, cw - 44 - pwid, 15, 700, G.UI);
+        c.fillText(a.label, x + 26, mid);
+        if (!on) s.btns.push({
+          x: x,
+          y: yy,
+          w: cw,
+          h: rh,
+          slot: j
+        });
       });
       if (s.bigX > 0) {
-        var n = s.bigN || 1,
+        var k2 = s.bigN || 1,
           z = Math.min(84, (W - 60) / 3),
-          bh = rows * (sh + 6),
-          x0 = W / 2 - (n * z + (n - 1) * 10) / 2;
+          bh = rows * (rh + gap),
+          x0 = W / 2 - (k2 * z + (k2 - 1) * 10) / 2;
         c.save();
         c.globalAlpha = Math.min(1, s.bigX * 3);
-        for (var k = 0; k < n; k++) {
-          var _x = x0 + k * (z + 10),
+        for (var k = 0; k < k2; k++) {
+          var x = x0 + k * (z + 10),
             yy = y + bh / 2 - z / 2;
-          rr(c, _x, yy, z, z, 12);
+          rr(c, x, yy, z, z, 12);
           c.fillStyle = P.bg;
           c.fill();
           c.lineWidth = 6;
@@ -1198,45 +1343,46 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           c.fillStyle = "#d64545";
           c.textAlign = "center";
           c.font = "700 ".concat(z * 0.72, "px ").concat(G.UI);
-          c.fillText("✕", _x + z / 2, yy + z / 2 + 3);
+          c.fillText("✕", x + z / 2, yy + z / 2 + 3);
         }
         c.restore();
       }
-      y += rows * (sh + 6) + 6;
-      strikes(c, P, h.strikes[i], 14, y);
-      var aw = W - 28 - 104,
-        w1 = aw * 0.4,
-        w2 = (aw - w1 - 12) / 2;
-      var x = 14 + 104;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w1, 34, "Strike"), {
+      var by = H - 164;
+      var uw = 96,
+        sw = W - 24 - uw - 8,
+        hw = (W - 36) / 2,
+        w3 = (W - 24 - 16) / 3;
+      rr(c, 12, by, sw, 52, 14);
+      c.fillStyle = "#d64545";
+      c.fill();
+      c.fillStyle = "#fff";
+      c.textAlign = "center";
+      c.font = "700 18px ".concat(G.UI);
+      c.fillText("\u2715  STRIKE   ".concat("●".repeat(st)).concat("○".repeat(3 - st)), 12 + sw / 2, by + 27);
+      s.btns.push({
+        x: 12,
+        y: by,
+        w: sw,
+        h: 52,
         k: "hstrike"
+      });
+      s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), {
+        k: "hundo"
       }));
-      x += w1 + 6;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Peek", s.peek), {
-        k: "hpeek"
-      }));
-      x += w2 + 6;
-      s.btns.push(Object.assign(G.pill(c, x, y - 4, w2, 34, "Keys", kb), {
-        k: "hkb"
-      }));
-      if (kb) {
-        inputBox(G, c, P, y + 36, "Type what they said");
-        keys(G, c, P, kbH);
-        return;
-      }
-      y += 42;
-      var hw = (W - 36) / 2,
-        last = i === HD.length - 1;
+      by += 60;
       if (won < 0) [0, 1].forEach(function (t) {
-        return s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), y, hw, 46, "Pot \u2192 ".concat(TEAMS[t].slice(5)), true, !h.pot), {
+        return s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), by, hw, 46, "Pot \u2192 ".concat(tm[t]), true, !h.pot), {
           k: "hwin" + t
         }));
-      });else lines("".concat(TEAMS[won], " banked it"), y + 23, "600 15px ".concat(G.UI), ink);
-      y += 56;
-      s.btns.push(Object.assign(G.pill(c, 12, y, hw, 46, "Reveal all", false, h.shown[i].length === q.a.length), {
+      });else lines("".concat(tm[won], " banked it"), by + 23, "600 15px ".concat(G.UI), ink);
+      by += 54;
+      s.btns.push(Object.assign(G.pill(c, 12, by, w3, 44, s.hide ? "👀 Show" : "🙈 Hide", s.hide), {
+        k: "hhide"
+      }));
+      s.btns.push(Object.assign(G.pill(c, 20 + w3, by, w3, 44, "Show rest", false, !left), {
         k: "hall"
       }));
-      s.btns.push(Object.assign(G.pill(c, 24 + hw, y, hw, 46, last ? "Final score" : "Next round ›", false, won < 0 && h.pot > 0), {
+      s.btns.push(Object.assign(G.pill(c, 28 + 2 * w3, by, w3, 44, last ? "Final score" : "Next ›", false, won < 0 && h.pot > 0), {
         k: "hnext"
       }));
     },
@@ -1247,6 +1393,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       crewBoard: crewBoard,
       DAYS: DAYS,
       SPARE: SPARE,
+      MORE: MORE,
+      to100: to100,
+      newDeck: newDeck,
       scoreOf: scoreOf,
       host: function host() {
         return HS;
