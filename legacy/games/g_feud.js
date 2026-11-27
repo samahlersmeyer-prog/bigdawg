@@ -71,7 +71,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     "2026-11-29": "crew"
   };
   var SPARE = [P("Besides turkey, name a Thanksgiving main dish.", "YouGov, 2020 · % of head-to-head matchups won", [["Ham", 67], ["Beef", 54, "roast beef|prime rib|steak|brisket|roast"], ["Chicken", 53]]), P("Name something people expect to talk about at Thanksgiving dinner.", "Pew Research Center, 2024", [["Work or school", 35, "work|school|job|class"], ["The election", 26, "politics|election|trump|president"], ["Pop culture", 24, "movie|tv|show|music|celebrity|sport"]]), P("Name a kind of gift card people give.", "NRF holiday survey", [["Restaurant", 30, "food|dinner"], ["Visa or bank card", 26, "visa|bank|mastercard|amex|prepaid"], ["Department store", 26, "store|macys|kohls|target|walmart"], ["Coffee shop", 21, "coffee|starbucks|dunkin"]]), P("Name where people do their holiday shopping.", "NRF holiday survey, 2026", [["Online", 53, "amazon|internet|web"], ["Grocery stores", 43, "grocery|supermarket|kroger|meijer"], ["Discount stores", 43, "discount|walmart|target|dollar store"], ["Department stores", 42, "department|macys|kohls|mall"]]), P("Name a common Thanksgiving hosting fail.", "OnePoll for Omaha Steaks, 2019", [["Food isn't done on time", 31, "late|food late|not ready|running late|dinner late|behind"], ["Dishes done at different times", 29, "timing|cold food|food cold|cold"], ["Ran out of wine", 28, "wine|out of wine|alcohol|booze|beer|drink"], ["Spilled a dish", 28, "spill|spilled|drop|dropped|dropped food|dropped turkey"], ["Forgot an ingredient", 28, "forgot|forgot something|missing ingredient|forgot ingredient"]])];
-  var MORE = [P("Name America's favorite Halloween candy.", "Monmouth University Poll, 2019", [["Reese's Peanut Butter Cups", 36], ["Snickers", 18], ["M&M's", 11], ["Hershey bar", 6], ["Candy corn", 6], ["Skittles", 5], ["Starburst", 4], ["Tootsie Pops", 2]]), P("Name America's favorite Christmas cookie.", "Monmouth University Poll, 2023", [["Frosted sugar cookies", 32], ["Gingerbread", 12], ["Chocolate chip", 11], ["Snickerdoodles", 6]]), P("Name America's favorite season.", "Morning Consult, 2022", [["Fall", 41], ["Spring", 24], ["Summer", 24], ["Winter", 11]]), P("Name America's favorite day of the week.", "YouGov, 2021", [["Saturday", 35], ["Friday", 29], ["Sunday", 14]]), P("Name a New Year's resolution people are making.", "YouGov, Dec 2025", [["Exercise more", 25], ["Be happy", 23], ["Eat healthier", 22], ["Save more money", 21], ["Improve my health", 21]]), P("Name a vegetable people say they don't like.", "OnePoll for Dr. Praeger's, 2019", [["Turnips", 27], ["Beets", 26], ["Radishes", 23], ["Brussels sprouts", 21], ["Artichokes", 20], ["Eggplant", 20], ["Butternut squash", 20]]), P("Name a vegetable almost everybody likes.", "OnePoll for Dr. Praeger's, 2019", [["Corn", 91], ["Potatoes", 91], ["Carrots", 89], ["Tomatoes", 89], ["Onions", 87], ["Green beans", 87], ["Cucumbers", 86], ["Broccoli", 85]]), P("Name something people plan to do this holiday season.", "YouGov holiday survey", [["Listen to holiday music", 75], ["Watch a holiday movie", 72], ["Look at holiday lights", 70], ["Exchange presents", 70], ["Drink hot chocolate", 67], ["Decorate a tree", 66]]), P("Name a favorite breakfast food.", "National Honey Board survey", [["Eggs", 69], ["Bacon or sausage", 46], ["Cereal", 44], ["Fruit", 42], ["Oatmeal", 39], ["Hash browns", 30], ["Biscuits and gravy", 17]]), P("Name America's favorite ice cream flavor.", "YouGov, 2022", [["Vanilla", 11], ["Chocolate", 10], ["Cookies and cream", 7], ["Strawberry", 6], ["Cookie dough", 6]]), P("Name a favorite ice cream topping.", "YouGov, 2022", [["Hot fudge", 40], ["Chocolate syrup", 33], ["Whipped cream", 32], ["Caramel", 32]]), P("Name something people put on a hamburger.", "YouGov", [["Ketchup", 71], ["Onions", 64], ["Mustard", 50], ["Mayonnaise", 48]]), P("Name a household chore people hate.", "TaskRabbit survey, 2019", [["Cleaning the bathroom", 63], ["Yard work", 43], ["Cleaning up after the pet", 42], ["Laundry", 31], ["Vacuuming", 31]]), P("Name a food Americans say they hate.", "YouGov, 2025", [["Liver", 40], ["Anchovies", 36], ["Sardines", 35]]), P("Name a favorite winter holiday drink.", "Harris Poll for Instacart", [["Hot chocolate", 58], ["Eggnog", 42], ["Cider", 26], ["Mulled wine", 13], ["Hot toddy", 13]]), P("Name America's favorite meal of the day.", "YouGov, Jan 2025", [["Dinner", 50], ["Breakfast", 23], ["Lunch", 19]])];
+  var MORE = [P("Name America's favorite Halloween candy.", "Monmouth University Poll, 2019", [["Reese's Peanut Butter Cups", 36], ["Snickers", 18], ["M&M's", 11, "mms|mm|m and m"], ["Hershey bar", 6], ["Candy corn", 6], ["Skittles", 5], ["Starburst", 4], ["Tootsie Pops", 2]]), P("Name America's favorite Christmas cookie.", "Monmouth University Poll, 2023", [["Frosted sugar cookies", 32], ["Gingerbread", 12], ["Chocolate chip", 11], ["Snickerdoodles", 6]]), P("Name America's favorite season.", "Morning Consult, 2022", [["Fall", 41, "autumn"], ["Spring", 24], ["Summer", 24], ["Winter", 11]]), P("Name America's favorite day of the week.", "YouGov, 2021", [["Saturday", 35], ["Friday", 29], ["Sunday", 14]]), P("Name a New Year's resolution people are making.", "YouGov, Dec 2025", [["Exercise more", 25, "work out|gym|get in shape|lose weight|go to gym"], ["Be happy", 23, "happiness|happier|be happier"], ["Eat healthier", 22, "eat better|eat healthy|diet"], ["Save more money", 21, "save money|money|save"], ["Improve my health", 21, "health|get healthy|be healthy|get healthier"]]), P("Name a vegetable people say they don't like.", "OnePoll for Dr. Praeger's, 2019", [["Turnips", 27], ["Beets", 26], ["Radishes", 23], ["Brussels sprouts", 21], ["Artichokes", 20], ["Eggplant", 20], ["Butternut squash", 20]]), P("Name a vegetable almost everybody likes.", "OnePoll for Dr. Praeger's, 2019", [["Corn", 91], ["Potatoes", 91], ["Carrots", 89], ["Tomatoes", 89], ["Onions", 87], ["Green beans", 87], ["Cucumbers", 86], ["Broccoli", 85]]), P("Name something people plan to do this holiday season.", "YouGov holiday survey", [["Listen to holiday music", 75, "music|christmas music|carol|sing carol|listen music|listen christmas music"], ["Watch a holiday movie", 72, "movie|christmas movie|watch movie|watch christmas movie"], ["Look at holiday lights", 70, "lights|christmas lights|look lights|see lights|look christmas lights"], ["Exchange presents", 70, "presents|gifts|open presents|give gifts|give presents|exchange gifts|open gifts"], ["Drink hot chocolate", 67, "hot chocolate|hot cocoa|cocoa"], ["Decorate a tree", 66, "tree|christmas tree|decorate tree|put up tree|decorate|decorate christmas tree"]]), P("Name a favorite breakfast food.", "National Honey Board survey", [["Eggs", 69], ["Bacon or sausage", 46, "bacon|sausage"], ["Cereal", 44], ["Fruit", 42], ["Oatmeal", 39], ["Hash browns", 30, "hashbrown|potato"], ["Biscuits and gravy", 17, "biscuit|gravy"]]), P("Name America's favorite ice cream flavor.", "YouGov, 2022", [["Vanilla", 11], ["Chocolate", 10], ["Cookies and cream", 7, "oreo|cookies cream"], ["Strawberry", 6], ["Cookie dough", 6]]), P("Name a favorite ice cream topping.", "YouGov, 2022", [["Hot fudge", 40], ["Chocolate syrup", 33, "chocolate|chocolate sauce|syrup"], ["Whipped cream", 32, "whip cream|cool whip"], ["Caramel", 32]]), P("Name something people put on a hamburger.", "YouGov", [["Ketchup", 71, "catsup"], ["Onions", 64], ["Mustard", 50], ["Mayonnaise", 48, "mayo"]]), P("Name a household chore people hate.", "TaskRabbit survey, 2019", [["Cleaning the bathroom", 63, "bathroom|toilet|clean toilet|scrub toilet"], ["Yard work", 43, "mow|mow lawn|lawn|rake|rake leaves|yardwork|cut grass"], ["Cleaning up after the pet", 42, "pet|dog poop|poop|litter box|pick up poop|clean up after dog|cat litter"], ["Laundry", 31, "fold laundry|wash clothes|clothes|fold clothes"], ["Vacuuming", 31, "sweep|sweeping"]]), P("Name a food Americans say they hate.", "YouGov, 2025", [["Liver", 40], ["Anchovies", 36], ["Sardines", 35]]), P("Name a favorite winter holiday drink.", "Harris Poll for Instacart", [["Hot chocolate", 58, "cocoa|hot cocoa"], ["Eggnog", 42], ["Cider", 26], ["Mulled wine", 13, "wine"], ["Hot toddy", 13]]), P("Name America's favorite meal of the day.", "YouGov, Jan 2025", [["Dinner", 50, "supper"], ["Breakfast", 23], ["Lunch", 19]])];
   var CK = "bdd:feud:crew";
   var tidy = function tidy(t) {
     t = String(t).trim().slice(0, 24);
@@ -337,7 +337,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       a: b.a.map(function (a, j) {
         return {
           label: a.label,
-          pts: fl[j]
+          pts: fl[j],
+          k: a.k
         };
       }).sort(function (x, y) {
         return y.pts - x.pts;
@@ -408,6 +409,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     }
     HD = HS ? HS.deck : null;
     if (HS) {
+      HD.forEach(function (b) {
+        return b.a.forEach(function (a) {
+          a.k = a.k || [norm(a.label)];
+        });
+      });
       askCode();
       hPush();
     }
@@ -998,7 +1004,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (key) this.tvPress(G, key);
         return;
       }
-      if (key && MODE === "solo" && G.s.qs) this.press(G, key);
+      if (!key) return;
+      if (MODE === "host") {
+        if (HS && !HS.over && G.s.hide && G.s.kb) this.hPress(G, key);
+      } else if (G.s.qs) this.press(G, key);
     },
     tvPress: function tvPress(G, k) {
       var _this2 = this;
@@ -1045,7 +1054,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       HS.won = HD.map(function () {
         return -1;
       });
-      G.s.hide = false;
       hSave();
       askCode();
     },
@@ -1078,6 +1086,30 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       buzzer();
       G.buzz();
       hSave();
+    },
+    hEnter: function hEnter(G) {
+      var s = G.s,
+        h = HS,
+        i = h.qi,
+        n = norm(s.typed);
+      if (n.length < 2) return;
+      s.typed = "";
+      var hits = match(HD[i], n),
+        open = hits.filter(function (j) {
+          return !h.shown[i].includes(j);
+        });
+      if (open.length > 1) return this.say(G, "Could be a couple. Be more specific.", 2.2);
+      if (!open.length && hits.length) return this.say(G, "Already on the board");
+      if (open.length) {
+        this.say(G, open[0] === 0 ? "Number one answer!" : "Good answer!");
+        return this.hReveal(G, open[0]);
+      }
+      this.say(G, "Not on the board");
+      this.hStrike(G);
+    },
+    hPress: function hPress(G, k) {
+      if (k === ">") return this.hEnter(G);
+      typeKey(G.s, k);
     },
     hostTap: function hostTap(G, b) {
       var _this3 = this;
@@ -1127,8 +1159,16 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (b.k === "hstrike") return this.hStrike(G);
       if (b.k === "hhide") {
         s.hide = !s.hide;
+        s.kb = s.hide;
+        s.typed = "";
         return;
       }
+      if (b.k === "hkb") {
+        s.kb = !s.kb;
+        s.typed = "";
+        return;
+      }
+      if (b.key) return this.hPress(G, b.key);
       if (b.k === "hwin0" || b.k === "hwin1") {
         if (h.won[i] >= 0 || !h.pot) return;
         var t = b.k === "hwin0" ? 0 : 1;
@@ -1218,6 +1258,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         left = n - h.shown[i].length,
         last = i === HD.length - 1,
         T = TOP + 6;
+      var kb = !!(s.hide && s.kb && won < 0 && left),
+        kbH = kb ? Math.min(214, H * 0.34) : 0;
       var pw = 88,
         tw = (W - 24 - pw - 12) / 2;
       [0, 1].forEach(function (t) {
@@ -1265,7 +1307,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hquit"
       });
       y = question(G, c, P, q, y + 28);
-      var tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give the pot to the team that was playing." : st >= 3 ? "3 strikes. The other team gets ONE guess to steal, then give the pot." : s.hide ? "Answers are hidden. Tap Show to flip one." : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it." : "Tap answers as they're said. Wrong answer? Hit Strike.";
+      var tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give the pot to the team that was playing." : st >= 3 ? s.hide ? "3 strikes. Type the other team's ONE steal guess, then tap Pot." : "3 strikes. The other team gets ONE guess to steal, then give the pot." : kb ? "You're playing too: type what they said, then Enter." : s.hide ? "Answers are hidden. Tap Type to enter a guess." : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it." : "Tap answers as they're said. Wrong answer? Hit Strike.";
       rr(c, 12, y - 8, W - 24, 24, 8);
       c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0";
       c.fill();
@@ -1274,7 +1316,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       fit(c, tip, W - 40, 12.5, 600, G.UI);
       c.fillText(tip, W / 2, y + 5);
       y += 24;
-      var bot = H - 170,
+      var bot = kb ? H - kbH - 116 : H - 170,
         cols = (bot - y) / n >= 36 ? 1 : 2,
         rows = Math.ceil(n / cols),
         gap = 5,
@@ -1347,25 +1389,42 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }
         c.restore();
       }
+      var strike = function strike(x, yy, w) {
+        rr(c, x, yy, w, 52, 14);
+        c.fillStyle = "#d64545";
+        c.fill();
+        c.fillStyle = "#fff";
+        c.textAlign = "center";
+        c.font = "700 ".concat(w < 200 ? 15 : 18, "px ").concat(G.UI);
+        c.fillText("\u2715 STRIKE  ".concat("●".repeat(st)).concat("○".repeat(3 - st)), x + w / 2, yy + 27);
+        s.btns.push({
+          x: x,
+          y: yy,
+          w: w,
+          h: 52,
+          k: "hstrike"
+        });
+      };
+      var hw = (W - 36) / 2;
+      if (kb) {
+        var y2 = bot + 6,
+          pw2 = 78,
+          sw2 = W - 24 - 2 * (pw2 + 6);
+        strike(12, y2, sw2);
+        s.btns.push(Object.assign(G.pill(c, 18 + sw2, y2 + 3, pw2, 46, "↩ Undo", false, !hist.length), {
+          k: "hundo"
+        }));
+        s.btns.push(Object.assign(G.pill(c, 24 + sw2 + pw2, y2 + 3, pw2, 46, "Pot ›", false), {
+          k: "hkb"
+        }));
+        inputBox(G, c, P, y2 + 60, "Type what they said");
+        keys(G, c, P, kbH);
+        return;
+      }
       var by = H - 164;
       var uw = 96,
-        sw = W - 24 - uw - 8,
-        hw = (W - 36) / 2,
-        w3 = (W - 24 - 16) / 3;
-      rr(c, 12, by, sw, 52, 14);
-      c.fillStyle = "#d64545";
-      c.fill();
-      c.fillStyle = "#fff";
-      c.textAlign = "center";
-      c.font = "700 18px ".concat(G.UI);
-      c.fillText("\u2715  STRIKE   ".concat("●".repeat(st)).concat("○".repeat(3 - st)), 12 + sw / 2, by + 27);
-      s.btns.push({
-        x: 12,
-        y: by,
-        w: sw,
-        h: 52,
-        k: "hstrike"
-      });
+        sw = W - 24 - uw - 8;
+      strike(12, by, sw);
       s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), {
         k: "hundo"
       }));
@@ -1376,15 +1435,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }));
       });else lines("".concat(tm[won], " banked it"), by + 23, "600 15px ".concat(G.UI), ink);
       by += 54;
-      s.btns.push(Object.assign(G.pill(c, 12, by, w3, 44, s.hide ? "👀 Show" : "🙈 Hide", s.hide), {
-        k: "hhide"
-      }));
-      s.btns.push(Object.assign(G.pill(c, 20 + w3, by, w3, 44, "Show rest", false, !left), {
-        k: "hall"
-      }));
-      s.btns.push(Object.assign(G.pill(c, 28 + 2 * w3, by, w3, 44, last ? "Final score" : "Next ›", false, won < 0 && h.pot > 0), {
-        k: "hnext"
-      }));
+      var row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false], ["Show rest", "hall", false, !left], [last ? "Final score" : "Next ›", "hnext", false, won < 0 && h.pot > 0]];
+      if (s.hide) row.unshift(["⌨ Type", "hkb", false, won >= 0 || !left]);
+      var wn = (W - 24 - 8 * (row.length - 1)) / row.length;
+      row.forEach(function (r, k) {
+        return s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 44, r[0], r[2], r[3]), {
+          k: r[1]
+        }));
+      });
     },
     _t: {
       norm: norm,
