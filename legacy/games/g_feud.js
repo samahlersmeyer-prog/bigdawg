@@ -1191,12 +1191,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       h.amt[i] = h.pot;
       h.pot = 0;
       h.won[i] = t;
-      HD[i].a.forEach(function (a, j) {
-        if (!h.shown[i].includes(j)) {
-          h.shown[i].push(j);
-          h.free[i].push(j);
-        }
-      });
       if (t < 2) G.sfx("win");
     },
     hReveal: function hReveal(G, j) {
@@ -1204,7 +1198,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         h = HS,
         i = h.qi,
         c = h.ctl[i];
-      if (h.won[i] >= 0 || h.shown[i].includes(j)) return;
+      if (h.shown[i].includes(j)) return;
+      if (h.won[i] >= 0) {
+        snap();
+        h.shown[i].push(j);
+        h.free[i].push(j);
+        s.flash = j;
+        s.flashT = 0.7;
+        h.nd = (h.nd || 0) + 1;
+        ding();
+        return hSave();
+      }
       snap();
       s.timer = 0;
       h.tl = 0;
@@ -1361,6 +1365,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         h.score[1 - w] += h.amt[i];
         h.won[i] = 1 - w;
         return hSave();
+      }
+      if (b.k === "hrest" && h.won[i] >= 0) {
+        var j = q.a.findIndex(function (a, j) {
+          return !h.shown[i].includes(j);
+        });
+        if (j >= 0) this.hReveal(G, j);
+        return;
       }
       if (b.k === "hskip" && h.won[i] < 0) {
         snap();
@@ -1743,7 +1754,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hquit"
       });
       y = question(G, c, P, q, y + 28);
-      var tip = won === 2 ? "No points this round. Tap Next." : won >= 0 ? "".concat(tm[won], " wins ").concat(h.amt[i], "! Tap ").concat(last ? "Final score" : "Next round", ".") : s.upT > 0 ? "Time's up! Hit Strike." : steal ? "".concat(tm[1 - ctl], " can STEAL: one answer!") : pickT ? "Who won the face-off? Pick the team." : ctl < 0 ? kb ? "Face-off! Type what they say." : s.hide ? "Hidden. Tap Type to enter a guess." : "Face-off! Tap the answer they say." : kb ? "".concat(tm[ctl], " playing. Type what they say.") : "".concat(tm[ctl], " playing. Tap answers or Strike.");
+      var tip = won === 2 ? left ? "No points. Reveal the rest, one at a time." : "No points this round. Tap Next." : won >= 0 && left ? "".concat(tm[won], " wins ").concat(h.amt[i], "! Reveal the rest, one at a time.") : won >= 0 ? "".concat(tm[won], " wins ").concat(h.amt[i], "! Tap ").concat(last ? "Final score" : "Next round", ".") : s.upT > 0 ? "Time's up! Hit Strike." : steal ? "".concat(tm[1 - ctl], " can STEAL: one answer!") : pickT ? "Who won the face-off? Pick the team." : ctl < 0 ? kb ? "Face-off! Type what they say." : s.hide ? "Hidden. Tap Type to enter a guess." : "Face-off! Tap the answer they say." : kb ? "".concat(tm[ctl], " playing. Type what they say.") : "".concat(tm[ctl], " playing. Tap answers or Strike.");
       y = this.tipClock(G, c, P, y, tip, TSEC);
       var bot = kb ? H - kbH - 116 : won >= 0 ? H - 118 : pickT ? H - 170 : H - 118,
         cols = (bot - y) / n >= 36 ? 1 : 2,
@@ -1879,7 +1890,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (pickT) {
         teams(by - 60);
       }
-      if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), {
+      if (won >= 0 && left) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, "Reveal next \xB7 ".concat(left, " left"), true), {
+        k: "hrest"
+      }));else if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), {
         k: "hnext"
       }));else strike(12, by, sw);
       s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), {
@@ -1889,6 +1902,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false]];
       if (s.hide && won < 0) row.push(["⌨ Type", "hkb", false, !left]);
       row.push(won >= 0 ? ["⇄ Other team", "hswap", false, won === 2] : ["Skip round ›", "hskip", false, false]);
+      if (won >= 0 && left) row.push([last ? "Final ›" : "Skip ›", "hnext", false, false]);
       var wn = (W - 24 - 8 * (row.length - 1)) / row.length;
       row.forEach(function (r, k) {
         return s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 40, r[0], r[2], r[3]), {

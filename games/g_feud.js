@@ -447,13 +447,14 @@
       hSave(); askCode();
     },
     // The round runs itself once the host says who is playing (h.ctl): clearing the board or a missed steal gives the pot
-    // to that team, a good steal gives it to the other, and the answers nobody got flip over in grey.
+    // to that team, a good steal gives it to the other. The answers nobody got stay hidden for the host to reveal one at a time.
     hAward(G, t) {
       const h = HS, i = h.qi; if (t < 2) h.score[t] += h.pot; h.amt[i] = h.pot; h.pot = 0; h.won[i] = t;
-      HD[i].a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); if (t < 2) G.sfx("win");
+      if (t < 2) G.sfx("win");
     },
     hReveal(G, j) {
-      const s = G.s, h = HS, i = h.qi, c = h.ctl[i]; if (h.won[i] >= 0 || h.shown[i].includes(j)) return;
+      const s = G.s, h = HS, i = h.qi, c = h.ctl[i]; if (h.shown[i].includes(j)) return;
+      if (h.won[i] >= 0) { snap(); h.shown[i].push(j); h.free[i].push(j); s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); return hSave(); } // after the round: grey, no points
       snap(); s.timer = 0; h.tl = 0; h.shown[i].push(j); h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding();
       if (c >= 0 && h.strikes[i] >= 3) this.hAward(G, 1 - c); // the steal worked
@@ -515,6 +516,7 @@
         const t = b.k === "hctl0" ? 0 : 1; snap(); h.ctl[i] = t; if (h.shown[i].length === q.a.length) this.hAward(G, t); return hSave();
       }
       if (b.k === "hswap" && h.won[i] >= 0 && h.won[i] < 2) { snap(); const w = h.won[i]; h.score[w] -= h.amt[i]; h.score[1 - w] += h.amt[i]; h.won[i] = 1 - w; return hSave(); }
+      if (b.k === "hrest" && h.won[i] >= 0) { const j = q.a.findIndex((a, j) => !h.shown[i].includes(j)); if (j >= 0) this.hReveal(G, j); return; }
       if (b.k === "hskip" && h.won[i] < 0) { snap(); s.timer = 0; h.tl = 0; h.pot = 0; this.hAward(G, 2); return hSave(); } // nobody scores
       if (b.k === "hnext") {
         if (h.won[i] < 0) return;
@@ -638,7 +640,8 @@
       s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
       y = question(G, c, P, q, y + 28);
       // what the host does next
-      const tip = won === 2 ? "No points this round. Tap Next."
+      const tip = won === 2 ? (left ? "No points. Reveal the rest, one at a time." : "No points this round. Tap Next.")
+        : won >= 0 && left ? `${tm[won]} wins ${h.amt[i]}! Reveal the rest, one at a time.`
         : won >= 0 ? `${tm[won]} wins ${h.amt[i]}! Tap ${last ? "Final score" : "Next round"}.`
         : s.upT > 0 ? "Time's up! Hit Strike."
         : steal ? `${tm[1 - ctl]} can STEAL: one answer!`
@@ -686,13 +689,15 @@
       }
       const uw = 96, sw = W - 24 - uw - 8; let by = H - 112;
       if (pickT) { teams(by - 60); }
-      if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), { k: "hnext" }));
+      if (won >= 0 && left) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, `Reveal next · ${left} left`, true), { k: "hrest" }));
+      else if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), { k: "hnext" }));
       else strike(12, by, sw);
       s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), { k: "hundo" }));
       by += 62;
       const row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false]];
       if (s.hide && won < 0) row.push(["⌨ Type", "hkb", false, !left]);
       row.push(won >= 0 ? ["⇄ Other team", "hswap", false, won === 2] : ["Skip round ›", "hskip", false, false]);
+      if (won >= 0 && left) row.push([last ? "Final ›" : "Skip ›", "hnext", false, false]);
       const wn = (W - 24 - 8 * (row.length - 1)) / row.length;
       row.forEach((r, k) => s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 40, r[0], r[2], r[3]), { k: r[1] })));
     },
