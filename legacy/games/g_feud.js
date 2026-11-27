@@ -348,6 +348,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
   };
   function pick(list, n) {
+    if (!store.get(USED)) store.set(USED, DAYS["2026-11-26"].slice(0, 3).map(function (b) {
+      return b.q;
+    }));
     var used = store.get(USED) || [],
       f = list.filter(function (b) {
         return !used.includes(b.q);
@@ -438,6 +441,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           a.k = a.k || [norm(a.label)];
         });
       });
+      HS.ctl = HS.ctl || HD.map(function (b, i) {
+        return HS.won[i] >= 0 ? HS.won[i] : -1;
+      });
+      HS.amt = HS.amt || HD.map(function () {
+        return 0;
+      });
       askCode();
       hPush();
     }
@@ -505,7 +514,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         msg: done ? _tot >= FMT ? "".concat(_tot, " points! ").concat((h.tm || TEAMS)[f.team], " wins Fast Money! \uD83C\uDF89") : "".concat(_tot, " points. So close!") : ""
       };
     }
+    var ctl = h.ctl ? h.ctl[i] : -1,
+      turn = h.over || h.won[i] >= 0 || ctl < 0 ? -1 : h.strikes[i] >= 3 ? 1 - ctl : ctl;
     return {
+      tu: turn,
       r: i + 1,
       of: HD.length,
       m: mult(i),
@@ -598,6 +610,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       mid = mk("ftv-mid", top),
       t1 = mk("ftv-team", top);
     var T = TV = {
+      t0: t0,
+      t1: t1,
       root: root,
       alive: true,
       last: null,
@@ -657,6 +671,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var T = TV;
     if (!T || !T.alive || !v) return;
     var L = T.last;
+    T.t0.classList.toggle("turn", v.tu === 0);
+    T.t1.classList.toggle("turn", v.tu === 1);
     T.n0.textContent = v.tm[0];
     T.n1.textContent = v.tm[1];
     T.s0.textContent = v.sc[0];
@@ -1159,37 +1175,65 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       HS.won = HD.map(function () {
         return -1;
       });
+      HS.ctl = HD.map(function () {
+        return -1;
+      });
+      HS.amt = HD.map(function () {
+        return 0;
+      });
       hSave();
       askCode();
+    },
+    hAward: function hAward(G, t) {
+      var h = HS,
+        i = h.qi;
+      if (t < 2) h.score[t] += h.pot;
+      h.amt[i] = h.pot;
+      h.pot = 0;
+      h.won[i] = t;
+      HD[i].a.forEach(function (a, j) {
+        if (!h.shown[i].includes(j)) {
+          h.shown[i].push(j);
+          h.free[i].push(j);
+        }
+      });
+      if (t < 2) G.sfx("win");
     },
     hReveal: function hReveal(G, j) {
       var s = G.s,
         h = HS,
-        i = h.qi;
-      if (h.shown[i].includes(j)) return;
+        i = h.qi,
+        c = h.ctl[i];
+      if (h.won[i] >= 0 || h.shown[i].includes(j)) return;
       snap();
       s.timer = 0;
       h.tl = 0;
       h.shown[i].push(j);
-      if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
+      h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j;
       s.flashT = 0.7;
       h.nd = (h.nd || 0) + 1;
       ding();
+      if (c >= 0 && h.strikes[i] >= 3) this.hAward(G, 1 - c);else if (c >= 0 && h.shown[i].length === HD[i].a.length) this.hAward(G, c);
       hSave();
     },
     hStrike: function hStrike(G) {
       var s = G.s,
         h = HS,
-        i = h.qi;
+        i = h.qi,
+        c = h.ctl[i];
+      if (h.won[i] >= 0) return;
       snap();
       s.timer = 0;
       s.upT = 0;
       h.tl = 0;
-      if (h.strikes[i] < 3) {
+      if (c < 0) s.bigN = 1;else if (h.strikes[i] < 3) {
         h.strikes[i]++;
         s.bigN = h.strikes[i];
-      } else s.bigN = 1;
+      } else {
+        s.bigN = 1;
+        this.hAward(G, c);
+      }
       h.nx = (h.nx || 0) + 1;
       h.xn = s.bigN;
       s.bigX = 1.3;
@@ -1303,31 +1347,31 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         return;
       }
       if (b.key) return this.hPress(G, b.key);
-      if (b.k === "hwin0" || b.k === "hwin1") {
-        if (h.won[i] >= 0 || !h.pot) return;
-        var t = b.k === "hwin0" ? 0 : 1;
+      if ((b.k === "hctl0" || b.k === "hctl1") && h.ctl[i] < 0 && h.won[i] < 0) {
+        var t = b.k === "hctl0" ? 0 : 1;
+        snap();
+        h.ctl[i] = t;
+        if (h.shown[i].length === q.a.length) this.hAward(G, t);
+        return hSave();
+      }
+      if (b.k === "hswap" && h.won[i] >= 0 && h.won[i] < 2) {
+        snap();
+        var w = h.won[i];
+        h.score[w] -= h.amt[i];
+        h.score[1 - w] += h.amt[i];
+        h.won[i] = 1 - w;
+        return hSave();
+      }
+      if (b.k === "hskip" && h.won[i] < 0) {
         snap();
         s.timer = 0;
         h.tl = 0;
-        h.score[t] += h.pot;
         h.pot = 0;
-        h.won[i] = t;
-        G.sfx("win");
-        return hSave();
-      }
-      if (b.k === "hall") {
-        if (h.shown[i].length === q.a.length) return;
-        snap();
-        q.a.forEach(function (a, j) {
-          if (!h.shown[i].includes(j)) {
-            h.shown[i].push(j);
-            h.free[i].push(j);
-          }
-        });
+        this.hAward(G, 2);
         return hSave();
       }
       if (b.k === "hnext") {
-        if (h.won[i] < 0 && h.pot) return;
+        if (h.won[i] < 0) return;
         snap();
         s.timer = 0;
         h.tl = 0;
@@ -1639,19 +1683,30 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         left = n - h.shown[i].length,
         last = i === HD.length - 1,
         T = TOP + 6;
+      var ctl = h.ctl[i],
+        steal = won < 0 && ctl >= 0 && st >= 3,
+        turn = won >= 0 || ctl < 0 ? -1 : steal ? 1 - ctl : ctl,
+        pickT = won < 0 && ctl < 0 && h.shown[i].length > 0;
       var kb = !!(s.hide && s.kb && won < 0 && left),
         kbH = kb ? Math.min(214, H * 0.34) : 0;
       var pw = 88,
         tw = (W - 24 - pw - 12) / 2;
       [0, 1].forEach(function (t) {
-        var x = t ? W - 12 - tw : 12;
+        var x = t ? W - 12 - tw : 12,
+          on = turn === t,
+          lab = on ? (steal ? "STEAL · " : "▶ ") + tm[t] : tm[t] + " ✎";
         rr(c, x, T, tw, 50, 10);
         c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6";
         c.fill();
+        if (on) {
+          c.lineWidth = 3;
+          c.strokeStyle = steal ? "#d64545" : "#e9b949";
+          c.stroke();
+        }
         c.textAlign = "center";
-        c.fillStyle = mute;
-        fit(c, tm[t] + " ✎", tw - 12, 11.5, 600, G.UI);
-        c.fillText(tm[t] + " ✎", x + tw / 2, T + 15);
+        c.fillStyle = on ? ink : mute;
+        fit(c, lab, tw - 12, 11.5, on ? 700 : 600, G.UI);
+        c.fillText(lab, x + tw / 2, T + 15);
         c.fillStyle = ink;
         c.font = "700 22px ".concat(G.UI);
         c.fillText(h.score[t], x + tw / 2, T + 35);
@@ -1688,9 +1743,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hquit"
       });
       y = question(G, c, P, q, y + 28);
-      var tip = s.upT > 0 ? "Time's up! Hit Strike." : won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give out the pot." : st >= 3 ? s.hide ? "3 strikes! Type the ONE steal guess." : "3 strikes! Other team: ONE steal guess." : kb ? "Type what they said, then Enter." : s.hide ? "Hidden. Tap Type to enter a guess." : !h.shown[i].length && !st ? "Face-off! Tap an answer when it's said." : "Tap answers as said. Wrong? Hit Strike.";
+      var tip = won === 2 ? "No points this round. Tap Next." : won >= 0 ? "".concat(tm[won], " wins ").concat(h.amt[i], "! Tap ").concat(last ? "Final score" : "Next round", ".") : s.upT > 0 ? "Time's up! Hit Strike." : steal ? "".concat(tm[1 - ctl], " can STEAL: one answer!") : pickT ? "Who won the face-off? Pick the team." : ctl < 0 ? kb ? "Face-off! Type what they say." : s.hide ? "Hidden. Tap Type to enter a guess." : "Face-off! Tap the answer they say." : kb ? "".concat(tm[ctl], " playing. Type what they say.") : "".concat(tm[ctl], " playing. Tap answers or Strike.");
       y = this.tipClock(G, c, P, y, tip, TSEC);
-      var bot = kb ? H - kbH - 116 : H - 170,
+      var bot = kb ? H - kbH - 116 : won >= 0 ? H - 118 : pickT ? H - 170 : H - 118,
         cols = (bot - y) / n >= 36 ? 1 : 2,
         rows = Math.ceil(n / cols),
         gap = 5,
@@ -1764,13 +1819,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         c.restore();
       }
       var strike = function strike(x, yy, w) {
+        var lab = ctl < 0 ? "✕  WRONG (no strike)" : steal ? "✕  STEAL MISSED" : "\u2715 STRIKE  ".concat("●".repeat(st)).concat("○".repeat(3 - st));
         rr(c, x, yy, w, 52, 14);
         c.fillStyle = "#d64545";
         c.fill();
         c.fillStyle = "#fff";
         c.textAlign = "center";
-        c.font = "700 ".concat(w < 200 ? 15 : 18, "px ").concat(G.UI);
-        c.fillText("\u2715 STRIKE  ".concat("●".repeat(st)).concat("○".repeat(3 - st)), x + w / 2, yy + 27);
+        fit(c, lab, w - 16, w < 200 ? 15 : 18, 700, G.UI);
+        c.fillText(lab, x + w / 2, yy + 27);
         s.btns.push({
           x: x,
           y: yy,
@@ -1779,41 +1835,63 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           k: "hstrike"
         });
       };
-      var hw = (W - 36) / 2;
+      var hw = (W - 36) / 2,
+        teams = function teams(yy) {
+          return [0, 1].forEach(function (t) {
+            var lab = "".concat(tm[t], " plays"),
+              x = 12 + t * (hw + 12);
+            rr(c, x, yy, hw, 52, 14);
+            c.fillStyle = "#e9b949";
+            c.fill();
+            c.fillStyle = "#2b1a10";
+            c.textAlign = "center";
+            fit(c, lab, hw - 14, 16, 700, G.UI);
+            c.fillText(lab, x + hw / 2, yy + 27);
+            s.btns.push({
+              x: x,
+              y: yy,
+              w: hw,
+              h: 52,
+              k: "hctl" + t
+            });
+          });
+        };
       if (kb) {
         var y2 = bot + 6,
           pw2 = 78,
           sw2 = W - 24 - 2 * (pw2 + 6);
-        strike(12, y2, sw2);
-        s.btns.push(Object.assign(G.pill(c, 18 + sw2, y2 + 3, pw2, 46, "↩ Undo", false, !hist.length), {
-          k: "hundo"
-        }));
-        s.btns.push(Object.assign(G.pill(c, 24 + sw2 + pw2, y2 + 3, pw2, 46, "Pot ›", false), {
-          k: "hkb"
-        }));
+        if (pickT) teams(y2);else {
+          strike(12, y2, sw2);
+          s.btns.push(Object.assign(G.pill(c, 18 + sw2, y2 + 3, pw2, 46, "↩ Undo", false, !hist.length), {
+            k: "hundo"
+          }));
+          s.btns.push(Object.assign(G.pill(c, 24 + sw2 + pw2, y2 + 3, pw2, 46, "Keys ✕", false), {
+            k: "hkb"
+          }));
+        }
         inputBox(G, c, P, y2 + 60, "Type what they said");
         keys(G, c, P, kbH);
         return;
       }
-      var by = H - 164;
       var uw = 96,
         sw = W - 24 - uw - 8;
-      strike(12, by, sw);
+      var by = H - 112;
+      if (pickT) {
+        teams(by - 60);
+      }
+      if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), {
+        k: "hnext"
+      }));else strike(12, by, sw);
       s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), {
         k: "hundo"
       }));
-      by += 60;
-      if (won < 0) [0, 1].forEach(function (t) {
-        return s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), by, hw, 46, "Pot \u2192 ".concat(tm[t]), true, !h.pot), {
-          k: "hwin" + t
-        }));
-      });else lines("".concat(tm[won], " banked it"), by + 23, "600 15px ".concat(G.UI), ink);
-      by += 54;
-      var row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false], ["Show rest", "hall", false, !left], [last ? "Final score" : "Next ›", "hnext", false, won < 0 && h.pot > 0]];
-      if (s.hide) row.unshift(["⌨ Type", "hkb", false, won >= 0 || !left]);
+      by += 62;
+      var row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false]];
+      if (s.hide && won < 0) row.push(["⌨ Type", "hkb", false, !left]);
+      row.push(won >= 0 ? ["⇄ Other team", "hswap", false, won === 2] : ["Skip round ›", "hskip", false, false]);
       var wn = (W - 24 - 8 * (row.length - 1)) / row.length;
       row.forEach(function (r, k) {
-        return s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 44, r[0], r[2], r[3]), {
+        return s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 40, r[0], r[2], r[3]), {
           k: r[1]
         }));
       });

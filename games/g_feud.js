@@ -152,6 +152,7 @@
   };
   // n boards this phone hasn't hosted yet, in random order; when the pile runs short it starts over.
   function pick(list, n) {
+    if (!store.get(USED)) store.set(USED, DAYS["2026-11-26"].slice(0, 3).map(b => b.q));
     let used = store.get(USED) || [], f = list.filter(b => !used.includes(b.q));
     if (f.length < n) { used = used.filter(q => !list.some(b => b.q === q)); f = list.slice(); }
     f = f.map(b => [Math.random(), b]).sort((x, y) => x[0] - y[0]).slice(0, n).map(p => p[1]);
@@ -178,7 +179,7 @@
     const cb = crewBoard(h.raw), T = DAYS["2026-11-26"];
     return h.name === "mix" ? [T[1], cb[4], T[2], cb[0], T[0]] : cb;
   };
-  const hLoad = () => { HS = store.get(HK); hist = []; if (HS && !HS.deck) { HS.deck = oldDeck(HS); delete HS.raw; } HD = HS ? HS.deck : null; if (HS) { HD.forEach(b => b.a.forEach(a => { a.k = a.k || [norm(a.label)]; })); askCode(); hPush(); } };
+  const hLoad = () => { HS = store.get(HK); hist = []; if (HS && !HS.deck) { HS.deck = oldDeck(HS); delete HS.raw; } HD = HS ? HS.deck : null; if (HS) { HD.forEach(b => b.a.forEach(a => { a.k = a.k || [norm(a.label)]; })); HS.ctl = HS.ctl || HD.map((b, i) => HS.won[i] >= 0 ? HS.won[i] : -1); HS.amt = HS.amt || HD.map(() => 0); askCode(); hPush(); } };
   const hSave = () => { store.set(HK, HS); hPush(); };
   // Undo: every host action saves the game first. The TV's strike and ding counters keep counting up, so undo never replays a sound.
   const snap = () => { hist.push(JSON.stringify(HS)); if (hist.length > 30) hist.shift(); };
@@ -195,7 +196,8 @@
       return { fm: 1, rd: `FAST MONEY · ${FMT} TO WIN`, q: f.top ? "The number one answers" : done ? "Fast Money" : `Player ${f.p + 1}: ${f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q}`, a, st: 0, x: h.nx || 0, xn: 1, d: h.nd || 0, pot: tot,
         sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: -1, over: done && !f.top, win: tot >= FMT, msg: done ? (tot >= FMT ? `${tot} points! ${(h.tm || TEAMS)[f.team]} wins Fast Money! 🎉` : `${tot} points. So close!`) : "" };
     }
-    return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
+    const ctl = h.ctl ? h.ctl[i] : -1, turn = h.over || h.won[i] >= 0 || ctl < 0 ? -1 : h.strikes[i] >= 3 ? 1 - ctl : ctl;
+    return { tu: turn, r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
       st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: h.won[i], over: h.over };
   };
   // A push that fails is sent again (the newest view, up to 5 tries, 2 s apart) so the TV never sticks on an old screen.
@@ -226,7 +228,7 @@
     tvClose();
     const root = el("div", "ftv"), mk = (cls, parent, text) => { const n = el("div", cls, text); (parent || root).append(n); return n; };
     const top = mk("ftv-top"), t0 = mk("ftv-team", top), mid = mk("ftv-mid", top), t1 = mk("ftv-team", top);
-    const T = TV = { root, alive: true, last: null, key: "", n0: mk("ftv-tn", t0), s0: mk("ftv-ts", t0), rd: mk("ftv-rd", mid), pot: mk("ftv-pot", mid), n1: mk("ftv-tn", t1), s1: mk("ftv-ts", t1),
+    const T = TV = { t0, t1, root, alive: true, last: null, key: "", n0: mk("ftv-tn", t0), s0: mk("ftv-ts", t0), rd: mk("ftv-rd", mid), pot: mk("ftv-pot", mid), n1: mk("ftv-tn", t1), s1: mk("ftv-ts", t1),
       q: mk("ftv-q", null, "Waiting for the host…"), board: mk("ftv-board"), st: mk("ftv-st"), clock: mk("ftv-clock"), x: mk("ftv-x"), win: mk("ftv-win") };
     T.tick = setInterval(() => {
       if (!T.end) return; const left = Math.ceil((T.end - Date.now()) / 1000);
@@ -246,6 +248,7 @@
   function tvRender(v) {
     const T = TV; if (!T || !T.alive || !v) return;
     const L = T.last;
+    T.t0.classList.toggle("turn", v.tu === 0); T.t1.classList.toggle("turn", v.tu === 1);
     T.n0.textContent = v.tm[0]; T.n1.textContent = v.tm[1]; T.s0.textContent = v.sc[0]; T.s1.textContent = v.sc[1]; T.pot.textContent = v.pot;
     T.rd.textContent = v.rd || `ROUND ${v.r} OF ${v.of}` + (v.m > 1 ? (v.m === 2 ? " · DOUBLE" : " · TRIPLE") : "");
     const key = v.fm ? "fm" + v.a.length : v.r + "|" + v.q; T.q.textContent = v.q;
@@ -440,17 +443,28 @@
       code = store.get(CODE) || code || ""; if (code) store.set(CODE, code); fails = 0; hist = [];
       HS = { name, deck: newDeck(name, raw), code, day: KEY, qi: 0, pot: 0, score: [0, 0], over: false, tm: store.get(TM) || TEAMS.slice() }; HD = HS.deck;
       if (name === "fm") { HS.over = true; HS.fm = newFm(0); }
-      ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1);
+      ["shown", "free"].forEach(k => { HS[k] = HD.map(() => []); }); HS.strikes = HD.map(() => 0); HS.won = HD.map(() => -1); HS.ctl = HD.map(() => -1); HS.amt = HD.map(() => 0);
       hSave(); askCode();
     },
+    // The round runs itself once the host says who is playing (h.ctl): clearing the board or a missed steal gives the pot
+    // to that team, a good steal gives it to the other, and the answers nobody got flip over in grey.
+    hAward(G, t) {
+      const h = HS, i = h.qi; if (t < 2) h.score[t] += h.pot; h.amt[i] = h.pot; h.pot = 0; h.won[i] = t;
+      HD[i].a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); if (t < 2) G.sfx("win");
+    },
     hReveal(G, j) {
-      const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
-      snap(); s.timer = 0; h.tl = 0; h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
-      s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); hSave();
+      const s = G.s, h = HS, i = h.qi, c = h.ctl[i]; if (h.won[i] >= 0 || h.shown[i].includes(j)) return;
+      snap(); s.timer = 0; h.tl = 0; h.shown[i].push(j); h.pot += HD[i].a[j].pts * mult(i);
+      s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding();
+      if (c >= 0 && h.strikes[i] >= 3) this.hAward(G, 1 - c); // the steal worked
+      else if (c >= 0 && h.shown[i].length === HD[i].a.length) this.hAward(G, c); // board cleared
+      hSave();
     },
     hStrike(G) {
-      const s = G.s, h = HS, i = h.qi; snap(); s.timer = 0; s.upT = 0; h.tl = 0;
-      if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
+      const s = G.s, h = HS, i = h.qi, c = h.ctl[i]; if (h.won[i] >= 0) return; snap(); s.timer = 0; s.upT = 0; h.tl = 0;
+      if (c < 0) s.bigN = 1; // a face-off miss buzzes but isn't a strike
+      else if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; }
+      else { s.bigN = 1; this.hAward(G, c); } // the steal missed: the team that was playing keeps the pot
       h.nx = (h.nx || 0) + 1; h.xn = s.bigN;
       s.bigX = 1.3; buzzer(); G.buzz(); hSave();
     },
@@ -497,13 +511,13 @@
       if (b.k === "hhide") { s.hide = !s.hide; s.kb = s.hide; s.typed = ""; return; }
       if (b.k === "hkb") { s.kb = !s.kb; s.typed = ""; return; }
       if (b.key) return this.hPress(G, b.key);
-      if (b.k === "hwin0" || b.k === "hwin1") {
-        if (h.won[i] >= 0 || !h.pot) return;
-        const t = b.k === "hwin0" ? 0 : 1; snap(); s.timer = 0; h.tl = 0; h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
+      if ((b.k === "hctl0" || b.k === "hctl1") && h.ctl[i] < 0 && h.won[i] < 0) { // who won the face-off and plays the round
+        const t = b.k === "hctl0" ? 0 : 1; snap(); h.ctl[i] = t; if (h.shown[i].length === q.a.length) this.hAward(G, t); return hSave();
       }
-      if (b.k === "hall") { if (h.shown[i].length === q.a.length) return; snap(); q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
+      if (b.k === "hswap" && h.won[i] >= 0 && h.won[i] < 2) { snap(); const w = h.won[i]; h.score[w] -= h.amt[i]; h.score[1 - w] += h.amt[i]; h.won[i] = 1 - w; return hSave(); }
+      if (b.k === "hskip" && h.won[i] < 0) { snap(); s.timer = 0; h.tl = 0; h.pot = 0; this.hAward(G, 2); return hSave(); } // nobody scores
       if (b.k === "hnext") {
-        if (h.won[i] < 0 && h.pot) return;
+        if (h.won[i] < 0) return;
         snap(); s.timer = 0; h.tl = 0; if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
         return hSave();
       }
@@ -605,12 +619,14 @@
         return;
       }
       const i = h.qi, q = HD[i], m = mult(i), won = h.won[i], st = h.strikes[i], n = q.a.length, left = n - h.shown[i].length, last = i === HD.length - 1, T = TOP + 6;
+      const ctl = h.ctl[i], steal = won < 0 && ctl >= 0 && st >= 3, turn = won >= 0 || ctl < 0 ? -1 : steal ? 1 - ctl : ctl, pickT = won < 0 && ctl < 0 && h.shown[i].length > 0;
       const kb = !!(s.hide && s.kb && won < 0 && left), kbH = kb ? Math.min(214, H * 0.34) : 0; // the keyboard, while a hidden round is live
       // scoreboard: team, pot, team (tap a team to rename it)
       const pw = 88, tw = (W - 24 - pw - 12) / 2;
       [0, 1].forEach(t => {
-        const x = t ? W - 12 - tw : 12; rr(c, x, T, tw, 50, 10); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill();
-        c.textAlign = "center"; c.fillStyle = mute; fit(c, tm[t] + " ✎", tw - 12, 11.5, 600, G.UI); c.fillText(tm[t] + " ✎", x + tw / 2, T + 15);
+        const x = t ? W - 12 - tw : 12, on = turn === t, lab = on ? (steal ? "STEAL · " : "▶ ") + tm[t] : tm[t] + " ✎";
+        rr(c, x, T, tw, 50, 10); c.fillStyle = P.dk ? "#2c2c2e" : "#ecece6"; c.fill(); if (on) { c.lineWidth = 3; c.strokeStyle = steal ? "#d64545" : "#e9b949"; c.stroke(); }
+        c.textAlign = "center"; c.fillStyle = on ? ink : mute; fit(c, lab, tw - 12, 11.5, on ? 700 : 600, G.UI); c.fillText(lab, x + tw / 2, T + 15);
         c.fillStyle = ink; c.font = `700 22px ${G.UI}`; c.fillText(h.score[t], x + tw / 2, T + 35);
         s.btns.push({ x, y: T, w: tw, h: 50, k: "hname", t });
       });
@@ -622,17 +638,17 @@
       s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
       y = question(G, c, P, q, y + 28);
       // what the host does next
-      const tip = s.upT > 0 ? "Time's up! Hit Strike."
-        : won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.")
-        : !left ? "Board cleared! Give out the pot."
-        : st >= 3 ? (s.hide ? "3 strikes! Type the ONE steal guess." : "3 strikes! Other team: ONE steal guess.")
-        : kb ? "Type what they said, then Enter."
-        : s.hide ? "Hidden. Tap Type to enter a guess."
-        : !h.shown[i].length && !st ? "Face-off! Tap an answer when it's said."
-        : "Tap answers as said. Wrong? Hit Strike.";
+      const tip = won === 2 ? "No points this round. Tap Next."
+        : won >= 0 ? `${tm[won]} wins ${h.amt[i]}! Tap ${last ? "Final score" : "Next round"}.`
+        : s.upT > 0 ? "Time's up! Hit Strike."
+        : steal ? `${tm[1 - ctl]} can STEAL: one answer!`
+        : pickT ? "Who won the face-off? Pick the team."
+        : ctl < 0 ? (kb ? "Face-off! Type what they say." : s.hide ? "Hidden. Tap Type to enter a guess." : "Face-off! Tap the answer they say.")
+        : kb ? `${tm[ctl]} playing. Type what they say.`
+        : `${tm[ctl]} playing. Tap answers or Strike.`;
       y = this.tipClock(G, c, P, y, tip, TSEC);
       // the answers: one tall column when they fit, else two (numbered down the left column first)
-      const bot = kb ? H - kbH - 116 : H - 170, cols = (bot - y) / n >= 36 ? 1 : 2, rows = Math.ceil(n / cols), gap = 5, rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)), cw = (W - 24 - (cols - 1) * 6) / cols;
+      const bot = kb ? H - kbH - 116 : won >= 0 ? H - 118 : pickT ? H - 170 : H - 118, cols = (bot - y) / n >= 36 ? 1 : 2, rows = Math.ceil(n / cols), gap = 5, rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)), cw = (W - 24 - (cols - 1) * 6) / cols;
       q.a.forEach((a, j) => {
         const col = j < rows ? 0 : 1, x = 12 + col * (cw + 6), yy = y + (j - col * rows) * (rh + gap), mid = yy + rh / 2 + 1, on = h.shown[i].includes(j), free = on && h.free[i].includes(j);
         rr(c, x, yy, cw, rh, 8); c.fillStyle = free ? (P.dk ? "#2c2c2e" : "#ecece6") : on ? (s.flash === j && s.flashT > 0 ? "#f8e3a1" : "#e9b949") : s.hide ? (P.dk ? "#27386b" : "#1f3a8a") : P.bg; c.fill();
@@ -650,31 +666,35 @@
         for (let k = 0; k < k2; k++) { const x = x0 + k * (z + 10), yy = y + bh / 2 - z / 2; rr(c, x, yy, z, z, 12); c.fillStyle = P.bg; c.fill(); c.lineWidth = 6; c.strokeStyle = "#d64545"; c.stroke(); c.fillStyle = "#d64545"; c.textAlign = "center"; c.font = `700 ${z * 0.72}px ${G.UI}`; c.fillText("✕", x + z / 2, yy + z / 2 + 3); }
         c.restore();
       }
-      // controls, fixed at the bottom: Strike and Undo, the pot, then the round
+      // controls, fixed at the bottom: one main action for where the round is, Undo, then a small utility row
       const strike = (x, yy, w) => {
+        const lab = ctl < 0 ? "✕  WRONG (no strike)" : steal ? "✕  STEAL MISSED" : `✕ STRIKE  ${"●".repeat(st)}${"○".repeat(3 - st)}`;
         rr(c, x, yy, w, 52, 14); c.fillStyle = "#d64545"; c.fill();
-        c.fillStyle = "#fff"; c.textAlign = "center"; c.font = `700 ${w < 200 ? 15 : 18}px ${G.UI}`; c.fillText(`✕ STRIKE  ${"●".repeat(st)}${"○".repeat(3 - st)}`, x + w / 2, yy + 27);
+        c.fillStyle = "#fff"; c.textAlign = "center"; fit(c, lab, w - 16, w < 200 ? 15 : 18, 700, G.UI); c.fillText(lab, x + w / 2, yy + 27);
         s.btns.push({ x, y: yy, w, h: 52, k: "hstrike" });
       };
-      const hw = (W - 36) / 2;
-      if (kb) { // Strike, Undo, a way out to the pot buttons, then the answer box and keys
+      const hw = (W - 36) / 2, teams = yy => [0, 1].forEach(t => { const lab = `${tm[t]} plays`, x = 12 + t * (hw + 12); rr(c, x, yy, hw, 52, 14); c.fillStyle = "#e9b949"; c.fill(); c.fillStyle = "#2b1a10"; c.textAlign = "center"; fit(c, lab, hw - 14, 16, 700, G.UI); c.fillText(lab, x + hw / 2, yy + 27); s.btns.push({ x, y: yy, w: hw, h: 52, k: "hctl" + t }); });
+      if (kb) { // typing: the team pick takes over the top row once an answer is up, then the answer box and keys
         const y2 = bot + 6, pw2 = 78, sw2 = W - 24 - 2 * (pw2 + 6);
-        strike(12, y2, sw2);
-        s.btns.push(Object.assign(G.pill(c, 18 + sw2, y2 + 3, pw2, 46, "↩ Undo", false, !hist.length), { k: "hundo" }));
-        s.btns.push(Object.assign(G.pill(c, 24 + sw2 + pw2, y2 + 3, pw2, 46, "Pot ›", false), { k: "hkb" }));
+        if (pickT) teams(y2);
+        else {
+          strike(12, y2, sw2);
+          s.btns.push(Object.assign(G.pill(c, 18 + sw2, y2 + 3, pw2, 46, "↩ Undo", false, !hist.length), { k: "hundo" }));
+          s.btns.push(Object.assign(G.pill(c, 24 + sw2 + pw2, y2 + 3, pw2, 46, "Keys ✕", false), { k: "hkb" }));
+        }
         inputBox(G, c, P, y2 + 60, "Type what they said"); keys(G, c, P, kbH); return;
       }
-      let by = H - 164; const uw = 96, sw = W - 24 - uw - 8;
-      strike(12, by, sw);
+      const uw = 96, sw = W - 24 - uw - 8; let by = H - 112;
+      if (pickT) { teams(by - 60); }
+      if (won >= 0) s.btns.push(Object.assign(G.pill(c, 12, by, sw, 52, last ? "Final score ›" : "Next round ›", true), { k: "hnext" }));
+      else strike(12, by, sw);
       s.btns.push(Object.assign(G.pill(c, 12 + sw + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), { k: "hundo" }));
-      by += 60;
-      if (won < 0) [0, 1].forEach(t => s.btns.push(Object.assign(G.pill(c, 12 + t * (hw + 12), by, hw, 46, `Pot → ${tm[t]}`, true, !h.pot), { k: "hwin" + t })));
-      else lines(`${tm[won]} banked it`, by + 23, `600 15px ${G.UI}`, ink);
-      by += 54;
-      const row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false], ["Show rest", "hall", false, !left], [last ? "Final score" : "Next ›", "hnext", false, won < 0 && h.pot > 0]];
-      if (s.hide) row.unshift(["⌨ Type", "hkb", false, won >= 0 || !left]);
+      by += 62;
+      const row = [[s.hide ? "👀 Show" : "🙈 Hide", "hhide", s.hide, false]];
+      if (s.hide && won < 0) row.push(["⌨ Type", "hkb", false, !left]);
+      row.push(won >= 0 ? ["⇄ Other team", "hswap", false, won === 2] : ["Skip round ›", "hskip", false, false]);
       const wn = (W - 24 - 8 * (row.length - 1)) / row.length;
-      row.forEach((r, k) => s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 44, r[0], r[2], r[3]), { k: r[1] })));
+      row.forEach((r, k) => s.btns.push(Object.assign(G.pill(c, 12 + k * (wn + 8), by, wn, 40, r[0], r[2], r[3]), { k: r[1] })));
     },
     _t: { norm, match, alike, crewBoard, DAYS, SPARE, MORE, to100, newDeck, scoreOf, host: () => HS, deck: () => HD, mode: m => { MODE = m; }, view, tvOpen, tvRender }
   });
