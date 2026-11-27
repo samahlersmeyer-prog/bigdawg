@@ -477,7 +477,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         done = f.rev[1] === 5,
         _tot = fmTot(f),
         a = [];
-      [0, 1].forEach(function (p) {
+      if (f.top) f.qs.forEach(function (b) {
+        return a.push([b.a[0].label, b.a[0].pts, 0]);
+      });else [0, 1].forEach(function (p) {
         return f.qs.forEach(function (b, k) {
           var j = f.ans[p][k];
           a.push(k < f.rev[p] && !(p === 0 && f.p === 1 && live) ? j >= 0 ? [b.a[j].label, b.a[j].pts, 0] : ["✕", 0, 1] : 0);
@@ -486,7 +488,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return {
         fm: 1,
         rd: "FAST MONEY \xB7 ".concat(FMT, " TO WIN"),
-        q: done ? "Fast Money" : "Player ".concat(f.p + 1, ": ").concat(f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q),
+        q: f.top ? "The number one answers" : done ? "Fast Money" : "Player ".concat(f.p + 1, ": ").concat(f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q),
         a: a,
         st: 0,
         x: h.nx || 0,
@@ -498,7 +500,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         tn: h.tn || 0,
         tl: h.tl || 0,
         won: -1,
-        over: done,
+        over: done && !f.top,
         win: _tot >= FMT,
         msg: done ? _tot >= FMT ? "".concat(_tot, " points! ").concat((h.tm || TEAMS)[f.team], " wins Fast Money! \uD83C\uDF89") : "".concat(_tot, " points. So close!") : ""
       };
@@ -661,7 +663,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     T.s1.textContent = v.sc[1];
     T.pot.textContent = v.pot;
     T.rd.textContent = v.rd || "ROUND ".concat(v.r, " OF ").concat(v.of) + (v.m > 1 ? v.m === 2 ? " · DOUBLE" : " · TRIPLE" : "");
-    var key = v.fm ? "fm" : v.r + "|" + v.q;
+    var key = v.fm ? "fm" + v.a.length : v.r + "|" + v.q;
     T.q.textContent = v.q;
     if (key !== T.key) {
       T.key = key;
@@ -1412,6 +1414,15 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         f.p = 1;
         return hSave();
       }
+      if (b.k === "ftop" && f.rev[1] === 5) {
+        snap();
+        f.top = !f.top;
+        if (f.top) {
+          h.nd = (h.nd || 0) + 1;
+          ding();
+        }
+        return hSave();
+      }
     },
     fmDraw: function fmDraw(G, c, P) {
       var s = G.s,
@@ -1531,11 +1542,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       c.textAlign = "center";
       c.fillStyle = ink;
       c.font = "700 17px ".concat(G.UI);
-      c.fillText(done ? "Fast Money is over" : rv < 5 ? "Player ".concat(p + 1, ": reveal the answers") : "Cover the TV before player 2 comes in", W / 2, y + 6);
+      c.fillText(f.top ? "The number one answers" : done ? "Fast Money is over" : rv < 5 ? "Player ".concat(p + 1, ": reveal the answers") : "Cover the TV before player 2 comes in", W / 2, y + 6);
       y += 26;
       f.qs.forEach(function (q, k) {
-        var j = f.ans[p][k],
-          on = k < rv,
+        var j = f.top ? 0 : f.ans[p][k],
+          on = f.top || k < rv,
           yy = y + k * 47,
           mid = yy + 22;
         rr(c, 12, yy, W - 24, 42, 8);
@@ -1549,9 +1560,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         fit(c, "".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), W - 90, 15, 700, G.UI);
         c.fillText("".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), 24, mid);
       });
-      if (done) s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", true), {
-        k: "hnew"
-      }));else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), {
+      if (done) {
+        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers ›", !f.top), {
+          k: "ftop"
+        }));
+        s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", f.top), {
+          k: "hnew"
+        }));
+      } else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), {
         k: "frev"
       }));else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Cover answers · Player 2 ›", true), {
         k: "fp2"

@@ -190,9 +190,10 @@
     const h = HS, i = h.qi, q = HD[i], f = h.fm;
     if (f) {
       const live = f.ans[f.p].length < 5, done = f.rev[1] === 5, tot = fmTot(f), a = [];
-      [0, 1].forEach(p => f.qs.forEach((b, k) => { const j = f.ans[p][k]; a.push(k < f.rev[p] && !(p === 0 && f.p === 1 && live) ? (j >= 0 ? [b.a[j].label, b.a[j].pts, 0] : ["✕", 0, 1]) : 0); }));
-      return { fm: 1, rd: `FAST MONEY · ${FMT} TO WIN`, q: done ? "Fast Money" : `Player ${f.p + 1}: ${f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q}`, a, st: 0, x: h.nx || 0, xn: 1, d: h.nd || 0, pot: tot,
-        sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: -1, over: done, win: tot >= FMT, msg: done ? (tot >= FMT ? `${tot} points! ${(h.tm || TEAMS)[f.team]} wins Fast Money! 🎉` : `${tot} points. So close!`) : "" };
+      if (f.top) f.qs.forEach(b => a.push([b.a[0].label, b.a[0].pts, 0]));
+      else [0, 1].forEach(p => f.qs.forEach((b, k) => { const j = f.ans[p][k]; a.push(k < f.rev[p] && !(p === 0 && f.p === 1 && live) ? (j >= 0 ? [b.a[j].label, b.a[j].pts, 0] : ["✕", 0, 1]) : 0); }));
+      return { fm: 1, rd: `FAST MONEY · ${FMT} TO WIN`, q: f.top ? "The number one answers" : done ? "Fast Money" : `Player ${f.p + 1}: ${f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q}`, a, st: 0, x: h.nx || 0, xn: 1, d: h.nd || 0, pot: tot,
+        sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: -1, over: done && !f.top, win: tot >= FMT, msg: done ? (tot >= FMT ? `${tot} points! ${(h.tm || TEAMS)[f.team]} wins Fast Money! 🎉` : `${tot} points. So close!`) : "" };
     }
     return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
       st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: h.won[i], over: h.over };
@@ -247,7 +248,7 @@
     const L = T.last;
     T.n0.textContent = v.tm[0]; T.n1.textContent = v.tm[1]; T.s0.textContent = v.sc[0]; T.s1.textContent = v.sc[1]; T.pot.textContent = v.pot;
     T.rd.textContent = v.rd || `ROUND ${v.r} OF ${v.of}` + (v.m > 1 ? (v.m === 2 ? " · DOUBLE" : " · TRIPLE") : "");
-    const key = v.fm ? "fm" : v.r + "|" + v.q; T.q.textContent = v.q;
+    const key = v.fm ? "fm" + v.a.length : v.r + "|" + v.q; T.q.textContent = v.q;
     if (key !== T.key) {
       T.key = key; T.board.textContent = "";
       const rows = Math.ceil(v.a.length / 2), cols = [el("div", "ftv-col"), el("div", "ftv-col")]; T.board.append(cols[0], cols[1]);
@@ -533,6 +534,7 @@
         if (p && f.rev[1] === 5 && fmTot(f) >= FMT) G.sfx("win"); return hSave();
       }
       if (b.k === "fp2" && !p && f.rev[0] === 5) { snap(); f.p = 1; return hSave(); }
+      if (b.k === "ftop" && f.rev[1] === 5) { snap(); f.top = !f.top; if (f.top) { h.nd = (h.nd || 0) + 1; ding(); } return hSave(); }
     },
     fmDraw(G, c, P) {
       const s = G.s, W = G.W, H = G.H, h = HS, f = h.fm, { ink, mute } = P, tm = h.tm || TEAMS, p = f.p, i = f.ans[p].length, tot = fmTot(f), done = f.rev[1] === 5, T = TOP + 6;
@@ -562,14 +564,17 @@
       }
       // reveal: one answer at a time
       y += 16; const rv = f.rev[p];
-      c.textAlign = "center"; c.fillStyle = ink; c.font = `700 17px ${G.UI}`; c.fillText(done ? "Fast Money is over" : rv < 5 ? `Player ${p + 1}: reveal the answers` : "Cover the TV before player 2 comes in", W / 2, y + 6); y += 26;
+      c.textAlign = "center"; c.fillStyle = ink; c.font = `700 17px ${G.UI}`; c.fillText(f.top ? "The number one answers" : done ? "Fast Money is over" : rv < 5 ? `Player ${p + 1}: reveal the answers` : "Cover the TV before player 2 comes in", W / 2, y + 6); y += 26;
       f.qs.forEach((q, k) => {
-        const j = f.ans[p][k], on = k < rv, yy = y + k * 47, mid = yy + 22;
+        const j = f.top ? 0 : f.ans[p][k], on = f.top || k < rv, yy = y + k * 47, mid = yy + 22;
         rr(c, 12, yy, W - 24, 42, 8); c.fillStyle = on ? (j >= 0 ? "#e9b949" : (P.dk ? "#2c2c2e" : "#ecece6")) : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
         c.fillStyle = on ? (j >= 0 ? "#2b1a10" : mute) : "#fff"; c.textAlign = "right"; c.font = `700 16px ${G.UI}`; c.fillText(on ? (j >= 0 ? q.a[j].pts : 0) : "?", W - 24, mid);
         c.textAlign = "left"; fit(c, `${k + 1}. ${j >= 0 ? q.a[j].label : "✕ no answer"}`, W - 90, 15, 700, G.UI); c.fillText(`${k + 1}. ${j >= 0 ? q.a[j].label : "✕ no answer"}`, 24, mid);
       });
-      if (done) s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", true), { k: "hnew" }));
+      if (done) {
+        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers ›", !f.top), { k: "ftop" }));
+        s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", f.top), { k: "hnew" }));
+      }
       else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), { k: "frev" }));
       else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Cover answers · Player 2 ›", true), { k: "fp2" }));
       undo();
