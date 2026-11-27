@@ -1239,7 +1239,7 @@ function answerDare(id, dateKey, dareId, score) {
 // When everyone opens the app at once, the same tabs used to be read over and over. Read-only calls now share
 // one copy of the big tabs for up to 30 seconds. Any call that changes data bumps a version number before and
 // after it runs, so nobody sees an old copy after a change, and calls that write always read the sheet fresh.
-const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1, feudPush: 1, feudWatch: 1 };
+const READ_FNS_ = { getBoard: 1, whoami: 1, loadProgress: 1, getShadeState: 1, listPlayers: 1, getStats: 1, getPlayerCard: 1, getArcade: 1, bootData: 1, getAllTime: 1, getCrews: 1, getWeekReview: 1, getFeudSurvey: 1, feudPush: 1, feudWatch: 1, tvHost: 1, tvPush: 1, tvWatch: 1 };
 const RC_SECS_ = 30;
 let READONLY_ = false, RC_VER_ = null, TZ_ = null;
 function rcVer_() { if (RC_VER_ == null) { try { RC_VER_ = CacheService.getScriptCache().get('rc:ver') || '0'; } catch (e) { RC_VER_ = 'x' + Date.now(); } } return RC_VER_; }
@@ -1343,6 +1343,35 @@ function feudWatch(code) {
   return s ? JSON.parse(s) : null;
 }
 
+// TV link for party games outside the app (Fishbowl's Jeopardy page). Same idea as Feud's link, but no player is
+// needed: tvHost hands the host a 4-letter code plus a secret key, only that key can push, anyone with the code can watch.
+function tvHost() {
+  const cache = CacheService.getScriptCache(), abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let tries = 0; tries < 20; tries++) {
+    code = ''; for (let k = 0; k < 4; k++) code += abc.charAt(Math.floor(Math.random() * abc.length));
+    if (!cache.get('tvg:' + code)) break;
+  }
+  const key = Utilities.getUuid().slice(0, 12);
+  cache.put('tvg:' + code, key, 21600);
+  return { code: code, key: key };
+}
+function tvPush(code, key, state) {
+  code = feudCode_(code);
+  const cache = CacheService.getScriptCache();
+  if (!key || cache.get('tvg:' + code) !== String(key)) throw new Error('No game with that code.');
+  const s = JSON.stringify(state || null);
+  if (s.length > 8000) throw new Error('Too big.');
+  cache.put('tvv:' + code, s, 21600); cache.put('tvg:' + code, String(key), 21600);
+  return true;
+}
+function tvWatch(code) {
+  code = feudCode_(code);
+  const cache = CacheService.getScriptCache(), s = cache.get('tvv:' + code);
+  if (!s && !cache.get('tvg:' + code)) throw new Error('No game with that code.');
+  return s ? JSON.parse(s) : null;
+}
+
 // The game page can live on a fast static host (GitHub Pages) and talk to this script over HTTPS.
 // The page sends {fn, args} as plain text (no CORS preflight); only the functions listed here can be called.
 const API_FNS = {
@@ -1351,7 +1380,8 @@ const API_FNS = {
   deleteJoke: deleteJoke, listPlayers: listPlayers, claimPlayer: claimPlayer, react: react, getStats: getStats,
   getPlayerCard: getPlayerCard, markSeen: markSeen, sendFeedback: sendFeedback, submitArcade: submitArcade, getArcade: getArcade, sendDare: sendDare, answerDare: answerDare,
   bootData: bootData, getAllTime: getAllTime, getCrews: getCrews, createCrew: createCrew, joinCrew: joinCrew, leaveCrew: leaveCrew, renameCrew: renameCrew, removeFromCrew: removeFromCrew, newCrewCode: newCrewCode, requestJoin: requestJoin, answerJoin: answerJoin, addToCrew: addToCrew, getWeekReview: getWeekReview,
-  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey, feudHost: feudHost, feudPush: feudPush, feudWatch: feudWatch
+  getFeudSurvey: getFeudSurvey, sendFeudSurvey: sendFeudSurvey, feudHost: feudHost, feudPush: feudPush, feudWatch: feudWatch,
+  tvHost: tvHost, tvPush: tvPush, tvWatch: tvWatch
 };
 function doPost(e) {
   let req = {};
