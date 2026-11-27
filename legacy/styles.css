@@ -1673,6 +1673,9 @@ html:not(.legacy) #v-groups .donebar { padding-top: 10px; }
 .ftv-ap { margin-left: 1vw; font-size: 4.6vh; }
 @keyframes ftv-flip { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
 .ftv-st { height: 5.5vh; text-align: center; font-size: 4vh; font-weight: 800; letter-spacing: 1.2vw; color: #ff5a5a; }
+.ftv-clock { position: absolute; right: 3vw; bottom: 10vh; z-index: 1; display: none; align-items: center; justify-content: center; width: 20vh; height: 20vh; border: 1vh solid #e9b949; border-radius: 50%; background: #0c1740; font-size: 11vh; font-weight: 800; color: #fff; }
+.ftv-clock.go { display: -webkit-flex; display: flex; }
+.ftv-clock.low { border-color: #ff3b3b; color: #ff5a5a; }
 .ftv-x, .ftv-win { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: none; align-items: center; justify-content: center; background: rgba(5, 10, 30, 0.6); font-weight: 800; text-align: center; }
 .ftv-x { font-size: 44vh; letter-spacing: 2vw; color: #ff3b3b; }
 .ftv-win { padding: 0 6vw; font-size: 11vh; line-height: 1.15; color: #e9b949; }

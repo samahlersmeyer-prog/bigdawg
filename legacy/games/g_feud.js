@@ -310,7 +310,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     CODE = "bdd:feud:code",
     USED = "bdd:feud:used",
     TM = "bdd:feud:tm",
-    TEAMS = ["Team Turkey", "Team Gravy"];
+    TEAMS = ["Team Turkey", "Team Gravy"],
+    TSEC = 15;
   var MODE = "solo",
     HS = null,
     HD = null,
@@ -433,7 +434,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       code: o.code,
       nx: o.nx,
       nd: o.nd,
-      tm: o.tm
+      tm: o.tm,
+      tn: o.tn,
+      tl: 0
     });
     HD = HS.deck;
     hSave();
@@ -460,6 +463,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       pot: h.pot,
       sc: h.score,
       tm: h.tm || TEAMS,
+      tn: h.tn || 0,
+      tl: h.tl || 0,
       won: h.won[i],
       over: h.over
     };
@@ -513,6 +518,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     if (!TV) return;
     TV.alive = false;
     clearTimeout(TV.xt);
+    clearInterval(TV.tick);
     try {
       if (document.fullscreenElement) document.exitFullscreen();
     } catch (e) {}
@@ -548,9 +554,23 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       q: mk("ftv-q", null, "Waiting for the host…"),
       board: mk("ftv-board"),
       st: mk("ftv-st"),
+      clock: mk("ftv-clock"),
       x: mk("ftv-x"),
       win: mk("ftv-win")
     };
+    T.tick = setInterval(function () {
+      if (!T.end) return;
+      var left = Math.ceil((T.end - Date.now()) / 1000);
+      T.clock.textContent = Math.max(0, left);
+      T.clock.classList.toggle("low", left <= 5);
+      if (left <= 0) {
+        T.end = 0;
+        timesUp();
+        setTimeout(function () {
+          if (!T.end) T.clock.classList.remove("go");
+        }, 2500);
+      }
+    }, 200);
     var foot = mk("ftv-foot");
     mk("ftv-code", foot, "Big Dawg Feud \xB7 TV code ".concat(code));
     var fs = el("button", "ftv-btn", "Full screen"),
@@ -628,6 +648,15 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }, 1500);
     }
     if (L && v.d > L.d) ding();
+    if (L && v.tn > (L.tn || 0) && v.tl) {
+      T.end = Date.now() + v.tl * 1000;
+      T.clock.textContent = v.tl;
+      T.clock.classList.remove("low");
+      T.clock.classList.add("go");
+    } else if (!v.tl && T.end) {
+      T.end = 0;
+      T.clock.classList.remove("go");
+    }
     if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
     T.win.textContent = v.over ? v.sc[0] === v.sc[1] ? "It's a tie!" : "".concat(v.tm[v.sc[0] > v.sc[1] ? 0 : 1], " wins! \uD83E\uDD83") : "";
     T.win.classList.toggle("go", !!v.over);
@@ -656,6 +685,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var ding = function ding() {
     tone("sine", 1568, 0.9, 0.18);
     tone("sine", 2093, 0.6, 0.09);
+  };
+  var timesUp = function timesUp() {
+    tone("square", 196, 0.9, 0.16);
+    tone("square", 147, 0.9, 0.12);
   };
   var buzzer = function buzzer() {
     tone("sawtooth", 130, 0.8, 0.2);
@@ -823,6 +856,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (s.flashT > 0) s.flashT -= dt;
       if (s.bigX > 0) s.bigX -= dt;
       if (s.quitT > 0) s.quitT -= dt;
+      if (s.upT > 0) s.upT -= dt;
+      if (s.timer > 0) {
+        var was = Math.ceil(s.timer);
+        s.timer -= dt;
+        if (s.timer <= 0) {
+          s.timer = 0;
+          s.upT = 3;
+          timesUp();
+          G.buzz();
+        } else if (Math.ceil(s.timer) < was && s.timer <= 5) tone("sine", 880, 0.08, 0.1);
+      }
       if (MODE !== "solo" || !s.qs) return;
       if (!s.done) {
         s.el += dt;
@@ -1063,6 +1107,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         i = h.qi;
       if (h.shown[i].includes(j)) return;
       snap();
+      s.timer = 0;
+      h.tl = 0;
       h.shown[i].push(j);
       if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j;
@@ -1076,6 +1122,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         h = HS,
         i = h.qi;
       snap();
+      s.timer = 0;
+      s.upT = 0;
+      h.tl = 0;
       if (h.strikes[i] < 3) {
         h.strikes[i]++;
         s.bigN = h.strikes[i];
@@ -1142,7 +1191,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (s.quitT > 0) quit();else s.quitT = 3;
         return;
       }
-      if (b.k === "hundo") return undo();
+      if (b.k === "hundo") {
+        s.timer = 0;
+        return undo();
+      }
       if (h.over) return;
       var i = h.qi,
         q = HD[i];
@@ -1163,6 +1215,19 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         s.typed = "";
         return;
       }
+      if (b.k === "htime") {
+        if (s.timer > 0) {
+          s.timer = 0;
+          h.tl = 0;
+        } else {
+          s.timer = TSEC;
+          s.upT = 0;
+          h.tn = (h.tn || 0) + 1;
+          h.tl = TSEC;
+          tone("sine", 660, 0.12, 0.12);
+        }
+        return hSave();
+      }
       if (b.k === "hkb") {
         s.kb = !s.kb;
         s.typed = "";
@@ -1173,6 +1238,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (h.won[i] >= 0 || !h.pot) return;
         var t = b.k === "hwin0" ? 0 : 1;
         snap();
+        s.timer = 0;
+        h.tl = 0;
         h.score[t] += h.pot;
         h.pot = 0;
         h.won[i] = t;
@@ -1193,6 +1260,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (b.k === "hnext") {
         if (h.won[i] < 0 && h.pot) return;
         snap();
+        s.timer = 0;
+        h.tl = 0;
         if (i === HD.length - 1) {
           h.over = true;
           G.sfx("win");
@@ -1307,15 +1376,36 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hquit"
       });
       y = question(G, c, P, q, y + 28);
-      var tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give the pot to the team that was playing." : st >= 3 ? s.hide ? "3 strikes. Type the other team's ONE steal guess, then tap Pot." : "3 strikes. The other team gets ONE guess to steal, then give the pot." : kb ? "You're playing too: type what they said, then Enter." : s.hide ? "Answers are hidden. Tap Type to enter a guess." : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it." : "Tap answers as they're said. Wrong answer? Hit Strike.";
-      rr(c, 12, y - 8, W - 24, 24, 8);
+      var tip = s.upT > 0 ? "Time's up! Hit Strike." : won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give out the pot." : st >= 3 ? s.hide ? "3 strikes! Type the ONE steal guess." : "3 strikes! Other team: ONE steal guess." : kb ? "Type what they said, then Enter." : s.hide ? "Hidden. Tap Type to enter a guess." : !h.shown[i].length && !st ? "Face-off! Tap an answer when it's said." : "Tap answers as said. Wrong? Hit Strike.";
+      var cw0 = 76,
+        run = s.timer > 0,
+        low = run && s.timer <= 5;
+      rr(c, 12, y - 10, W - 24 - cw0 - 6, 32, 8);
       c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0";
       c.fill();
       c.fillStyle = ink;
       c.textAlign = "center";
-      fit(c, tip, W - 40, 12.5, 600, G.UI);
-      c.fillText(tip, W / 2, y + 5);
-      y += 24;
+      fit(c, tip, W - 44 - cw0, 12.5, 600, G.UI);
+      c.fillText(tip, 12 + (W - 30 - cw0) / 2, y + 7);
+      rr(c, W - 12 - cw0, y - 10, cw0, 32, 16);
+      c.fillStyle = low || s.upT > 0 ? "#d64545" : run ? "#1f3a8a" : P.bg;
+      c.fill();
+      if (!run && !(s.upT > 0)) {
+        c.lineWidth = 1.5;
+        c.strokeStyle = ink;
+        c.stroke();
+      }
+      c.fillStyle = run || s.upT > 0 ? "#fff" : ink;
+      c.font = "700 ".concat(run ? 17 : 14, "px ").concat(G.UI);
+      c.fillText(run ? Math.ceil(s.timer) : s.upT > 0 ? "0" : "\u23F1 ".concat(TSEC, "s"), W - 12 - cw0 / 2, y + 7);
+      s.btns.push({
+        x: W - 18 - cw0,
+        y: y - 16,
+        w: cw0 + 12,
+        h: 44,
+        k: "htime"
+      });
+      y += 32;
       var bot = kb ? H - kbH - 116 : H - 170,
         cols = (bot - y) / n >= 36 ? 1 : 2,
         rows = Math.ceil(n / cols),

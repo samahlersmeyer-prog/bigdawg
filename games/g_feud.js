@@ -142,7 +142,7 @@
     });
   }
   // ---- host mode state: one game at a time, kept on this device so a reload picks it back up ----
-  const HK = "bdd:feud:host", CODE = "bdd:feud:code", USED = "bdd:feud:used", TM = "bdd:feud:tm", TEAMS = ["Team Turkey", "Team Gravy"];
+  const HK = "bdd:feud:host", CODE = "bdd:feud:code", USED = "bdd:feud:used", TM = "bdd:feud:tm", TEAMS = ["Team Turkey", "Team Gravy"], TSEC = 15; // TSEC: seconds on the answer clock
   let MODE = "solo", HS = null, HD = null, hist = [];
   // Host boards always add up to 100, like the show: each answer's share of its board, rounded so the total is exact.
   const to100 = b => {
@@ -177,14 +177,14 @@
   const hSave = () => { store.set(HK, HS); hPush(); };
   // Undo: every host action saves the game first. The TV's strike and ding counters keep counting up, so undo never replays a sound.
   const snap = () => { hist.push(JSON.stringify(HS)); if (hist.length > 30) hist.shift(); };
-  function undo() { if (!hist.length) return; const o = HS; HS = Object.assign(JSON.parse(hist.pop()), { code: o.code, nx: o.nx, nd: o.nd, tm: o.tm }); HD = HS.deck; hSave(); }
+  function undo() { if (!hist.length) return; const o = HS; HS = Object.assign(JSON.parse(hist.pop()), { code: o.code, nx: o.nx, nd: o.nd, tm: o.tm, tn: o.tn, tl: 0 }); HD = HS.deck; hSave(); }
   const mult = i => i === HD.length - 1 ? 3 : i === HD.length - 2 ? 2 : 1;
   // ---- TV link: the host's phone pushes what the room may see (feudPush); a second device, say a computer on the TV,
   // shows it (TV mode, feudWatch). Only flipped answers ever leave the phone. ----
   const view = () => {
     const h = HS, i = h.qi, q = HD[i];
     return { r: i + 1, of: HD.length, m: mult(i), q: q.q, a: q.a.map((a, j) => h.shown[i].includes(j) ? [a.label, a.pts, h.free[i].includes(j) ? 1 : 0] : 0),
-      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: h.tm || TEAMS, won: h.won[i], over: h.over };
+      st: h.strikes[i], x: h.nx || 0, xn: h.xn || 1, d: h.nd || 0, pot: h.pot, sc: h.score, tm: h.tm || TEAMS, tn: h.tn || 0, tl: h.tl || 0, won: h.won[i], over: h.over };
   };
   // A push that fails is sent again (the newest view, up to 5 tries, 2 s apart) so the TV never sticks on an old screen.
   let pushing = false, dirty = false, fails = 0, asking = false;
@@ -205,7 +205,7 @@
   }
   let TV = null;
   function tvClose() {
-    if (!TV) return; TV.alive = false; clearTimeout(TV.xt);
+    if (!TV) return; TV.alive = false; clearTimeout(TV.xt); clearInterval(TV.tick);
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     try { if (TV.wake) TV.wake.release(); } catch (e) {}
     TV.root.remove(); TV = null;
@@ -215,7 +215,12 @@
     const root = el("div", "ftv"), mk = (cls, parent, text) => { const n = el("div", cls, text); (parent || root).append(n); return n; };
     const top = mk("ftv-top"), t0 = mk("ftv-team", top), mid = mk("ftv-mid", top), t1 = mk("ftv-team", top);
     const T = TV = { root, alive: true, last: null, key: "", n0: mk("ftv-tn", t0), s0: mk("ftv-ts", t0), rd: mk("ftv-rd", mid), pot: mk("ftv-pot", mid), n1: mk("ftv-tn", t1), s1: mk("ftv-ts", t1),
-      q: mk("ftv-q", null, "Waiting for the host…"), board: mk("ftv-board"), st: mk("ftv-st"), x: mk("ftv-x"), win: mk("ftv-win") };
+      q: mk("ftv-q", null, "Waiting for the host…"), board: mk("ftv-board"), st: mk("ftv-st"), clock: mk("ftv-clock"), x: mk("ftv-x"), win: mk("ftv-win") };
+    T.tick = setInterval(() => {
+      if (!T.end) return; const left = Math.ceil((T.end - Date.now()) / 1000);
+      T.clock.textContent = Math.max(0, left); T.clock.classList.toggle("low", left <= 5);
+      if (left <= 0) { T.end = 0; timesUp(); setTimeout(() => { if (!T.end) T.clock.classList.remove("go"); }, 2500); }
+    }, 200);
     const foot = mk("ftv-foot"); mk("ftv-code", foot, `Big Dawg Feud · TV code ${code}`);
     const fs = el("button", "ftv-btn", "Full screen"), ex = el("button", "ftv-btn", "Exit"); foot.append(fs, ex);
     fs.addEventListener("click", () => { try { (root.requestFullscreen || root.webkitRequestFullscreen).call(root); } catch (e) {} });
@@ -245,6 +250,8 @@
     T.st.textContent = "✕".repeat(v.st);
     if (L && v.x > L.x) { T.x.textContent = "✕".repeat(v.xn || 1); T.x.classList.add("go"); buzzer(); clearTimeout(T.xt); T.xt = setTimeout(() => T.x.classList.remove("go"), 1500); }
     if (L && v.d > L.d) ding();
+    if (L && v.tn > (L.tn || 0) && v.tl) { T.end = Date.now() + v.tl * 1000; T.clock.textContent = v.tl; T.clock.classList.remove("low"); T.clock.classList.add("go"); }
+    else if (!v.tl && T.end) { T.end = 0; T.clock.classList.remove("go"); }
     if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
     T.win.textContent = v.over ? (v.sc[0] === v.sc[1] ? "It's a tie!" : `${v.tm[v.sc[0] > v.sc[1] ? 0 : 1]} wins! 🦃`) : ""; T.win.classList.toggle("go", !!v.over);
     if (v.over && L && !L.over && typeof celebrate === "function") celebrate();
@@ -261,6 +268,7 @@
     } catch (e) {}
   }
   const ding = () => { tone("sine", 1568, 0.9, 0.18); tone("sine", 2093, 0.6, 0.09); };
+  const timesUp = () => { tone("square", 196, 0.9, 0.16); tone("square", 147, 0.9, 0.12); };
   const buzzer = () => { tone("sawtooth", 130, 0.8, 0.2); tone("square", 137, 0.8, 0.1); };
   defGame({
     key: "feud", name: "Feud", icon: "🦃", max: 1000, cat: "den", puzzle: true,
@@ -325,6 +333,11 @@
     update(G, dt) {
       const s = G.s; s.t += dt;
       if (s.msgT > 0) s.msgT -= dt; if (s.shake > 0) s.shake -= dt; if (s.flashT > 0) s.flashT -= dt; if (s.bigX > 0) s.bigX -= dt; if (s.quitT > 0) s.quitT -= dt;
+      if (s.upT > 0) s.upT -= dt;
+      if (s.timer > 0) {
+        const was = Math.ceil(s.timer); s.timer -= dt;
+        if (s.timer <= 0) { s.timer = 0; s.upT = 3; timesUp(); G.buzz(); } else if (Math.ceil(s.timer) < was && s.timer <= 5) tone("sine", 880, 0.08, 0.1);
+      }
       if (MODE !== "solo" || !s.qs) return;
       if (!s.done) { s.el += dt; s.ck = (s.ck || 0) + dt; if (s.ck > 2) { s.ck = 0; this.persist(G); } }
       if (s.done && !s.posted && s.postT > 0) { s.postT -= dt; if (s.postT <= 0) { s.posted = true; this.persist(G); G.post(scoreOf(s), this.info(G)); } }
@@ -419,11 +432,11 @@
     },
     hReveal(G, j) {
       const s = G.s, h = HS, i = h.qi; if (h.shown[i].includes(j)) return;
-      snap(); h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
+      snap(); s.timer = 0; h.tl = 0; h.shown[i].push(j); if (h.won[i] < 0) h.pot += HD[i].a[j].pts * mult(i);
       s.flash = j; s.flashT = 0.7; h.nd = (h.nd || 0) + 1; ding(); hSave();
     },
     hStrike(G) {
-      const s = G.s, h = HS, i = h.qi; snap();
+      const s = G.s, h = HS, i = h.qi; snap(); s.timer = 0; s.upT = 0; h.tl = 0;
       if (h.strikes[i] < 3) { h.strikes[i]++; s.bigN = h.strikes[i]; } else s.bigN = 1; // after three, a miss is the other team's failed steal
       h.nx = (h.nx || 0) + 1; h.xn = s.bigN;
       s.bigX = 1.3; buzzer(); G.buzz(); hSave();
@@ -454,23 +467,27 @@
       const quit = () => { HS = HD = null; hist = []; store.set(HK, null); s.quitT = 0; s.hmsg = ""; };
       if (b.k === "hnew") return quit();
       if (b.k === "hquit") { if (s.quitT > 0) quit(); else s.quitT = 3; return; }
-      if (b.k === "hundo") return undo();
+      if (b.k === "hundo") { s.timer = 0; return undo(); }
       if (h.over) return;
       const i = h.qi, q = HD[i];
       if (b.k === "hname") { const v = (prompt("Team name", h.tm[b.t]) || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 12); if (v) { h.tm[b.t] = v; store.set(TM, h.tm); hSave(); } return; }
       if (b.slot != null) return this.hReveal(G, b.slot);
       if (b.k === "hstrike") return this.hStrike(G);
       if (b.k === "hhide") { s.hide = !s.hide; s.kb = s.hide; s.typed = ""; return; }
+      if (b.k === "htime") { // start the answer clock, or stop it
+        if (s.timer > 0) { s.timer = 0; h.tl = 0; } else { s.timer = TSEC; s.upT = 0; h.tn = (h.tn || 0) + 1; h.tl = TSEC; tone("sine", 660, 0.12, 0.12); }
+        return hSave();
+      }
       if (b.k === "hkb") { s.kb = !s.kb; s.typed = ""; return; }
       if (b.key) return this.hPress(G, b.key);
       if (b.k === "hwin0" || b.k === "hwin1") {
         if (h.won[i] >= 0 || !h.pot) return;
-        const t = b.k === "hwin0" ? 0 : 1; snap(); h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
+        const t = b.k === "hwin0" ? 0 : 1; snap(); s.timer = 0; h.tl = 0; h.score[t] += h.pot; h.pot = 0; h.won[i] = t; G.sfx("win"); return hSave();
       }
       if (b.k === "hall") { if (h.shown[i].length === q.a.length) return; snap(); q.a.forEach((a, j) => { if (!h.shown[i].includes(j)) { h.shown[i].push(j); h.free[i].push(j); } }); return hSave(); }
       if (b.k === "hnext") {
         if (h.won[i] < 0 && h.pot) return;
-        snap(); if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
+        snap(); s.timer = 0; h.tl = 0; if (i === HD.length - 1) { h.over = true; G.sfx("win"); } else h.qi++;
         return hSave();
       }
     },
@@ -514,15 +531,20 @@
       s.btns.push({ x: W - 140, y: y - 16, w: 140, h: 32, k: "hquit" });
       y = question(G, c, P, q, y + 28);
       // what the host does next
-      const tip = won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.")
-        : !left ? "Board cleared! Give the pot to the team that was playing."
-        : st >= 3 ? (s.hide ? "3 strikes. Type the other team's ONE steal guess, then tap Pot." : "3 strikes. The other team gets ONE guess to steal, then give the pot.")
-        : kb ? "You're playing too: type what they said, then Enter."
-        : s.hide ? "Answers are hidden. Tap Type to enter a guess."
-        : !h.shown[i].length && !st ? "Face-off: read it out loud. Tap an answer when someone says it."
-        : "Tap answers as they're said. Wrong answer? Hit Strike.";
-      rr(c, 12, y - 8, W - 24, 24, 8); c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0"; c.fill();
-      c.fillStyle = ink; c.textAlign = "center"; fit(c, tip, W - 40, 12.5, 600, G.UI); c.fillText(tip, W / 2, y + 5); y += 24;
+      const tip = s.upT > 0 ? "Time's up! Hit Strike."
+        : won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.")
+        : !left ? "Board cleared! Give out the pot."
+        : st >= 3 ? (s.hide ? "3 strikes! Type the ONE steal guess." : "3 strikes! Other team: ONE steal guess.")
+        : kb ? "Type what they said, then Enter."
+        : s.hide ? "Hidden. Tap Type to enter a guess."
+        : !h.shown[i].length && !st ? "Face-off! Tap an answer when it's said."
+        : "Tap answers as said. Wrong? Hit Strike.";
+      const cw0 = 76, run = s.timer > 0, low = run && s.timer <= 5; // the clock: tap to start 15 seconds, tap again to stop
+      rr(c, 12, y - 10, W - 24 - cw0 - 6, 32, 8); c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0"; c.fill();
+      c.fillStyle = ink; c.textAlign = "center"; fit(c, tip, W - 44 - cw0, 12.5, 600, G.UI); c.fillText(tip, 12 + (W - 30 - cw0) / 2, y + 7);
+      rr(c, W - 12 - cw0, y - 10, cw0, 32, 16); c.fillStyle = low || s.upT > 0 ? "#d64545" : run ? "#1f3a8a" : P.bg; c.fill(); if (!run && !(s.upT > 0)) { c.lineWidth = 1.5; c.strokeStyle = ink; c.stroke(); }
+      c.fillStyle = run || s.upT > 0 ? "#fff" : ink; c.font = `700 ${run ? 17 : 14}px ${G.UI}`; c.fillText(run ? Math.ceil(s.timer) : s.upT > 0 ? "0" : `⏱ ${TSEC}s`, W - 12 - cw0 / 2, y + 7);
+      s.btns.push({ x: W - 18 - cw0, y: y - 16, w: cw0 + 12, h: 44, k: "htime" }); y += 32;
       // the answers: one tall column when they fit, else two (numbered down the left column first)
       const bot = kb ? H - kbH - 116 : H - 170, cols = (bot - y) / n >= 36 ? 1 : 2, rows = Math.ceil(n / cols), gap = 5, rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)), cw = (W - 24 - (cols - 1) * 6) / cols;
       q.a.forEach((a, j) => {
