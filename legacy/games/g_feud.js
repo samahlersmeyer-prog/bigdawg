@@ -311,7 +311,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     USED = "bdd:feud:used",
     TM = "bdd:feud:tm",
     TEAMS = ["Team Turkey", "Team Gravy"],
-    TSEC = 15;
+    TSEC = 15,
+    FMT = 200;
   var MODE = "solo",
     HS = null,
     HD = null,
@@ -371,18 +372,40 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     })));
     return f;
   }
-  function newDeck(name, raw) {
+  var pile = function pile() {
     var _ref3;
+    return (_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
+      return d <= KEY && Array.isArray(DAYS[d]);
+    }).map(function (d) {
+      return DAYS[d];
+    })).concat([SPARE, MORE]));
+  };
+  var newFm = function newFm(team) {
+    return {
+      qs: pick(pile().filter(function (b) {
+        return b.a.length > 3;
+      }), 5).map(to100),
+      team: team,
+      p: 0,
+      ans: [[], []],
+      rev: [0, 0]
+    };
+  };
+  var fmTot = function fmTot(f) {
+    return [0, 1].reduce(function (t, p) {
+      return t + f.ans[p].slice(0, f.rev[p]).reduce(function (x, j, i) {
+        return x + (j >= 0 ? f.qs[i].a[j].pts : 0);
+      }, 0);
+    }, 0);
+  };
+  function newDeck(name, raw) {
+    if (name === "fm") return [];
     var cb = raw ? crewBoard(raw).filter(function (b) {
       return b.a.length > 1;
     }) : [];
     if (name === "crew") return cb.map(to100);
     var c = name === "mix" ? pick(cb, Math.min(2, cb.length)) : [];
-    var d = pick((_ref3 = []).concat.apply(_ref3, _toConsumableArray(Object.keys(DAYS).filter(function (d) {
-      return d <= KEY && Array.isArray(DAYS[d]);
-    }).map(function (d) {
-      return DAYS[d];
-    })).concat([SPARE, MORE])), 5 - c.length).sort(function (x, y) {
+    var d = pick(pile(), 5 - c.length).sort(function (x, y) {
       return x.a.length - y.a.length;
     });
     c.forEach(function (b, i) {
@@ -447,7 +470,39 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var view = function view() {
     var h = HS,
       i = h.qi,
-      q = HD[i];
+      q = HD[i],
+      f = h.fm;
+    if (f) {
+      var live = f.ans[f.p].length < 5,
+        done = f.rev[1] === 5,
+        _tot = fmTot(f),
+        a = [];
+      [0, 1].forEach(function (p) {
+        return f.qs.forEach(function (b, k) {
+          var j = f.ans[p][k];
+          a.push(k < f.rev[p] && !(p === 0 && f.p === 1 && live) ? j >= 0 ? [b.a[j].label, b.a[j].pts, 0] : ["✕", 0, 1] : 0);
+        });
+      });
+      return {
+        fm: 1,
+        rd: "FAST MONEY \xB7 ".concat(FMT, " TO WIN"),
+        q: done ? "Fast Money" : "Player ".concat(f.p + 1, ": ").concat(f.qs[live ? f.ans[f.p].length : Math.min(4, f.rev[f.p])].q),
+        a: a,
+        st: 0,
+        x: h.nx || 0,
+        xn: 1,
+        d: h.nd || 0,
+        pot: _tot,
+        sc: h.score,
+        tm: h.tm || TEAMS,
+        tn: h.tn || 0,
+        tl: h.tl || 0,
+        won: -1,
+        over: done,
+        win: _tot >= FMT,
+        msg: done ? _tot >= FMT ? "".concat(_tot, " points! ").concat((h.tm || TEAMS)[f.team], " wins Fast Money! \uD83C\uDF89") : "".concat(_tot, " points. So close!") : ""
+      };
+    }
     return {
       r: i + 1,
       of: HD.length,
@@ -605,11 +660,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     T.s0.textContent = v.sc[0];
     T.s1.textContent = v.sc[1];
     T.pot.textContent = v.pot;
-    T.rd.textContent = "ROUND ".concat(v.r, " OF ").concat(v.of) + (v.m > 1 ? v.m === 2 ? " · DOUBLE" : " · TRIPLE" : "");
-    var key = v.r + "|" + v.q;
+    T.rd.textContent = v.rd || "ROUND ".concat(v.r, " OF ").concat(v.of) + (v.m > 1 ? v.m === 2 ? " · DOUBLE" : " · TRIPLE" : "");
+    var key = v.fm ? "fm" : v.r + "|" + v.q;
+    T.q.textContent = v.q;
     if (key !== T.key) {
       T.key = key;
-      T.q.textContent = v.q;
       T.board.textContent = "";
       var rows = Math.ceil(v.a.length / 2),
         cols = [el("div", "ftv-col"), el("div", "ftv-col")];
@@ -658,9 +713,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       T.clock.classList.remove("go");
     }
     if (L && v.won >= 0 && L.won < 0 && L.r === v.r && typeof chime === "function") chime("win");
-    T.win.textContent = v.over ? v.sc[0] === v.sc[1] ? "It's a tie!" : "".concat(v.tm[v.sc[0] > v.sc[1] ? 0 : 1], " wins! \uD83E\uDD83") : "";
+    T.win.textContent = v.over ? v.msg || (v.sc[0] === v.sc[1] ? "It's a tie!" : "".concat(v.tm[v.sc[0] > v.sc[1] ? 0 : 1], " wins! \uD83E\uDD83")) : "";
     T.win.classList.toggle("go", !!v.over);
-    if (v.over && L && !L.over && typeof celebrate === "function") celebrate();
+    if (v.over && L && !L.over && (!v.fm || v.win) && typeof celebrate === "function") celebrate();
     T.last = v;
   }
   var ac;
@@ -1087,6 +1142,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         tm: store.get(TM) || TEAMS.slice()
       };
       HD = HS.deck;
+      if (name === "fm") {
+        HS.over = true;
+        HS.fm = newFm(0);
+      }
       ["shown", "free"].forEach(function (k) {
         HS[k] = HD.map(function () {
           return [];
@@ -1165,6 +1224,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var s = G.s,
         h = HS;
       if (b.k === "hpolls") return this.hostNew(G, "polls");
+      if (b.k === "hfmonly") return this.hostNew(G, "fm");
       if (b.k === "hcrew" || b.k === "hmix") {
         if (s.hload) return;
         s.hload = true;
@@ -1195,6 +1255,26 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         s.timer = 0;
         return undo();
       }
+      if (b.k === "htime") {
+        var dur = h.fm ? h.fm.p ? 25 : 20 : TSEC;
+        if (s.timer > 0) {
+          s.timer = 0;
+          h.tl = 0;
+        } else {
+          s.timer = dur;
+          s.upT = 0;
+          h.tn = (h.tn || 0) + 1;
+          h.tl = dur;
+          tone("sine", 660, 0.12, 0.12);
+        }
+        return hSave();
+      }
+      if (b.k === "hfm" && h.over && !h.fm) {
+        snap();
+        h.fm = newFm(h.score[1] > h.score[0] ? 1 : 0);
+        return hSave();
+      }
+      if (h.fm) return this.fmTap(G, b);
       if (h.over) return;
       var i = h.qi,
         q = HD[i];
@@ -1214,19 +1294,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         s.kb = s.hide;
         s.typed = "";
         return;
-      }
-      if (b.k === "htime") {
-        if (s.timer > 0) {
-          s.timer = 0;
-          h.tl = 0;
-        } else {
-          s.timer = TSEC;
-          s.upT = 0;
-          h.tn = (h.tn || 0) + 1;
-          h.tl = TSEC;
-          tone("sine", 660, 0.12, 0.12);
-        }
-        return hSave();
       }
       if (b.k === "hkb") {
         s.kb = !s.kb;
@@ -1269,6 +1336,228 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         return hSave();
       }
     },
+    tipClock: function tipClock(G, c, P, y, tip, dur) {
+      var s = G.s,
+        W = G.W,
+        ink = P.ink,
+        cw0 = 76,
+        run = s.timer > 0,
+        low = run && s.timer <= 5;
+      rr(c, 12, y - 10, W - 24 - cw0 - 6, 32, 8);
+      c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0";
+      c.fill();
+      c.fillStyle = ink;
+      c.textAlign = "center";
+      fit(c, tip, W - 44 - cw0, 12.5, 600, G.UI);
+      c.fillText(tip, 12 + (W - 30 - cw0) / 2, y + 7);
+      rr(c, W - 12 - cw0, y - 10, cw0, 32, 16);
+      c.fillStyle = low || s.upT > 0 ? "#d64545" : run ? "#1f3a8a" : P.bg;
+      c.fill();
+      if (!run && !(s.upT > 0)) {
+        c.lineWidth = 1.5;
+        c.strokeStyle = ink;
+        c.stroke();
+      }
+      c.fillStyle = run || s.upT > 0 ? "#fff" : ink;
+      c.font = "700 ".concat(run ? 17 : 14, "px ").concat(G.UI);
+      c.fillText(run ? Math.ceil(s.timer) : s.upT > 0 ? "0" : "\u23F1 ".concat(dur, "s"), W - 12 - cw0 / 2, y + 7);
+      s.btns.push({
+        x: W - 18 - cw0,
+        y: y - 16,
+        w: cw0 + 12,
+        h: 44,
+        k: "htime"
+      });
+      return y + 32;
+    },
+    fmTap: function fmTap(G, b) {
+      var s = G.s,
+        h = HS,
+        f = h.fm,
+        p = f.p,
+        i = f.ans[p].length;
+      if (i < 5) {
+        if (b.slot == null && b.k !== "fpass") return;
+        var j = b.slot == null ? -1 : b.slot;
+        if (p && j >= 0 && f.ans[0][i] === j) {
+          buzzer();
+          G.buzz();
+          return this.say(G, "Already said! Need another answer.", 2.5);
+        }
+        snap();
+        f.ans[p].push(j);
+        if (i === 4) {
+          s.timer = 0;
+          s.upT = 0;
+          h.tl = 0;
+        }
+        return hSave();
+      }
+      if (b.k === "frev" && f.rev[p] < 5) {
+        snap();
+        var _j2 = f.ans[p][f.rev[p]++];
+        if (_j2 >= 0) {
+          h.nd = (h.nd || 0) + 1;
+          ding();
+        } else {
+          h.nx = (h.nx || 0) + 1;
+          h.xn = 1;
+          buzzer();
+        }
+        if (p && f.rev[1] === 5 && fmTot(f) >= FMT) G.sfx("win");
+        return hSave();
+      }
+      if (b.k === "fp2" && !p && f.rev[0] === 5) {
+        snap();
+        f.p = 1;
+        return hSave();
+      }
+    },
+    fmDraw: function fmDraw(G, c, P) {
+      var s = G.s,
+        W = G.W,
+        H = G.H,
+        h = HS,
+        f = h.fm,
+        ink = P.ink,
+        mute = P.mute,
+        tm = h.tm || TEAMS,
+        p = f.p,
+        i = f.ans[p].length,
+        tot = fmTot(f),
+        done = f.rev[1] === 5,
+        T = TOP + 6;
+      rr(c, 12, T, W - 24, 50, 10);
+      c.fillStyle = "#1f3a8a";
+      c.fill();
+      c.textAlign = "left";
+      c.fillStyle = "#e9b949";
+      c.font = "700 12px ".concat(G.UI);
+      c.fillText("FAST MONEY \xB7 ".concat(tm[f.team]), 24, T + 16);
+      c.fillStyle = "#fff";
+      c.font = "700 18px ".concat(G.UI);
+      c.fillText(done ? tot >= FMT ? "They win! 🎉" : "So close!" : "Player ".concat(p + 1), 24, T + 37);
+      c.textAlign = "right";
+      c.fillStyle = "#e9b949";
+      c.font = "700 24px ".concat(G.UI);
+      c.fillText("".concat(tot, " / ").concat(FMT), W - 24, T + 27);
+      var y = T + 68;
+      c.font = "600 13px ".concat(G.UI);
+      c.fillStyle = mute;
+      c.textAlign = "left";
+      c.fillText(h.code ? "TV code " + h.code : "", 14, y);
+      c.textAlign = "right";
+      c.fillStyle = s.quitT > 0 ? "#d64545" : mute;
+      c.fillText(s.quitT > 0 ? "Tap again to end" : "End game", W - 14, y);
+      s.btns.push({
+        x: W - 140,
+        y: y - 16,
+        w: 140,
+        h: 32,
+        k: "hquit"
+      });
+      var uw = 96,
+        bw2 = W - 24 - uw - 8,
+        by = H - 62,
+        undo = function undo() {
+          return s.btns.push(Object.assign(G.pill(c, 12 + bw2 + 8, by + 3, uw, 46, "↩ Undo", false, !hist.length), {
+            k: "hundo"
+          }));
+        };
+      if (i < 5) {
+        var q = f.qs[i],
+          n = q.a.length;
+        y = question(G, c, P, {
+          q: "".concat(i + 1, " of 5 \xB7 ").concat(q.q),
+          src: q.src
+        }, y + 28);
+        y = this.tipClock(G, c, P, y, s.upT > 0 ? "Time's up! No answer for the rest." : s.msgT > 0 && s.msg ? s.msg : s.timer > 0 ? "Tap what they say. Keep it moving!" : "Start the clock, then read question ".concat(i + 1, "."), p ? 25 : 20);
+        var bot = by - 8,
+          cols = (bot - y) / n >= 36 ? 1 : 2,
+          rows = Math.ceil(n / cols),
+          gap = 5,
+          rh = Math.max(22, Math.min(46, (bot - y) / rows - gap)),
+          cw = (W - 24 - (cols - 1) * 6) / cols;
+        q.a.forEach(function (a, j) {
+          var col = j < rows ? 0 : 1,
+            x = 12 + col * (cw + 6),
+            yy = y + (j - col * rows) * (rh + gap),
+            mid = yy + rh / 2 + 1,
+            dup = p === 1 && f.ans[0][i] === j;
+          rr(c, x, yy, cw, rh, 8);
+          c.fillStyle = dup ? P.dk ? "#2c2c2e" : "#ecece6" : P.bg;
+          c.fill();
+          if (!dup) {
+            c.lineWidth = 1.5;
+            c.strokeStyle = P.dk ? "#6d87d8" : "#1f3a8a";
+            c.stroke();
+          }
+          var ps = dup ? "said" : String(a.pts);
+          c.fillStyle = dup ? mute : ink;
+          c.textAlign = "right";
+          c.font = "700 ".concat(dup ? 12 : 15, "px ").concat(G.UI);
+          c.fillText(ps, x + cw - 9, mid);
+          var pwid = c.measureText(ps).width;
+          c.textAlign = "left";
+          fit(c, a.label, cw - 30 - pwid, 15, 700, G.UI);
+          c.fillText(a.label, x + 10, mid);
+          s.btns.push({
+            x: x,
+            y: yy,
+            w: cw,
+            h: rh,
+            slot: j
+          });
+        });
+        rr(c, 12, by, bw2, 52, 14);
+        c.fillStyle = "#d64545";
+        c.fill();
+        c.fillStyle = "#fff";
+        c.textAlign = "center";
+        c.font = "700 16px ".concat(G.UI);
+        c.fillText("✕  No answer / not up there", 12 + bw2 / 2, by + 27);
+        s.btns.push({
+          x: 12,
+          y: by,
+          w: bw2,
+          h: 52,
+          k: "fpass"
+        });
+        undo();
+        return;
+      }
+      y += 16;
+      var rv = f.rev[p];
+      c.textAlign = "center";
+      c.fillStyle = ink;
+      c.font = "700 17px ".concat(G.UI);
+      c.fillText(done ? "Fast Money is over" : rv < 5 ? "Player ".concat(p + 1, ": reveal the answers") : "Player 1 is done", W / 2, y + 6);
+      y += 26;
+      f.qs.forEach(function (q, k) {
+        var j = f.ans[p][k],
+          on = k < rv,
+          yy = y + k * 47,
+          mid = yy + 22;
+        rr(c, 12, yy, W - 24, 42, 8);
+        c.fillStyle = on ? j >= 0 ? "#e9b949" : P.dk ? "#2c2c2e" : "#ecece6" : P.dk ? "#27386b" : "#1f3a8a";
+        c.fill();
+        c.fillStyle = on ? j >= 0 ? "#2b1a10" : mute : "#fff";
+        c.textAlign = "right";
+        c.font = "700 16px ".concat(G.UI);
+        c.fillText(on ? j >= 0 ? q.a[j].pts : 0 : "?", W - 24, mid);
+        c.textAlign = "left";
+        fit(c, "".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), W - 90, 15, 700, G.UI);
+        c.fillText("".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), 24, mid);
+      });
+      if (done) s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", true), {
+        k: "hnew"
+      }));else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), {
+        k: "frev"
+      }));else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Player 2's turn ›", true), {
+        k: "fp2"
+      }));
+      undo();
+    },
     hostDraw: function hostDraw(G, c, P) {
       var s = G.s,
         W = G.W,
@@ -1300,20 +1589,27 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         s.btns.push(Object.assign(G.pill(c, bx, _y2 + 114, bw, 46, "Crew answers only", false, s.hload), {
           k: "hcrew"
         }));
-        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 190, "600 14px ".concat(G.UI), ink);
+        s.btns.push(Object.assign(G.pill(c, bx, _y2 + 168, bw, 46, "Fast Money only", false, s.hload), {
+          k: "hfmonly"
+        }));
+        if (s.hload || s.hmsg) lines(s.hload ? "Loading the crew's answers…" : s.hmsg, _y2 + 240, "600 14px ".concat(G.UI), ink);
         return;
       }
       var tm = h.tm || TEAMS;
+      if (h.fm) return this.fmDraw(G, c, P);
       if (h.over) {
         var _h$score = _slicedToArray(h.score, 2),
           a = _h$score[0],
           b = _h$score[1];
         lines(a === b ? "It's a tie!" : "".concat(tm[a > b ? 0 : 1], " wins! \uD83E\uDD83"), TOP + 60, "700 26px ".concat(G.TITLE), ink);
         lines("".concat(tm[0], " ").concat(a, "  \xB7  ").concat(tm[1], " ").concat(b), TOP + 100, "600 16px ".concat(G.UI), mute);
-        s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 50, "New game", true), {
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 134, bw, 54, "Fast Money ›", true), {
+          k: "hfm"
+        }));
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 198, bw, 46, "New game"), {
           k: "hnew"
         }));
-        s.btns.push(Object.assign(G.pill(c, bx, TOP + 194, bw, 44, "↩ Undo", false, !hist.length), {
+        s.btns.push(Object.assign(G.pill(c, bx, TOP + 254, bw, 44, "↩ Undo", false, !hist.length), {
           k: "hundo"
         }));
         return;
@@ -1377,35 +1673,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       });
       y = question(G, c, P, q, y + 28);
       var tip = s.upT > 0 ? "Time's up! Hit Strike." : won >= 0 ? (left ? "Tap Show rest, then " : "Tap ") + (last ? "Final score." : "Next round.") : !left ? "Board cleared! Give out the pot." : st >= 3 ? s.hide ? "3 strikes! Type the ONE steal guess." : "3 strikes! Other team: ONE steal guess." : kb ? "Type what they said, then Enter." : s.hide ? "Hidden. Tap Type to enter a guess." : !h.shown[i].length && !st ? "Face-off! Tap an answer when it's said." : "Tap answers as said. Wrong? Hit Strike.";
-      var cw0 = 76,
-        run = s.timer > 0,
-        low = run && s.timer <= 5;
-      rr(c, 12, y - 10, W - 24 - cw0 - 6, 32, 8);
-      c.fillStyle = P.dk ? "#3a3320" : "#fbf1d0";
-      c.fill();
-      c.fillStyle = ink;
-      c.textAlign = "center";
-      fit(c, tip, W - 44 - cw0, 12.5, 600, G.UI);
-      c.fillText(tip, 12 + (W - 30 - cw0) / 2, y + 7);
-      rr(c, W - 12 - cw0, y - 10, cw0, 32, 16);
-      c.fillStyle = low || s.upT > 0 ? "#d64545" : run ? "#1f3a8a" : P.bg;
-      c.fill();
-      if (!run && !(s.upT > 0)) {
-        c.lineWidth = 1.5;
-        c.strokeStyle = ink;
-        c.stroke();
-      }
-      c.fillStyle = run || s.upT > 0 ? "#fff" : ink;
-      c.font = "700 ".concat(run ? 17 : 14, "px ").concat(G.UI);
-      c.fillText(run ? Math.ceil(s.timer) : s.upT > 0 ? "0" : "\u23F1 ".concat(TSEC, "s"), W - 12 - cw0 / 2, y + 7);
-      s.btns.push({
-        x: W - 18 - cw0,
-        y: y - 16,
-        w: cw0 + 12,
-        h: 44,
-        k: "htime"
-      });
-      y += 32;
+      y = this.tipClock(G, c, P, y, tip, TSEC);
       var bot = kb ? H - kbH - 116 : H - 170,
         cols = (bot - y) / n >= 36 ? 1 : 2,
         rows = Math.ceil(n / cols),
