@@ -1602,9 +1602,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       f.qs.forEach(function (q, k) {
         var j = f.top ? 0 : f.ans[p][k],
           on = f.top || k < rv,
-          yy = y + k * 47,
-          mid = yy + 22;
-        rr(c, 12, yy, W - 24, 42, 8);
+          yy = y + k * 56,
+          mid = yy + 18,
+          t1 = "#1: ".concat(q.a[0].label, " \xB7 ").concat(q.a[0].pts);
+        rr(c, 12, yy, W - 24, 50, 8);
         c.fillStyle = on ? j >= 0 ? "#e9b949" : P.dk ? "#2c2c2e" : "#ecece6" : P.dk ? "#27386b" : "#1f3a8a";
         c.fill();
         c.fillStyle = on ? j >= 0 ? "#2b1a10" : mute : "#fff";
@@ -1614,9 +1615,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         c.textAlign = "left";
         fit(c, "".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), W - 90, 15, 700, G.UI);
         c.fillText("".concat(k + 1, ". ").concat(j >= 0 ? q.a[j].label : "✕ no answer"), 24, mid);
+        if (!f.top) {
+          c.fillStyle = on ? j >= 0 ? "rgba(43,26,16,.75)" : mute : "rgba(255,255,255,.75)";
+          fit(c, t1, W - 60, 12, 600, G.UI);
+          c.fillText(t1, 38, yy + 38);
+        }
       });
       if (done) {
-        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers ›", !f.top), {
+        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers on TV ›", !f.top), {
           k: "ftop"
         }));
         s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", f.top), {

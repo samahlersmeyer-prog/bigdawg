@@ -581,14 +581,15 @@
       // reveal: one answer at a time
       y += 16; const rv = f.rev[p];
       c.textAlign = "center"; c.fillStyle = ink; c.font = `700 17px ${G.UI}`; c.fillText(f.top ? "The number one answers" : done ? "Fast Money is over" : rv < 5 ? `Player ${p + 1}: reveal the answers` : "Cover the TV before player 2 comes in", W / 2, y + 6); y += 26;
-      f.qs.forEach((q, k) => {
-        const j = f.top ? 0 : f.ans[p][k], on = f.top || k < rv, yy = y + k * 47, mid = yy + 22;
-        rr(c, 12, yy, W - 24, 42, 8); c.fillStyle = on ? (j >= 0 ? "#e9b949" : (P.dk ? "#2c2c2e" : "#ecece6")) : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
+      f.qs.forEach((q, k) => { // each row: what the player said, and (host only) that question's number one answer under it
+        const j = f.top ? 0 : f.ans[p][k], on = f.top || k < rv, yy = y + k * 56, mid = yy + 18, t1 = `#1: ${q.a[0].label} · ${q.a[0].pts}`;
+        rr(c, 12, yy, W - 24, 50, 8); c.fillStyle = on ? (j >= 0 ? "#e9b949" : (P.dk ? "#2c2c2e" : "#ecece6")) : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
         c.fillStyle = on ? (j >= 0 ? "#2b1a10" : mute) : "#fff"; c.textAlign = "right"; c.font = `700 16px ${G.UI}`; c.fillText(on ? (j >= 0 ? q.a[j].pts : 0) : "?", W - 24, mid);
         c.textAlign = "left"; fit(c, `${k + 1}. ${j >= 0 ? q.a[j].label : "✕ no answer"}`, W - 90, 15, 700, G.UI); c.fillText(`${k + 1}. ${j >= 0 ? q.a[j].label : "✕ no answer"}`, 24, mid);
+        if (!f.top) { c.fillStyle = on ? (j >= 0 ? "rgba(43,26,16,.75)" : mute) : "rgba(255,255,255,.75)"; fit(c, t1, W - 60, 12, 600, G.UI); c.fillText(t1, 38, yy + 38); }
       });
       if (done) {
-        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers ›", !f.top), { k: "ftop" }));
+        s.btns.push(Object.assign(G.pill(c, 12, by - 58, W - 24, 50, f.top ? "‹ Back to their answers" : "Show the #1 answers on TV ›", !f.top), { k: "ftop" }));
         s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", f.top), { k: "hnew" }));
       }
       else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), { k: "frev" }));
