@@ -562,7 +562,7 @@
       }
       // reveal: one answer at a time
       y += 16; const rv = f.rev[p];
-      c.textAlign = "center"; c.fillStyle = ink; c.font = `700 17px ${G.UI}`; c.fillText(done ? "Fast Money is over" : rv < 5 ? `Player ${p + 1}: reveal the answers` : "Player 1 is done", W / 2, y + 6); y += 26;
+      c.textAlign = "center"; c.fillStyle = ink; c.font = `700 17px ${G.UI}`; c.fillText(done ? "Fast Money is over" : rv < 5 ? `Player ${p + 1}: reveal the answers` : "Cover the TV before player 2 comes in", W / 2, y + 6); y += 26;
       f.qs.forEach((q, k) => {
         const j = f.ans[p][k], on = k < rv, yy = y + k * 47, mid = yy + 22;
         rr(c, 12, yy, W - 24, 42, 8); c.fillStyle = on ? (j >= 0 ? "#e9b949" : (P.dk ? "#2c2c2e" : "#ecece6")) : (P.dk ? "#27386b" : "#1f3a8a"); c.fill();
@@ -571,7 +571,7 @@
       });
       if (done) s.btns.push(Object.assign(G.pill(c, 12, by + 3, bw2, 46, "New game", true), { k: "hnew" }));
       else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), { k: "frev" }));
-      else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Player 2's turn ›", true), { k: "fp2" }));
+      else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Cover answers · Player 2 ›", true), { k: "fp2" }));
       undo();
     },
     hostDraw(G, c, P) {

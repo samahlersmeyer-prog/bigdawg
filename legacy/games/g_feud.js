@@ -1531,7 +1531,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       c.textAlign = "center";
       c.fillStyle = ink;
       c.font = "700 17px ".concat(G.UI);
-      c.fillText(done ? "Fast Money is over" : rv < 5 ? "Player ".concat(p + 1, ": reveal the answers") : "Player 1 is done", W / 2, y + 6);
+      c.fillText(done ? "Fast Money is over" : rv < 5 ? "Player ".concat(p + 1, ": reveal the answers") : "Cover the TV before player 2 comes in", W / 2, y + 6);
       y += 26;
       f.qs.forEach(function (q, k) {
         var j = f.ans[p][k],
@@ -1553,7 +1553,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         k: "hnew"
       }));else if (rv < 5) s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Reveal next ›", true), {
         k: "frev"
-      }));else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Player 2's turn ›", true), {
+      }));else s.btns.push(Object.assign(G.pill(c, 12, by, bw2, 52, "Cover answers · Player 2 ›", true), {
         k: "fp2"
       }));
       undo();
